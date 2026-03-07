@@ -79,6 +79,7 @@ global.window.betaflight = {
   // Analysis
   analyzeFilters: vi.fn(),
   analyzePID: vi.fn(),
+  analyzeTransferFunction: vi.fn(),
 
   // Snapshot Restore
   restoreSnapshot: vi.fn(),

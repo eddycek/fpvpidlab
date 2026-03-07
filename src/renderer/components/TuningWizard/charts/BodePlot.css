@@ -1,0 +1,39 @@
+.bode-plot {
+  margin: 12px 0;
+}
+
+.bode-plot-section {
+  margin-bottom: 16px;
+}
+
+.bode-plot-label {
+  font-size: 12px;
+  color: var(--text-secondary, #aaa);
+  margin: 8px 0 4px 0;
+  font-weight: 500;
+}
+
+.bode-plot-container {
+  background: var(--bg-tertiary, #1e1e1e);
+  border-radius: 6px;
+  padding: 12px 8px 4px 0;
+  width: 100%;
+  min-width: 700px;
+  overflow-x: auto;
+}
+
+.bode-plot-empty {
+  padding: 24px;
+  text-align: center;
+  color: var(--text-secondary, #aaa);
+  font-size: 13px;
+}
+
+.bode-plot .recharts-tooltip-cursor {
+  stroke: #555;
+}
+
+.bode-plot .recharts-cartesian-grid-horizontal line,
+.bode-plot .recharts-cartesian-grid-vertical line {
+  stroke: #2a2a2a;
+}

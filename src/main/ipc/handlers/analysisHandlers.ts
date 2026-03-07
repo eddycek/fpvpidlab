@@ -11,7 +11,7 @@ import { logger } from '../../utils/logger';
 import { getErrorMessage } from '../../utils/errors';
 import { BlackboxParser } from '../../blackbox/BlackboxParser';
 import { analyze as analyzeFilters } from '../../analysis/FilterAnalyzer';
-import { analyzePID } from '../../analysis/PIDAnalyzer';
+import { analyzePID, analyzeTransferFunction } from '../../analysis/PIDAnalyzer';
 import { extractFlightPIDs } from '../../analysis/PIDRecommender';
 import { validateBBLHeader, enrichSettingsFromBBLHeaders } from '../../analysis/headerValidation';
 import type { HandlerDependencies } from './types';
@@ -225,6 +225,87 @@ export function registerAnalysisHandlers(deps: HandlerDependencies): void {
         return createResponse<PIDAnalysisResult>(result);
       } catch (error) {
         logger.error('Failed to run PID analysis:', error);
+        return createResponse<PIDAnalysisResult>(undefined, getErrorMessage(error));
+      }
+    }
+  );
+
+  // Transfer function (Wiener deconvolution) analysis handler
+  ipcMain.handle(
+    IPCChannel.ANALYSIS_RUN_TRANSFER_FUNCTION,
+    async (event, logId: string, sessionIndex?: number, currentPIDs?: PIDConfiguration) => {
+      try {
+        if (!deps.blackboxManager) {
+          return createResponse<PIDAnalysisResult>(undefined, 'BlackboxManager not initialized');
+        }
+
+        const logMeta = await deps.blackboxManager.getLog(logId);
+        if (!logMeta) {
+          return createResponse<PIDAnalysisResult>(undefined, `Blackbox log not found: ${logId}`);
+        }
+
+        logger.info(`Running transfer function analysis on: ${logMeta.filename}`);
+
+        if (!currentPIDs && deps.mspClient?.isConnected()) {
+          try {
+            currentPIDs = await deps.mspClient.getPIDConfiguration();
+          } catch {
+            logger.warn('Could not read PID settings from FC, using defaults');
+          }
+        }
+
+        const data = await fs.readFile(logMeta.filepath);
+        const parseResult = await BlackboxParser.parse(data);
+
+        if (!parseResult.success || parseResult.sessions.length === 0) {
+          return createResponse<PIDAnalysisResult>(
+            undefined,
+            'Failed to parse Blackbox log for transfer function analysis'
+          );
+        }
+
+        const idx = sessionIndex ?? 0;
+        if (idx >= parseResult.sessions.length) {
+          return createResponse<PIDAnalysisResult>(
+            undefined,
+            `Session index ${idx} out of range (log has ${parseResult.sessions.length} sessions)`
+          );
+        }
+
+        const session = parseResult.sessions[idx];
+        const flightPIDs = extractFlightPIDs(session.header.rawHeaders);
+
+        let flightStyle: 'smooth' | 'balanced' | 'aggressive' = 'balanced';
+        if (deps.profileManager) {
+          try {
+            const currentProfile = await deps.profileManager.getCurrentProfile();
+            if (currentProfile?.flightStyle) {
+              flightStyle = currentProfile.flightStyle;
+            }
+          } catch {
+            // Fall back to balanced
+          }
+        }
+
+        const result = await analyzeTransferFunction(
+          session.flightData,
+          idx,
+          currentPIDs,
+          (progress) => {
+            event.sender.send(IPCChannel.EVENT_ANALYSIS_PROGRESS, progress);
+          },
+          flightPIDs,
+          session.header.rawHeaders,
+          flightStyle
+        );
+
+        logger.info(
+          `Transfer function analysis complete: ${result.recommendations.length} recommendations, ${result.analysisTimeMs}ms`
+        );
+
+        return createResponse<PIDAnalysisResult>(result);
+      } catch (error) {
+        logger.error('Failed to run transfer function analysis:', error);
         return createResponse<PIDAnalysisResult>(undefined, getErrorMessage(error));
       }
     }

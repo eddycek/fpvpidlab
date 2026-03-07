@@ -669,6 +669,105 @@ describe('AnalysisOverview', () => {
     expect(screen.queryByText(/Data:/)).not.toBeInTheDocument();
   });
 
+  it('shows Frequency Response Analysis section when TF result available', async () => {
+    const tfResult: PIDAnalysisResult & { transferFunction: any } = {
+      ...mockPIDResult,
+      stepsDetected: 0,
+      analysisMethod: 'wiener_deconvolution' as const,
+      transferFunction: {
+        roll: {
+          frequencies: new Float64Array([10, 20]),
+          magnitude: new Float64Array([0, -3]),
+          phase: new Float64Array([0, -45]),
+        },
+        pitch: {
+          frequencies: new Float64Array([10, 20]),
+          magnitude: new Float64Array([0, -3]),
+          phase: new Float64Array([0, -45]),
+        },
+        yaw: {
+          frequencies: new Float64Array([10, 20]),
+          magnitude: new Float64Array([0, -3]),
+          phase: new Float64Array([0, -45]),
+        },
+        syntheticStepResponse: {
+          roll: { timeMs: [0, 10], response: [0, 1] },
+          pitch: { timeMs: [0, 10], response: [0, 1] },
+          yaw: { timeMs: [0, 10], response: [0, 1] },
+        },
+        metrics: {
+          roll: {
+            bandwidthHz: 55,
+            gainMarginDb: 10,
+            phaseMarginDeg: 50,
+            overshootPercent: 8,
+            settlingTimeMs: 60,
+            riseTimeMs: 25,
+          },
+          pitch: {
+            bandwidthHz: 52,
+            gainMarginDb: 9,
+            phaseMarginDeg: 48,
+            overshootPercent: 10,
+            settlingTimeMs: 65,
+            riseTimeMs: 28,
+          },
+          yaw: {
+            bandwidthHz: 35,
+            gainMarginDb: 12,
+            phaseMarginDeg: 55,
+            overshootPercent: 5,
+            settlingTimeMs: 70,
+            riseTimeMs: 35,
+          },
+        },
+      },
+    };
+    vi.mocked(window.betaflight.parseBlackboxLog).mockResolvedValue(mockParseResult);
+    vi.mocked(window.betaflight.analyzeFilters).mockResolvedValue(mockFilterResult);
+    vi.mocked(window.betaflight.analyzePID).mockResolvedValue(mockPIDResult);
+    vi.mocked(window.betaflight.analyzeTransferFunction).mockResolvedValue(tfResult);
+
+    render(<AnalysisOverview logId="log-1" logName="blackbox_2026-02-11.bbl" onExit={onExit} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Frequency Response Analysis')).toBeInTheDocument();
+    });
+
+    expect(screen.getByText('Transfer Function Metrics')).toBeInTheDocument();
+    expect(screen.getByText('Wiener deconvolution')).toBeInTheDocument();
+  });
+
+  it('does not show Frequency Response section when TF analysis fails', async () => {
+    vi.mocked(window.betaflight.parseBlackboxLog).mockResolvedValue(mockParseResult);
+    vi.mocked(window.betaflight.analyzeFilters).mockResolvedValue(mockFilterResult);
+    vi.mocked(window.betaflight.analyzePID).mockResolvedValue(mockPIDResult);
+    vi.mocked(window.betaflight.analyzeTransferFunction).mockRejectedValue(
+      new Error('Not enough data')
+    );
+
+    render(<AnalysisOverview logId="log-1" logName="blackbox_2026-02-11.bbl" onExit={onExit} />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/12 steps detected/)).toBeInTheDocument();
+    });
+
+    expect(screen.queryByText('Frequency Response Analysis')).not.toBeInTheDocument();
+  });
+
+  it('calls analyzeTransferFunction alongside other analyses', async () => {
+    vi.mocked(window.betaflight.parseBlackboxLog).mockResolvedValue(mockParseResult);
+    vi.mocked(window.betaflight.analyzeFilters).mockResolvedValue(mockFilterResult);
+    vi.mocked(window.betaflight.analyzePID).mockResolvedValue(mockPIDResult);
+    vi.mocked(window.betaflight.analyzeTransferFunction).mockResolvedValue(mockPIDResult);
+
+    render(<AnalysisOverview logId="log-1" logName="blackbox_2026-02-11.bbl" onExit={onExit} />);
+
+    await waitFor(() => {
+      expect(window.betaflight.analyzeTransferFunction).toHaveBeenCalledWith('log-1', 0);
+    });
+  });
+
   it('log name is not clickable for single-session logs', async () => {
     vi.mocked(window.betaflight.parseBlackboxLog).mockResolvedValue(mockParseResult);
     vi.mocked(window.betaflight.analyzeFilters).mockResolvedValue(mockFilterResult);

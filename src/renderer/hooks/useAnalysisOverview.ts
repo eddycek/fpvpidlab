@@ -3,7 +3,7 @@ import type { BlackboxLogSession, BlackboxParseProgress } from '@shared/types/bl
 import type {
   FilterAnalysisResult,
   PIDAnalysisResult,
-  AnalysisProgress
+  AnalysisProgress,
 } from '@shared/types/analysis.types';
 
 export interface UseAnalysisOverviewReturn {
@@ -33,6 +33,11 @@ export interface UseAnalysisOverviewReturn {
   pidProgress: AnalysisProgress | null;
   pidError: string | null;
   retryPIDAnalysis: () => void;
+
+  // Transfer function (Wiener) analysis
+  tfResult: PIDAnalysisResult | null;
+  tfAnalyzing: boolean;
+  tfError: string | null;
 }
 
 export function useAnalysisOverview(logId: string): UseAnalysisOverviewReturn {
@@ -57,56 +62,79 @@ export function useAnalysisOverview(logId: string): UseAnalysisOverviewReturn {
   const [pidProgress, setPidProgress] = useState<AnalysisProgress | null>(null);
   const [pidError, setPidError] = useState<string | null>(null);
 
-  const runFilterAnalysis = useCallback(async (idx: number) => {
-    setFilterAnalyzing(true);
-    setFilterProgress(null);
-    setFilterError(null);
+  // Transfer function (Wiener) analysis state
+  const [tfResult, setTfResult] = useState<PIDAnalysisResult | null>(null);
+  const [tfAnalyzing, setTfAnalyzing] = useState(false);
+  const [tfError, setTfError] = useState<string | null>(null);
 
-    try {
-      const result = await window.betaflight.analyzeFilters(
-        logId,
-        idx,
-        undefined,
-        (progress) => {
+  const runFilterAnalysis = useCallback(
+    async (idx: number) => {
+      setFilterAnalyzing(true);
+      setFilterProgress(null);
+      setFilterError(null);
+
+      try {
+        const result = await window.betaflight.analyzeFilters(logId, idx, undefined, (progress) => {
           setFilterProgress(progress);
-        }
-      );
-      setFilterResult(result);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to analyze filters';
-      setFilterError(message);
-    } finally {
-      setFilterAnalyzing(false);
-    }
-  }, [logId]);
+        });
+        setFilterResult(result);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Failed to analyze filters';
+        setFilterError(message);
+      } finally {
+        setFilterAnalyzing(false);
+      }
+    },
+    [logId]
+  );
 
-  const runPIDAnalysis = useCallback(async (idx: number) => {
-    setPidAnalyzing(true);
-    setPidProgress(null);
-    setPidError(null);
+  const runPIDAnalysis = useCallback(
+    async (idx: number) => {
+      setPidAnalyzing(true);
+      setPidProgress(null);
+      setPidError(null);
 
-    try {
-      const result = await window.betaflight.analyzePID(
-        logId,
-        idx,
-        undefined,
-        (progress) => {
+      try {
+        const result = await window.betaflight.analyzePID(logId, idx, undefined, (progress) => {
           setPidProgress(progress);
-        }
-      );
-      setPidResult(result);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to analyze PIDs';
-      setPidError(message);
-    } finally {
-      setPidAnalyzing(false);
-    }
-  }, [logId]);
+        });
+        setPidResult(result);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Failed to analyze PIDs';
+        setPidError(message);
+      } finally {
+        setPidAnalyzing(false);
+      }
+    },
+    [logId]
+  );
 
-  const runBothAnalyses = useCallback((idx: number) => {
-    runFilterAnalysis(idx);
-    runPIDAnalysis(idx);
-  }, [runFilterAnalysis, runPIDAnalysis]);
+  const runTFAnalysis = useCallback(
+    async (idx: number) => {
+      setTfAnalyzing(true);
+      setTfError(null);
+
+      try {
+        const result = await window.betaflight.analyzeTransferFunction(logId, idx);
+        setTfResult(result);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Failed to analyze transfer function';
+        setTfError(message);
+      } finally {
+        setTfAnalyzing(false);
+      }
+    },
+    [logId]
+  );
+
+  const runBothAnalyses = useCallback(
+    (idx: number) => {
+      runFilterAnalysis(idx);
+      runPIDAnalysis(idx);
+      runTFAnalysis(idx);
+    },
+    [runFilterAnalysis, runPIDAnalysis, runTFAnalysis]
+  );
 
   const parseLog = useCallback(async () => {
     setParsing(true);
@@ -117,6 +145,8 @@ export function useAnalysisOverview(logId: string): UseAnalysisOverviewReturn {
     setFilterError(null);
     setPidResult(null);
     setPidError(null);
+    setTfResult(null);
+    setTfError(null);
 
     try {
       const result = await window.betaflight.parseBlackboxLog(logId, (progress) => {
@@ -145,16 +175,21 @@ export function useAnalysisOverview(logId: string): UseAnalysisOverviewReturn {
   }, [logId, runBothAnalyses]);
 
   // Handle session selection for multi-session logs
-  const selectSession = useCallback((idx: number) => {
-    setSessionIndex(idx);
-    setSessionSelected(true);
-    // Reset previous analysis results
-    setFilterResult(null);
-    setFilterError(null);
-    setPidResult(null);
-    setPidError(null);
-    runBothAnalyses(idx);
-  }, [runBothAnalyses]);
+  const selectSession = useCallback(
+    (idx: number) => {
+      setSessionIndex(idx);
+      setSessionSelected(true);
+      // Reset previous analysis results
+      setFilterResult(null);
+      setFilterError(null);
+      setPidResult(null);
+      setPidError(null);
+      setTfResult(null);
+      setTfError(null);
+      runBothAnalyses(idx);
+    },
+    [runBothAnalyses]
+  );
 
   const resetToSessionPicker = useCallback(() => {
     setSessionSelected(false);
@@ -162,6 +197,8 @@ export function useAnalysisOverview(logId: string): UseAnalysisOverviewReturn {
     setFilterError(null);
     setPidResult(null);
     setPidError(null);
+    setTfResult(null);
+    setTfError(null);
   }, []);
 
   // Auto-parse on mount
@@ -202,5 +239,8 @@ export function useAnalysisOverview(logId: string): UseAnalysisOverviewReturn {
     pidProgress,
     pidError,
     retryPIDAnalysis,
+    tfResult,
+    tfAnalyzing,
+    tfError,
   };
 }

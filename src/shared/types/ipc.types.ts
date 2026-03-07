@@ -139,6 +139,7 @@ export enum IPCChannel {
   // Analysis
   ANALYSIS_RUN_FILTER = 'analysis:run-filter',
   ANALYSIS_RUN_PID = 'analysis:run-pid',
+  ANALYSIS_RUN_TRANSFER_FUNCTION = 'analysis:run-transfer-function',
 
   // Snapshot Restore
   SNAPSHOT_RESTORE = 'snapshot:restore',
@@ -240,6 +241,12 @@ export interface BetaflightAPI {
     onProgress?: (progress: AnalysisProgress) => void
   ): Promise<FilterAnalysisResult>;
   analyzePID(
+    logId: string,
+    sessionIndex?: number,
+    currentPIDs?: PIDConfiguration,
+    onProgress?: (progress: AnalysisProgress) => void
+  ): Promise<PIDAnalysisResult>;
+  analyzeTransferFunction(
     logId: string,
     sessionIndex?: number,
     currentPIDs?: PIDConfiguration,

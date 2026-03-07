@@ -2,6 +2,7 @@ import React from 'react';
 import { useAnalysisOverview } from '../../hooks/useAnalysisOverview';
 import { SpectrumChart } from '../TuningWizard/charts/SpectrumChart';
 import { StepResponseChart } from '../TuningWizard/charts/StepResponseChart';
+import { BodePlot } from '../TuningWizard/charts/BodePlot';
 import './AnalysisOverview.css';
 
 /** Strip recommendation sentences from analysis summaries (diagnostic-only view). */
@@ -481,6 +482,89 @@ export function AnalysisOverview({ logId, logName, onExit }: AnalysisOverviewPro
               />
             </>
           )}
+        </div>
+      )}
+
+      {/* Transfer Function (Wiener) Section */}
+      {overview.tfAnalyzing && (
+        <div className="analysis-overview-section">
+          <h3 className="analysis-overview-section-title">Frequency Response Analysis</h3>
+          <p style={{ fontSize: 13, color: 'var(--text-secondary, #aaa)', margin: '0 0 16px 0' }}>
+            Estimating transfer function from flight data...
+          </p>
+        </div>
+      )}
+
+      {overview.tfResult && (overview.tfResult as any).transferFunction && (
+        <div className="analysis-overview-section">
+          <h3 className="analysis-overview-section-title">Frequency Response Analysis</h3>
+          <p style={{ fontSize: 13, color: 'var(--text-secondary, #aaa)', margin: '0 0 8px 0' }}>
+            Transfer function estimated via Wiener deconvolution. The Bode plot shows how the quad
+            tracks stick inputs at different frequencies.
+          </p>
+          <div className="analysis-meta">
+            <span className="analysis-meta-pill">Wiener deconvolution</span>
+          </div>
+
+          <h4 className="current-pids-heading">Transfer Function Metrics</h4>
+          <div className="axis-summary">
+            {(['roll', 'pitch', 'yaw'] as const).map((axis) => {
+              const metrics = (overview.tfResult as any).transferFunction.metrics[axis];
+              return (
+                <div key={`tf-${axis}`} className="axis-summary-card">
+                  <div className="axis-summary-card-title">{axis}</div>
+                  <div className="axis-summary-card-stat">
+                    <span>Bandwidth: </span>
+                    {metrics.bandwidthHz.toFixed(0)} Hz
+                  </div>
+                  <div className="axis-summary-card-stat">
+                    <span>Phase margin: </span>
+                    {metrics.phaseMarginDeg.toFixed(0)}&deg;
+                  </div>
+                  <div className="axis-summary-card-stat">
+                    <span>Overshoot: </span>
+                    {metrics.overshootPercent.toFixed(1)}%
+                  </div>
+                  <div className="axis-summary-card-stat">
+                    <span>Rise: </span>
+                    {metrics.riseTimeMs.toFixed(0)} ms
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <p className="chart-description">
+            The <strong>Bode plot</strong> shows how the quad&apos;s response changes with
+            frequency. The <strong>magnitude</strong> plot shows how well it tracks (0 dB =
+            perfect). The <strong>phase</strong> plot shows delay &mdash; more negative means more
+            lag. The dashed line at -3 dB marks the bandwidth limit.
+          </p>
+          <p className="chart-legend">
+            <span className="chart-legend-item">
+              <span className="chart-legend-line" style={{ borderColor: '#ff6b6b' }} /> Roll
+            </span>
+            <span className="chart-legend-item">
+              <span className="chart-legend-line" style={{ borderColor: '#51cf66' }} /> Pitch
+            </span>
+            <span className="chart-legend-item">
+              <span className="chart-legend-line" style={{ borderColor: '#4dabf7' }} /> Yaw
+            </span>
+            <span className="chart-legend-item">
+              <span
+                className="chart-legend-line chart-legend-line--dashed"
+                style={{ borderColor: '#ff8787' }}
+              />{' '}
+              -3 dB / -180&deg;
+            </span>
+          </p>
+          <BodePlot
+            bode={{
+              roll: (overview.tfResult as any).transferFunction.roll,
+              pitch: (overview.tfResult as any).transferFunction.pitch,
+              yaw: (overview.tfResult as any).transferFunction.yaw,
+            }}
+          />
         </div>
       )}
     </div>

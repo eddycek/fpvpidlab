@@ -485,6 +485,36 @@ const betaflightAPI: BetaflightAPI = {
     }
   },
 
+  async analyzeTransferFunction(
+    logId: string,
+    sessionIndex?: number,
+    currentPIDs?: PIDConfiguration,
+    onProgress?: (progress: AnalysisProgress) => void
+  ): Promise<PIDAnalysisResult> {
+    let progressListener: ((event: any, progress: AnalysisProgress) => void) | null = null;
+    if (onProgress) {
+      progressListener = (_event: any, progress: AnalysisProgress) => onProgress(progress);
+      ipcRenderer.on(IPCChannel.EVENT_ANALYSIS_PROGRESS, progressListener);
+    }
+
+    try {
+      const response = await ipcRenderer.invoke(
+        IPCChannel.ANALYSIS_RUN_TRANSFER_FUNCTION,
+        logId,
+        sessionIndex,
+        currentPIDs
+      );
+      if (!response.success) {
+        throw new Error(response.error || 'Failed to run transfer function analysis');
+      }
+      return response.data;
+    } finally {
+      if (progressListener) {
+        ipcRenderer.removeListener(IPCChannel.EVENT_ANALYSIS_PROGRESS, progressListener);
+      }
+    }
+  },
+
   // Snapshot Restore
   async restoreSnapshot(id: string, createBackup: boolean): Promise<SnapshotRestoreResult> {
     const response = await ipcRenderer.invoke(IPCChannel.SNAPSHOT_RESTORE, id, createBackup);
