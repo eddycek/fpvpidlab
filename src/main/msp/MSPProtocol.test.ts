@@ -19,8 +19,8 @@ describe('MSPProtocol', () => {
       expect(result[0]).toBe(0x24); // '$'
       expect(result[1]).toBe(0x4d); // 'M'
       expect(result[2]).toBe(0x3c); // '<'
-      expect(result[3]).toBe(0);    // size = 0
-      expect(result[4]).toBe(112);  // command
+      expect(result[3]).toBe(0); // size = 0
+      expect(result[4]).toBe(112); // command
       expect(result[5]).toBe(0 ^ 112); // checksum = size ^ command
     });
 
@@ -129,9 +129,11 @@ describe('MSPProtocol', () => {
     it('returns null for incomplete payload (header present but data short)', () => {
       // Header says size=10 but we only have 3 bytes of data
       const buf = Buffer.alloc(9);
-      buf[0] = 0x24; buf[1] = 0x4d; buf[2] = 0x3e;
+      buf[0] = 0x24;
+      buf[1] = 0x4d;
+      buf[2] = 0x3e;
       buf[3] = 10; // size = 10
-      buf[4] = 1;  // command
+      buf[4] = 1; // command
       // Only 4 bytes after header, need 10 + checksum = 11
       expect(protocol.decode(buf)).toBeNull();
     });
@@ -184,7 +186,10 @@ describe('MSPProtocol', () => {
     it('returns null for incomplete jumbo payload', () => {
       // Header says 500 bytes but buffer is too short
       const buf = Buffer.alloc(20);
-      buf[0] = 0x24; buf[1] = 0x4d; buf[2] = 0x3e; buf[3] = 0xff;
+      buf[0] = 0x24;
+      buf[1] = 0x4d;
+      buf[2] = 0x3e;
+      buf[3] = 0xff;
       buf.writeUInt16LE(500, 4);
       buf[6] = 71;
       expect(protocol.decode(buf)).toBeNull();
@@ -318,6 +323,190 @@ describe('MSPProtocol', () => {
       const { messages, remaining } = protocol.parseBuffer(buf);
       expect(messages.length).toBe(0);
       // No preamble found, so offset stays at 0 but loop breaks
+    });
+  });
+
+  // ─── parseBuffer() jumbo frame support ──────────────────────────
+
+  describe('parseBuffer jumbo frames', () => {
+    it('parses single jumbo frame from buffer', () => {
+      const payload = Buffer.alloc(300);
+      for (let i = 0; i < 300; i++) payload[i] = i & 0xff;
+      const frame = buildMSPJumboResponse(71, payload);
+
+      const { messages, remaining } = protocol.parseBuffer(frame);
+
+      expect(messages.length).toBe(1);
+      expect(messages[0].command).toBe(71);
+      expect(messages[0].data.length).toBe(300);
+      expect(Buffer.compare(messages[0].data, payload)).toBe(0);
+      expect(remaining.length).toBe(0);
+    });
+
+    it('parses standard frame followed by jumbo frame', () => {
+      const stdPayload = Buffer.from([0x01, 0x02, 0x03]);
+      const jumboPayload = Buffer.alloc(400);
+      for (let i = 0; i < 400; i++) jumboPayload[i] = (i * 3) & 0xff;
+
+      const stdFrame = buildMSPv1Response(1, stdPayload);
+      const jumboFrame = buildMSPJumboResponse(71, jumboPayload);
+      const combined = Buffer.concat([stdFrame, jumboFrame]);
+
+      const { messages, remaining } = protocol.parseBuffer(combined);
+
+      expect(messages.length).toBe(2);
+      expect(messages[0].command).toBe(1);
+      expect(messages[0].data.length).toBe(3);
+      expect(messages[1].command).toBe(71);
+      expect(messages[1].data.length).toBe(400);
+      expect(Buffer.compare(messages[1].data, jumboPayload)).toBe(0);
+      expect(remaining.length).toBe(0);
+    });
+
+    it('parses jumbo frame followed by standard frame', () => {
+      const jumboPayload = Buffer.alloc(500);
+      for (let i = 0; i < 500; i++) jumboPayload[i] = (i * 7) & 0xff;
+      const stdPayload = Buffer.from([0xaa, 0xbb]);
+
+      const jumboFrame = buildMSPJumboResponse(71, jumboPayload);
+      const stdFrame = buildMSPv1Response(2, stdPayload);
+      const combined = Buffer.concat([jumboFrame, stdFrame]);
+
+      const { messages, remaining } = protocol.parseBuffer(combined);
+
+      expect(messages.length).toBe(2);
+      expect(messages[0].command).toBe(71);
+      expect(messages[0].data.length).toBe(500);
+      expect(messages[1].command).toBe(2);
+      expect(messages[1].data.length).toBe(2);
+      expect(remaining.length).toBe(0);
+    });
+
+    it('parses multiple jumbo frames from single buffer', () => {
+      const payload1 = Buffer.alloc(300);
+      const payload2 = Buffer.alloc(600);
+      for (let i = 0; i < 300; i++) payload1[i] = i & 0xff;
+      for (let i = 0; i < 600; i++) payload2[i] = (i * 11) & 0xff;
+
+      const frame1 = buildMSPJumboResponse(71, payload1);
+      const frame2 = buildMSPJumboResponse(72, payload2);
+      const combined = Buffer.concat([frame1, frame2]);
+
+      const { messages, remaining } = protocol.parseBuffer(combined);
+
+      expect(messages.length).toBe(2);
+      expect(messages[0].command).toBe(71);
+      expect(messages[0].data.length).toBe(300);
+      expect(messages[1].command).toBe(72);
+      expect(messages[1].data.length).toBe(600);
+      expect(remaining.length).toBe(0);
+    });
+
+    it('returns remaining bytes for incomplete trailing jumbo frame', () => {
+      const stdFrame = buildMSPv1Response(1, [0x42]);
+      // Build an incomplete jumbo frame (header only, no data)
+      const incompleteJumbo = Buffer.alloc(8);
+      incompleteJumbo[0] = 0x24;
+      incompleteJumbo[1] = 0x4d;
+      incompleteJumbo[2] = 0x3e;
+      incompleteJumbo[3] = 0xff;
+      incompleteJumbo.writeUInt16LE(500, 4); // claims 500 bytes
+      incompleteJumbo[6] = 71;
+
+      const combined = Buffer.concat([stdFrame, incompleteJumbo]);
+      const { messages, remaining } = protocol.parseBuffer(combined);
+
+      expect(messages.length).toBe(1);
+      expect(messages[0].command).toBe(1);
+      // Remaining should include the incomplete jumbo frame
+      expect(remaining.length).toBe(8);
+    });
+
+    it('handles jumbo frame with size exactly 255 (boundary)', () => {
+      const payload = Buffer.alloc(255);
+      for (let i = 0; i < 255; i++) payload[i] = i & 0xff;
+
+      const frame = buildMSPJumboResponse(71, payload);
+      const { messages, remaining } = protocol.parseBuffer(frame);
+
+      expect(messages.length).toBe(1);
+      expect(messages[0].command).toBe(71);
+      expect(messages[0].data.length).toBe(255);
+      expect(remaining.length).toBe(0);
+    });
+
+    it('parses three mixed frames: standard + jumbo + standard', () => {
+      const std1 = buildMSPv1Response(1, [0x10]);
+      const jumbo = buildMSPJumboResponse(71, Buffer.alloc(1000, 0xab));
+      const std2 = buildMSPv1Response(3, [0x20, 0x30]);
+      const combined = Buffer.concat([std1, jumbo, std2]);
+
+      const { messages, remaining } = protocol.parseBuffer(combined);
+
+      expect(messages.length).toBe(3);
+      expect(messages[0].command).toBe(1);
+      expect(messages[0].data.length).toBe(1);
+      expect(messages[1].command).toBe(71);
+      expect(messages[1].data.length).toBe(1000);
+      expect(messages[2].command).toBe(3);
+      expect(messages[2].data.length).toBe(2);
+      expect(remaining.length).toBe(0);
+    });
+
+    it('handles garbage bytes before jumbo frame', () => {
+      const garbage = Buffer.from([0x00, 0xff, 0x42, 0x13]);
+      const jumboPayload = Buffer.alloc(300, 0xcc);
+      const jumboFrame = buildMSPJumboResponse(71, jumboPayload);
+      const combined = Buffer.concat([garbage, jumboFrame]);
+
+      const { messages } = protocol.parseBuffer(combined);
+
+      expect(messages.length).toBe(1);
+      expect(messages[0].command).toBe(71);
+      expect(messages[0].data.length).toBe(300);
+    });
+
+    it('handles corrupted jumbo frame followed by valid standard frame', () => {
+      // Build a jumbo frame with corrupted checksum
+      const jumboPayload = Buffer.alloc(300, 0xdd);
+      const corruptJumbo = buildMSPJumboResponse(71, jumboPayload);
+      corruptJumbo[corruptJumbo.length - 1] ^= 0xff; // corrupt checksum
+
+      const validStd = buildMSPv1Response(2, [0x42]);
+      const combined = Buffer.concat([corruptJumbo, validStd]);
+
+      const { messages } = protocol.parseBuffer(combined);
+
+      // Should skip the corrupt jumbo and find the valid standard frame
+      expect(messages.length).toBe(1);
+      expect(messages[0].command).toBe(2);
+    });
+
+    it('verifies data integrity across multiple jumbo frames', () => {
+      // Simulate a blackbox download: multiple 4096-byte flash reads
+      const chunk1 = Buffer.alloc(4096);
+      const chunk2 = Buffer.alloc(4096);
+      for (let i = 0; i < 4096; i++) {
+        chunk1[i] = i & 0xff;
+        chunk2[i] = (i + 128) & 0xff;
+      }
+
+      const frame1 = buildMSPJumboResponse(71, chunk1);
+      const frame2 = buildMSPJumboResponse(71, chunk2);
+      const combined = Buffer.concat([frame1, frame2]);
+
+      const { messages, remaining } = protocol.parseBuffer(combined);
+
+      expect(messages.length).toBe(2);
+      expect(messages[0].data.length).toBe(4096);
+      expect(messages[1].data.length).toBe(4096);
+      // Verify each byte is correct
+      expect(messages[0].data[0]).toBe(0);
+      expect(messages[0].data[255]).toBe(255);
+      expect(messages[0].data[4095]).toBe(4095 & 0xff);
+      expect(messages[1].data[0]).toBe(128);
+      expect(messages[1].data[4095]).toBe((4095 + 128) & 0xff);
+      expect(remaining.length).toBe(0);
     });
   });
 });

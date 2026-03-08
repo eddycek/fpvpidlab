@@ -50,7 +50,9 @@ export class MSPProtocol {
     const size = data.length;
 
     if (size > MSP_PROTOCOL.MAX_JUMBO_PAYLOAD_SIZE) {
-      throw new MSPError(`Jumbo payload too large: ${size} > ${MSP_PROTOCOL.MAX_JUMBO_PAYLOAD_SIZE}`);
+      throw new MSPError(
+        `Jumbo payload too large: ${size} > ${MSP_PROTOCOL.MAX_JUMBO_PAYLOAD_SIZE}`
+      );
     }
 
     // Jumbo frame: preamble + 0xFF flag + 2-byte size + command + data + checksum
@@ -134,7 +136,7 @@ export class MSPProtocol {
     return {
       command,
       data,
-      error: isError
+      error: isError,
     };
   }
 
@@ -175,7 +177,7 @@ export class MSPProtocol {
     return {
       command,
       data,
-      error: false
+      error: false,
     };
   }
 
@@ -208,8 +210,16 @@ export class MSPProtocol {
         const message = this.decode(buffer.slice(offset));
         if (message) {
           messages.push(message);
-          const size = buffer[offset + 3];
-          offset += 6 + size; // Move past this message
+          // Advance past the decoded message — jumbo frames have a different layout
+          const sizeOrFlag = buffer[offset + 3];
+          if (sizeOrFlag === 0xff) {
+            // Jumbo frame: $M>0xFF<size_lo><size_hi><cmd><data><crc> = 8 + payload
+            const jumboSize = buffer.readUInt16LE(offset + 4);
+            offset += 8 + jumboSize;
+          } else {
+            // Standard frame: $M><size><cmd><data><crc> = 6 + payload
+            offset += 6 + sizeOrFlag;
+          }
         } else {
           // Incomplete message, save remaining
           break;
@@ -222,7 +232,7 @@ export class MSPProtocol {
 
     return {
       messages,
-      remaining: buffer.slice(offset)
+      remaining: buffer.slice(offset),
     };
   }
 }
