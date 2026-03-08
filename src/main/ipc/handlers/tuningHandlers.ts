@@ -33,7 +33,18 @@ export function registerTuningHandlers(deps: HandlerDependencies): void {
         const ffRecs = input.feedforwardRecommendations ?? [];
         const totalRecs =
           input.filterRecommendations.length + input.pidRecommendations.length + ffRecs.length;
-        if (totalRecs === 0) throw new Error('No recommendations to apply');
+
+        // Zero recommendations: skip apply, return success without reboot
+        if (totalRecs === 0) {
+          logger.info('No recommendations to apply — completing without changes');
+          return createResponse<ApplyRecommendationsResult>({
+            success: true,
+            appliedPIDs: 0,
+            appliedFilters: 0,
+            appliedFeedforward: 0,
+            rebooted: false,
+          });
+        }
 
         const sendProgress = (progress: ApplyRecommendationsProgress) => {
           event.sender.send(IPCChannel.EVENT_TUNING_APPLY_PROGRESS, progress);

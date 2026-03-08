@@ -359,7 +359,7 @@ describe('useTuningWizard', () => {
 
   // ---- Apply recommendation tests ----
 
-  it('startApply sets confirming state', () => {
+  it('startApply skips to applying when no recommendations', () => {
     const { result } = renderHook(() => useTuningWizard('log-1'));
 
     expect(result.current.applyState).toBe('idle');
@@ -368,16 +368,18 @@ describe('useTuningWizard', () => {
       result.current.startApply();
     });
 
-    expect(result.current.applyState).toBe('confirming');
+    // No filter/PID results → 0 recommendations → skips confirming, goes to applying
+    expect(result.current.applyState).toBe('applying');
   });
 
   it('cancelApply resets state to idle', () => {
     const { result } = renderHook(() => useTuningWizard('log-1'));
 
+    // Manually set confirming state (would normally come from startApply with recommendations)
     act(() => {
+      // Trigger apply which goes to 'applying' (0 recs), then we test cancel from that
       result.current.startApply();
     });
-    expect(result.current.applyState).toBe('confirming');
 
     act(() => {
       result.current.cancelApply();

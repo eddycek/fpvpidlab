@@ -39,8 +39,9 @@ function getChangeText(current: number, recommended: number): { text: string; cl
   };
 }
 
-function getApplyButtonLabel(mode: TuningMode, applyState: ApplyState): string {
+function getApplyButtonLabel(mode: TuningMode, applyState: ApplyState, hasRecs: boolean): string {
   if (applyState === 'applying') return 'Applying...';
+  if (!hasRecs) return 'Continue (No Changes)';
   switch (mode) {
     case 'filter':
       return 'Apply Filters';
@@ -138,7 +139,7 @@ export function TuningSummaryStep({
     confidenceCounts[rec.confidence]++;
   }
 
-  const isApplyDisabled = totalRecs === 0 || applyState === 'applying' || applyState === 'done';
+  const isApplyDisabled = applyState === 'applying' || applyState === 'done';
 
   return (
     <div className="analysis-section">
@@ -286,7 +287,7 @@ export function TuningSummaryStep({
             disabled={isApplyDisabled}
             onClick={onApply}
           >
-            {getApplyButtonLabel(mode, applyState)}
+            {getApplyButtonLabel(mode, applyState, totalRecs > 0)}
           </button>
         ) : null}
         <button

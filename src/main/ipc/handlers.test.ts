@@ -1258,7 +1258,7 @@ describe('IPC Handlers', () => {
       expect(mockMSP.connection.enterCLI).not.toHaveBeenCalled();
     });
 
-    it('rejects empty recommendations', async () => {
+    it('returns success without reboot when no recommendations', async () => {
       const input = {
         filterRecommendations: [],
         pidRecommendations: [],
@@ -1267,8 +1267,10 @@ describe('IPC Handlers', () => {
       };
       const { event } = createMockEvent();
       const res = await invokeWithEvent(IPCChannel.TUNING_APPLY_RECOMMENDATIONS, event, input);
-      expect(res.success).toBe(false);
-      expect(res.error).toContain('No recommendations');
+      expect(res.success).toBe(true);
+      expect(res.data.appliedPIDs).toBe(0);
+      expect(res.data.appliedFilters).toBe(0);
+      expect(res.data.rebooted).toBe(false);
     });
 
     it('skips snapshot when createSnapshot is false', async () => {

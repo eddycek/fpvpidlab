@@ -222,10 +222,6 @@ export function useTuningWizard(logId: string, mode: TuningMode = 'full'): UseTu
     return cleanup;
   }, []);
 
-  const startApply = useCallback(() => {
-    setApplyState('confirming');
-  }, []);
-
   const cancelApply = useCallback(() => {
     setApplyState('idle');
   }, []);
@@ -236,10 +232,6 @@ export function useTuningWizard(logId: string, mode: TuningMode = 'full'): UseTu
       setApplyProgress(null);
       setApplyError(null);
       setApplyResult(null);
-
-      // Mark the upcoming disconnect as intentional so useConnection
-      // shows "Disconnected" instead of "FC disconnected unexpectedly"
-      markIntentionalDisconnect();
 
       try {
         // In mode-specific modes, only send relevant recommendations
@@ -253,6 +245,13 @@ export function useTuningWizard(logId: string, mode: TuningMode = 'full'): UseTu
               : (pidResult?.recommendations ?? []);
         const pidRecs = allPidRecs.filter((r) => r.setting.startsWith('pid_'));
         const ffRecs = allPidRecs.filter((r) => r.setting.startsWith('feedforward_'));
+
+        const hasChanges = filterRecs.length + pidRecs.length + ffRecs.length > 0;
+
+        // Only mark intentional disconnect when changes will cause a reboot
+        if (hasChanges) {
+          markIntentionalDisconnect();
+        }
 
         const result = await window.betaflight.applyRecommendations({
           filterRecommendations: filterRecs,
@@ -271,6 +270,25 @@ export function useTuningWizard(logId: string, mode: TuningMode = 'full'): UseTu
     },
     [filterResult, pidResult, tfResult, mode]
   );
+
+  const startApply = useCallback(() => {
+    // Check if there are any recommendations to apply
+    const fRecs = mode === 'pid' ? [] : (filterResult?.recommendations ?? []);
+    const pRecs =
+      mode === 'filter'
+        ? []
+        : mode === 'quick'
+          ? (tfResult?.recommendations ?? [])
+          : (pidResult?.recommendations ?? []);
+    const totalRecs = fRecs.length + pRecs.length;
+
+    if (totalRecs === 0) {
+      // No changes — skip confirmation modal, apply directly (returns immediately)
+      confirmApply(false);
+    } else {
+      setApplyState('confirming');
+    }
+  }, [mode, filterResult, pidResult, tfResult, confirmApply]);
 
   return {
     mode,

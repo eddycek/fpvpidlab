@@ -127,7 +127,7 @@ describe('QuickAnalysisStep', () => {
     expect(screen.getByText('PID recommendations from transfer function.')).toBeInTheDocument();
   });
 
-  it('shows continue button with total recommendation count', () => {
+  it('shows continue to summary button when results ready', () => {
     render(
       <QuickAnalysisStep
         {...defaultProps}
@@ -136,7 +136,7 @@ describe('QuickAnalysisStep', () => {
       />
     );
 
-    expect(screen.getByText('Continue with 2 Recommendations')).toBeInTheDocument();
+    expect(screen.getByText('Continue to Summary')).toBeInTheDocument();
   });
 
   it('shows error messages', () => {

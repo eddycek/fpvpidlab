@@ -128,9 +128,7 @@ export function QuickAnalysisStep({
             onClick={onContinue}
             disabled={allRecs.length === 0}
           >
-            {allRecs.length > 0
-              ? `Continue with ${allRecs.length} Recommendations`
-              : 'No Changes to Apply'}
+            {allRecs.length > 0 ? 'Continue to Summary' : 'No Changes to Apply'}
           </button>
           <button className="wizard-btn wizard-btn-secondary" onClick={() => runQuickAnalysis()}>
             Re-analyze

@@ -441,7 +441,7 @@ describe('TuningSummaryStep', () => {
     expect(screen.getByText(/verification hover/)).toBeInTheDocument();
   });
 
-  it('apply button disabled when no recommendations', () => {
+  it('shows continue without changes button when no recommendations', () => {
     const emptyFilterResult: FilterAnalysisResult = {
       ...mockFilterResult,
       recommendations: [],
@@ -465,7 +465,7 @@ describe('TuningSummaryStep', () => {
       />
     );
 
-    const applyButton = screen.getByRole('button', { name: 'Apply Changes' });
-    expect(applyButton).toBeDisabled();
+    const continueButton = screen.getByRole('button', { name: 'Continue (No Changes)' });
+    expect(continueButton).toBeEnabled();
   });
 });

@@ -39,7 +39,9 @@ async function runGuidedCycle(cycleNum: number): Promise<void> {
 
   // 1. Start Tuning Session (modal → Guided Tune)
   await demo.clickButton('Start Tuning Session');
-  await demo.clickButton('Guided Tune');
+  // Use modal-scoped locator to avoid strict mode violation when history has "Quick Tune" text
+  const modal = page.locator('.start-tuning-overlay');
+  await modal.getByRole('button', { name: 'Guided Tune' }).click();
   await demo.waitForText('Erase Blackbox data', WAIT);
 
   // 2. Filter flight: erase → auto-flight → download → analysis → apply
@@ -53,19 +55,26 @@ async function runGuidedCycle(cycleNum: number): Promise<void> {
     .getByRole('button', { name: /Continue to Summary/i })
     .waitFor({ state: 'visible', timeout: ANALYSIS_WAIT });
   await demo.clickButton(/Continue to Summary/i);
-  await page
-    .getByRole('button', { name: 'Apply Filters' })
-    .waitFor({ state: 'visible', timeout: WAIT });
-  await demo.clickButton('Apply Filters');
-  const filterApplyBtns = page.getByRole('button', { name: 'Apply Changes' });
-  await filterApplyBtns.last().waitFor({ state: 'visible', timeout: 5_000 });
-  await filterApplyBtns.last().click();
+
+  // Apply filters or continue without changes
+  const applyFiltersBtn = page.getByRole('button', { name: 'Apply Filters' });
+  const noFilterChangesBtn = page.getByRole('button', { name: 'Continue (No Changes)' });
+  await applyFiltersBtn.or(noFilterChangesBtn).waitFor({ state: 'visible', timeout: WAIT });
+
+  if (await noFilterChangesBtn.isVisible().catch(() => false)) {
+    await noFilterChangesBtn.click();
+  } else {
+    await applyFiltersBtn.click();
+    const filterApplyBtns = page.getByRole('button', { name: 'Apply Changes' });
+    await filterApplyBtns.last().waitFor({ state: 'visible', timeout: 5_000 });
+    await filterApplyBtns.last().click();
+  }
   await page
     .getByRole('button', { name: 'Close Wizard' })
     .waitFor({ state: 'visible', timeout: WAIT });
   await demo.clickButton('Close Wizard');
 
-  console.log(`  Cycle ${cycleNum}: filters applied, continuing to PID...`);
+  console.log(`  Cycle ${cycleNum}: filters handled, continuing to PID...`);
 
   // 3. Continue to PID phase
   const continueBtn = page.getByRole('button', { name: 'Continue' });
@@ -87,19 +96,26 @@ async function runGuidedCycle(cycleNum: number): Promise<void> {
     .getByRole('button', { name: /Continue to Summary/i })
     .waitFor({ state: 'visible', timeout: ANALYSIS_WAIT });
   await demo.clickButton(/Continue to Summary/i);
-  await page
-    .getByRole('button', { name: 'Apply PIDs' })
-    .waitFor({ state: 'visible', timeout: WAIT });
-  await demo.clickButton('Apply PIDs');
-  const pidApplyBtns = page.getByRole('button', { name: 'Apply Changes' });
-  await pidApplyBtns.last().waitFor({ state: 'visible', timeout: 5_000 });
-  await pidApplyBtns.last().click();
+
+  // Apply PIDs or continue without changes
+  const applyPIDsBtn = page.getByRole('button', { name: 'Apply PIDs' });
+  const noPIDChangesBtn = page.getByRole('button', { name: 'Continue (No Changes)' });
+  await applyPIDsBtn.or(noPIDChangesBtn).waitFor({ state: 'visible', timeout: WAIT });
+
+  if (await noPIDChangesBtn.isVisible().catch(() => false)) {
+    await noPIDChangesBtn.click();
+  } else {
+    await applyPIDsBtn.click();
+    const pidApplyBtns = page.getByRole('button', { name: 'Apply Changes' });
+    await pidApplyBtns.last().waitFor({ state: 'visible', timeout: 5_000 });
+    await pidApplyBtns.last().click();
+  }
   await page
     .getByRole('button', { name: 'Close Wizard' })
     .waitFor({ state: 'visible', timeout: WAIT });
   await demo.clickButton('Close Wizard');
 
-  console.log(`  Cycle ${cycleNum}: PIDs applied, completing...`);
+  console.log(`  Cycle ${cycleNum}: PIDs handled, completing...`);
 
   // 5. Skip verification → complete → dismiss
   await page
@@ -130,7 +146,10 @@ async function runQuickCycle(cycleNum: number): Promise<void> {
 
   // 1. Start Quick Tune Session (modal → Quick Tune)
   await demo.clickButton('Start Tuning Session');
-  await demo.clickButton('Quick Tune');
+  // Use modal-scoped locator to avoid strict mode violation
+  // (Tuning History may also contain "Quick Tune" text)
+  const modal = page.locator('.start-tuning-overlay');
+  await modal.getByRole('button', { name: 'Quick Tune' }).click();
   await demo.waitForText('Erase Blackbox data', WAIT);
 
   // 2. Quick flight: erase → auto-flight → download → quick wizard → apply
@@ -146,20 +165,25 @@ async function runQuickCycle(cycleNum: number): Promise<void> {
     .waitFor({ state: 'visible', timeout: ANALYSIS_WAIT });
   await demo.clickButton(/Continue to Summary/i);
 
-  // Apply All Changes
-  await page
-    .getByRole('button', { name: 'Apply All Changes' })
-    .waitFor({ state: 'visible', timeout: WAIT });
-  await demo.clickButton('Apply All Changes');
-  const applyBtns = page.getByRole('button', { name: 'Apply Changes' });
-  await applyBtns.last().waitFor({ state: 'visible', timeout: 5_000 });
-  await applyBtns.last().click();
+  // Apply All Changes or continue without changes
+  const applyAllBtn = page.getByRole('button', { name: 'Apply All Changes' });
+  const noQuickChangesBtn = page.getByRole('button', { name: 'Continue (No Changes)' });
+  await applyAllBtn.or(noQuickChangesBtn).waitFor({ state: 'visible', timeout: WAIT });
+
+  if (await noQuickChangesBtn.isVisible().catch(() => false)) {
+    await noQuickChangesBtn.click();
+  } else {
+    await applyAllBtn.click();
+    const applyBtns = page.getByRole('button', { name: 'Apply Changes' });
+    await applyBtns.last().waitFor({ state: 'visible', timeout: 5_000 });
+    await applyBtns.last().click();
+  }
   await page
     .getByRole('button', { name: 'Close Wizard' })
     .waitFor({ state: 'visible', timeout: WAIT });
   await demo.clickButton('Close Wizard');
 
-  console.log(`  Cycle ${cycleNum}: all changes applied, completing...`);
+  console.log(`  Cycle ${cycleNum}: all changes handled, completing...`);
 
   // 3. Skip verification → complete → dismiss
   await page
