@@ -1,6 +1,6 @@
 # Tuning Precision Improvements
 
-> **Status**: Active (PRs #119–#120, #137, #146–#152, #156–#160 — 11/15 implemented)
+> **Status**: Active (PRs #119–#120, #137, #146–#152, #156–#160 — 12/15 implemented)
 
 Research-based analysis of techniques to improve tuning recommendation accuracy. Prioritized by impact and implementation effort.
 
@@ -236,7 +236,7 @@ Display as trend chart in TuningHistoryPanel across tuning sessions.
 
 Map PID recommendations to Betaflight Configurator's slider positions (master multiplier, PD ratio) instead of raw values. More intuitive for users familiar with the configurator UI.
 
-### 13. Mechanical Health Diagnostic
+### 13. ✅ Mechanical Health Diagnostic — `MechanicalHealthChecker.ts`
 
 Before PID tuning, check for extreme noise floor (>-20 dB), asymmetric per-axis noise (bent prop/damaged motor), or abnormal motor output variance. Flag mechanical issues and recommend inspection before tuning.
 

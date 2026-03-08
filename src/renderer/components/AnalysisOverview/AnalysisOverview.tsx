@@ -240,6 +240,20 @@ export function AnalysisOverview({ logId, logName, onExit }: AnalysisOverviewPro
             )}
           </div>
 
+          {overview.filterResult.mechanicalHealth &&
+            overview.filterResult.mechanicalHealth.status !== 'ok' &&
+            overview.filterResult.mechanicalHealth.issues.map((issue, i) => (
+              <div
+                key={`mech-${i}`}
+                className={`analysis-warning analysis-warning--${issue.severity === 'critical' ? 'error' : 'warning'}`}
+              >
+                <span className="analysis-warning-icon">
+                  {issue.severity === 'critical' ? '\u274C' : '\u26A0\uFE0F'}
+                </span>
+                <span>{issue.message}</span>
+              </div>
+            ))}
+
           {overview.filterResult.rpmFilterActive && (
             <div className="analysis-warning analysis-warning--info">
               <span className="analysis-warning-icon">{'\u2139\uFE0F'}</span>

@@ -23,6 +23,7 @@ import { scoreFilterDataQuality, adjustFilterConfidenceByQuality } from './DataQ
 import { computeThrottleSpectrogram } from './ThrottleSpectrogramAnalyzer';
 import { estimateGroupDelay } from './GroupDelayEstimator';
 import { analyzeWindDisturbance } from './WindDisturbanceDetector';
+import { checkMechanicalHealth } from './MechanicalHealthChecker';
 import { FFT_WINDOW_SIZE, FREQUENCY_MIN_HZ, FREQUENCY_MAX_HZ } from './constants';
 
 /** Maximum number of segments to use (more = slower but more accurate) */
@@ -147,6 +148,9 @@ export async function analyze(
   // Step 6: Wind/disturbance detection
   const windDisturbance = analyzeWindDisturbance(flightData);
 
+  // Step 7: Mechanical health diagnostic
+  const mechanicalHealth = checkMechanicalHealth(flightData, noiseProfile);
+
   onProgress?.({ step: 'recommending', percent: 100 });
 
   return {
@@ -162,6 +166,7 @@ export async function analyze(
     ...(throttleSpectrogram?.bandsWithData ? { throttleSpectrogram } : {}),
     groupDelay,
     windDisturbance,
+    mechanicalHealth,
   };
 }
 
@@ -218,6 +223,9 @@ async function analyzeEntireFlight(
   // Wind/disturbance detection
   const windDisturbance = analyzeWindDisturbance(flightData);
 
+  // Mechanical health diagnostic
+  const mechanicalHealth = checkMechanicalHealth(flightData, noiseProfile);
+
   return {
     noise: noiseProfile,
     recommendations,
@@ -231,6 +239,7 @@ async function analyzeEntireFlight(
     ...(throttleSpectrogram?.bandsWithData ? { throttleSpectrogram } : {}),
     groupDelay,
     windDisturbance,
+    mechanicalHealth,
   };
 }
 

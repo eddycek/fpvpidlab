@@ -122,6 +122,20 @@ export function FilterAnalysisStep({
           )}
         </div>
 
+        {filterResult.mechanicalHealth &&
+          filterResult.mechanicalHealth.status !== 'ok' &&
+          filterResult.mechanicalHealth.issues.map((issue, i) => (
+            <div
+              key={i}
+              className={`analysis-warning analysis-warning--${issue.severity === 'critical' ? 'error' : 'warning'}`}
+            >
+              <span className="analysis-warning-icon">
+                {issue.severity === 'critical' ? '\u274C' : '\u26A0\uFE0F'}
+              </span>
+              <span>{issue.message}</span>
+            </div>
+          ))}
+
         {filterResult.rpmFilterActive && (
           <div className="analysis-warning analysis-warning--info">
             <span className="analysis-warning-icon">{'\u2139\uFE0F'}</span>

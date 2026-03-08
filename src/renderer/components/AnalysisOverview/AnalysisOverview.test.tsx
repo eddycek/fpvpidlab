@@ -808,6 +808,60 @@ describe('AnalysisOverview', () => {
     expect(screen.queryByText(/Wind:/)).not.toBeInTheDocument();
   });
 
+  it('shows mechanical health warnings when issues detected', async () => {
+    const filterWithHealth: FilterAnalysisResult = {
+      ...mockFilterResult,
+      mechanicalHealth: {
+        status: 'critical',
+        issues: [
+          {
+            type: 'extreme_noise',
+            severity: 'critical',
+            message: 'Extreme noise on roll axis (-15 dB). Check for damaged prop.',
+            affectedAxis: 'roll',
+            measuredValue: -15,
+            threshold: -20,
+          },
+        ],
+        noiseFloors: { roll: -15, pitch: -45, yaw: -45 },
+        summary: 'Critical mechanical issues detected.',
+      },
+    };
+    vi.mocked(window.betaflight.parseBlackboxLog).mockResolvedValue(mockParseResult);
+    vi.mocked(window.betaflight.analyzeFilters).mockResolvedValue(filterWithHealth);
+    vi.mocked(window.betaflight.analyzePID).mockResolvedValue(mockPIDResult);
+
+    render(<AnalysisOverview logId="log-1" logName="blackbox_2026-02-11.bbl" onExit={onExit} />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Extreme noise on roll axis/)).toBeInTheDocument();
+    });
+  });
+
+  it('does not show mechanical health warnings when status is ok', async () => {
+    const filterWithHealthOk: FilterAnalysisResult = {
+      ...mockFilterResult,
+      mechanicalHealth: {
+        status: 'ok',
+        issues: [],
+        noiseFloors: { roll: -45, pitch: -45, yaw: -45 },
+        summary: 'Mechanical health looks good.',
+      },
+    };
+    vi.mocked(window.betaflight.parseBlackboxLog).mockResolvedValue(mockParseResult);
+    vi.mocked(window.betaflight.analyzeFilters).mockResolvedValue(filterWithHealthOk);
+    vi.mocked(window.betaflight.analyzePID).mockResolvedValue(mockPIDResult);
+
+    render(<AnalysisOverview logId="log-1" logName="blackbox_2026-02-11.bbl" onExit={onExit} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('low')).toBeInTheDocument();
+    });
+
+    expect(screen.queryByText(/Extreme noise/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Asymmetric noise/)).not.toBeInTheDocument();
+  });
+
   it('log name is not clickable for single-session logs', async () => {
     vi.mocked(window.betaflight.parseBlackboxLog).mockResolvedValue(mockParseResult);
     vi.mocked(window.betaflight.analyzeFilters).mockResolvedValue(mockFilterResult);

@@ -122,6 +122,8 @@ export interface FilterAnalysisResult {
   groupDelay?: FilterGroupDelay;
   /** Wind/disturbance detection result */
   windDisturbance?: WindDisturbanceResult;
+  /** Mechanical health diagnostic result */
+  mechanicalHealth?: MechanicalHealthResult;
 }
 
 // ---- Throttle Spectrogram Types ----
@@ -445,6 +447,41 @@ export interface PropWashEvent {
   severityRatio: number;
   /** Per-axis energy in the prop wash band */
   axisEnergy: { roll: number; pitch: number; yaw: number };
+}
+
+// ---- Mechanical Health Types ----
+
+/** Severity of a mechanical health issue */
+export type HealthSeverity = 'ok' | 'warning' | 'critical';
+
+/** A detected mechanical health issue */
+export interface MechanicalHealthIssue {
+  /** Type of detected issue */
+  type: 'extreme_noise' | 'axis_asymmetry' | 'motor_imbalance';
+  /** Severity level */
+  severity: HealthSeverity;
+  /** Human-readable description */
+  message: string;
+  /** Affected axis or motor (if applicable) */
+  affectedAxis?: 'roll' | 'pitch' | 'yaw';
+  /** Measured value that triggered the issue */
+  measuredValue: number;
+  /** Threshold that was exceeded */
+  threshold: number;
+}
+
+/** Mechanical health diagnostic result */
+export interface MechanicalHealthResult {
+  /** Overall health status */
+  status: HealthSeverity;
+  /** Detected issues (empty if healthy) */
+  issues: MechanicalHealthIssue[];
+  /** Per-axis noise floors used for diagnosis */
+  noiseFloors: { roll: number; pitch: number; yaw: number };
+  /** Per-motor variance during hover (if motor data available) */
+  motorVariance?: [number, number, number, number];
+  /** Human-readable summary */
+  summary: string;
 }
 
 // ---- Wind Disturbance Detection Types ----
