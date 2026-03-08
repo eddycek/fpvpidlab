@@ -393,6 +393,10 @@ export interface PIDAnalysisResult {
   bayesianSuggestion?: BayesianSuggestion;
   /** D-term effectiveness analysis */
   dTermEffectiveness?: DTermEffectiveness;
+  /** Current PID gains mapped to BF Configurator slider positions */
+  sliderPosition?: SliderPosition;
+  /** Slider change summary when recommendations are applied */
+  sliderDelta?: { masterMultiplierDelta: number; pdRatioDelta: number; summary: string };
 }
 
 // ---- D-Term Effectiveness Types ----
@@ -449,6 +453,34 @@ export interface PropWashEvent {
   severityRatio: number;
   /** Per-axis energy in the prop wash band */
   axisEnergy: { roll: number; pitch: number; yaw: number };
+}
+
+// ---- Slider Position Types ----
+
+/** Per-axis PID slider multiplier */
+export interface AxisSliderPosition {
+  /** P multiplier relative to BF default */
+  pMultiplier: number;
+  /** I multiplier relative to BF default */
+  iMultiplier: number;
+  /** D multiplier relative to BF default */
+  dMultiplier: number;
+}
+
+/** Slider-aligned representation of PID gains */
+export interface SliderPosition {
+  /** Master multiplier (1.0 = BF defaults) */
+  masterMultiplier: number;
+  /** P/D ratio relative to defaults (1.0 = default balance) */
+  pdRatio: number;
+  /** Per-axis slider summary */
+  axes: {
+    roll: AxisSliderPosition;
+    pitch: AxisSliderPosition;
+    yaw: AxisSliderPosition;
+  };
+  /** Human-readable summary */
+  summary: string;
 }
 
 // ---- Dynamic Lowpass Analysis Types ----

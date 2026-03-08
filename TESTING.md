@@ -163,7 +163,7 @@ npm run test:ui           # Visual interface with DOM snapshots
 
 ## Test Inventory
 
-**Total: 2221 unit tests across 110 files + 25 Playwright E2E tests** (last verified: March 8, 2026)
+**Total: 2237 unit tests across 111 files + 25 Playwright E2E tests** (last verified: March 8, 2026)
 
 ### UI Components
 
@@ -317,6 +317,7 @@ npm run test:ui           # Visual interface with DOM snapshots
 | `analysis/WindDisturbanceDetector.test.ts` | 11 | Wind/disturbance detection, gyro variance during hover, calm/moderate/windy classification, per-axis independence, hover-only analysis, multiple segments |
 | `analysis/MechanicalHealthChecker.test.ts` | 13 | Mechanical health diagnostic, extreme noise detection, axis asymmetry, motor imbalance, combined issues, threshold edge cases |
 | `analysis/DynamicLowpassRecommender.test.ts` | 13 | Dynamic lowpass analysis, throttle-noise correlation, recommendation generation, threshold validation |
+| `analysis/SliderMapper.test.ts` | 16 | Slider-aligned PID mapping, master multiplier, PD ratio, buildRecommendedPIDs, slider delta computation |
 | `analysis/BayesianPIDOptimizer.test.ts` | 31 | Gaussian Process surrogate, Expected Improvement, Latin Hypercube Sampling, bounds |
 | `analysis/TransferFunctionEstimator.test.ts` | 21 | Wiener deconvolution, frequency response estimation, Bode plot data, PID recommendations from transfer function |
 | `analysis/AnalysisPipeline.realdata.test.ts` | 20 | End-to-end filter+PID analysis with bf45-reference fixture and real_flight.bbl, safety bounds, determinism, performance |
