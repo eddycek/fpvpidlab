@@ -7,6 +7,7 @@
 import type { PIDConfiguration } from '@shared/types/pid.types';
 import type {
   AxisStepProfile,
+  DTermEffectiveness,
   FeedforwardContext,
   PIDRecommendation,
 } from '@shared/types/analysis.types';
@@ -53,7 +54,8 @@ export function recommendPID(
   flightPIDs?: PIDConfiguration,
   feedforwardContext?: FeedforwardContext,
   flightStyle: FlightStyle = 'balanced',
-  tfMetrics?: TransferFunctionContext
+  tfMetrics?: TransferFunctionContext,
+  dTermEffectiveness?: DTermEffectiveness
 ): PIDRecommendation[] {
   const recommendations: PIDRecommendation[] = [];
   const profiles = [roll, pitch, yaw] as const;
@@ -258,6 +260,12 @@ export function recommendPID(
   // Only applies to roll and pitch (yaw often has D=0).
   validateDampingRatio(recommendations, currentPIDs);
 
+  // Post-process: apply D-term effectiveness context to D recommendations
+  // (runs after damping ratio to annotate all D recs including ratio-generated ones)
+  if (dTermEffectiveness) {
+    applyDTermEffectiveness(recommendations, dTermEffectiveness);
+  }
+
   return recommendations;
 }
 
@@ -327,6 +335,31 @@ function validateDampingRatio(
           confidence: 'medium',
         });
       }
+    }
+  }
+}
+
+/**
+ * Post-process D recommendations using D-term effectiveness data.
+ *
+ * - Boosts confidence on D-increase when D is critical for stability
+ * - Adds advisory note when D effectiveness is low (<0.3)
+ */
+function applyDTermEffectiveness(
+  recommendations: PIDRecommendation[],
+  dte: DTermEffectiveness
+): void {
+  for (const rec of recommendations) {
+    if (!rec.setting.includes('_d')) continue;
+
+    const isIncrease = rec.recommendedValue > rec.currentValue;
+
+    if (isIncrease && dte.dCritical) {
+      rec.confidence = 'high';
+    }
+
+    if (!isIncrease && dte.overall < 0.3) {
+      rec.reason += ' D-term effectiveness is low — D may not be doing much dampening work.';
     }
   }
 }

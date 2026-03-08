@@ -385,6 +385,22 @@ export interface PIDAnalysisResult {
   propWash?: PropWashAnalysis;
   /** Bayesian optimizer suggestion for next PID gains */
   bayesianSuggestion?: BayesianSuggestion;
+  /** D-term effectiveness analysis */
+  dTermEffectiveness?: DTermEffectiveness;
+}
+
+// ---- D-Term Effectiveness Types ----
+
+/** D-term effectiveness analysis result */
+export interface DTermEffectiveness {
+  /** Per-axis D-term effectiveness ratio (0-1) */
+  roll: number;
+  pitch: number;
+  yaw: number;
+  /** Overall effectiveness (weighted average of roll+pitch, yaw excluded) */
+  overall: number;
+  /** Whether D-term is critical for stability */
+  dCritical: boolean;
 }
 
 // ---- Cross-Axis Coupling Types ----

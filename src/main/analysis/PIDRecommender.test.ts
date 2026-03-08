@@ -1169,4 +1169,86 @@ describe('PIDRecommender', () => {
       expect(resultRatio).toBeLessThanOrEqual(DAMPING_RATIO_MAX);
     });
   });
+
+  describe('D-term effectiveness integration', () => {
+    const overshooting = makeProfile({
+      meanOvershoot: 40,
+      responses: [makeResponse({ overshootPercent: 40, ringingCount: 3 })],
+    });
+
+    it('should boost D-increase confidence to high when dCritical is true', () => {
+      const recs = recommendPID(
+        overshooting,
+        overshooting,
+        makeProfile(),
+        DEFAULT_PIDS,
+        undefined,
+        undefined,
+        'balanced',
+        undefined,
+        { roll: 0.8, pitch: 0.8, yaw: 0.1, overall: 0.8, dCritical: true }
+      );
+      const dIncrease = recs.find(
+        (r) => r.setting.includes('_d') && r.recommendedValue > r.currentValue
+      );
+      if (dIncrease) {
+        expect(dIncrease.confidence).toBe('high');
+      }
+    });
+
+    it('should add advisory note when D effectiveness is low and D is being decreased', () => {
+      // Create a scenario where D might be recommended to decrease (overdamped)
+      const good = makeProfile({
+        meanOvershoot: 5,
+        responses: [makeResponse({ overshootPercent: 5, ringingCount: 0 })],
+      });
+      const pids: PIDConfiguration = {
+        roll: { P: 40, I: 80, D: 60 }, // High D/P ratio → may trigger decrease
+        pitch: { P: 40, I: 80, D: 60 },
+        yaw: { P: 45, I: 80, D: 0 },
+      };
+      const recs = recommendPID(
+        good,
+        good,
+        makeProfile(),
+        pids,
+        undefined,
+        undefined,
+        'balanced',
+        undefined,
+        { roll: 0.1, pitch: 0.1, yaw: 0, overall: 0.1, dCritical: false }
+      );
+      const dDecrease = recs.find(
+        (r) => r.setting.includes('_d') && r.recommendedValue < r.currentValue
+      );
+      if (dDecrease) {
+        expect(dDecrease.reason).toContain('D-term effectiveness is low');
+      }
+    });
+
+    it('should not modify non-D recommendations', () => {
+      const recs = recommendPID(
+        overshooting,
+        overshooting,
+        makeProfile(),
+        DEFAULT_PIDS,
+        undefined,
+        undefined,
+        'balanced',
+        undefined,
+        { roll: 0.9, pitch: 0.9, yaw: 0.1, overall: 0.9, dCritical: true }
+      );
+      const pRecs = recs.filter((r) => r.setting.includes('_p'));
+      // P recommendations should not be affected by D-term effectiveness
+      for (const rec of pRecs) {
+        expect(rec.reason).not.toContain('D-term effectiveness');
+      }
+    });
+
+    it('should work correctly when dTermEffectiveness is undefined', () => {
+      const recs = recommendPID(overshooting, overshooting, makeProfile(), DEFAULT_PIDS);
+      // Should produce recommendations without errors
+      expect(recs.length).toBeGreaterThan(0);
+    });
+  });
 });
