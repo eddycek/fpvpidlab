@@ -31,6 +31,7 @@ import { analyzeCrossAxisCoupling } from './CrossAxisDetector';
 import { analyzePropWash } from './PropWashDetector';
 import { suggestNextPID, type PIDObservation } from './BayesianPIDOptimizer';
 import { analyzeDTermEffectiveness } from './DTermAnalyzer';
+import { mapToSliders, computeSliderDelta, buildRecommendedPIDs } from './SliderMapper';
 
 /** Default PID configuration if none provided */
 const DEFAULT_PIDS: PIDConfiguration = {
@@ -232,6 +233,15 @@ export async function analyzePID(
     ...(propWash ? { propWash } : {}),
     ...(bayesianSuggestion ? { bayesianSuggestion } : {}),
     ...(dTermEffectiveness ? { dTermEffectiveness } : {}),
+    sliderPosition: mapToSliders(currentPIDs),
+    ...(recommendations.length > 0
+      ? {
+          sliderDelta: computeSliderDelta(
+            currentPIDs,
+            buildRecommendedPIDs(currentPIDs, recommendations)
+          ),
+        }
+      : {}),
   };
 }
 
@@ -362,6 +372,15 @@ export async function analyzeTransferFunction(
     analysisMethod: 'wiener_deconvolution',
     ...(warnings.length > 0 ? { warnings } : {}),
     transferFunction: tfResult,
+    sliderPosition: mapToSliders(currentPIDs),
+    ...(recommendations.length > 0
+      ? {
+          sliderDelta: computeSliderDelta(
+            currentPIDs,
+            buildRecommendedPIDs(currentPIDs, recommendations)
+          ),
+        }
+      : {}),
   };
 }
 

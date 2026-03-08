@@ -1,6 +1,6 @@
 # Tuning Precision Improvements
 
-> **Status**: Active (PRs #119–#120, #137, #146–#152, #156–#160 — 13/15 implemented)
+> **Status**: Active (PRs #119–#120, #137, #146–#152, #156–#160 — 14/15 implemented)
 
 Research-based analysis of techniques to improve tuning recommendation accuracy. Prioritized by impact and implementation effort.
 
@@ -232,7 +232,7 @@ Display as trend chart in TuningHistoryPanel across tuning sessions.
 
 ## Lower Priority
 
-### 12. Slider-Aligned Recommendations
+### 12. ✅ Slider-Aligned Recommendations — `SliderMapper.ts`
 
 Map PID recommendations to Betaflight Configurator's slider positions (master multiplier, PD ratio) instead of raw values. More intuitive for users familiar with the configurator UI.
 
