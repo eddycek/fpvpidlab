@@ -38,8 +38,9 @@ async function runTuningCycle(cycleNum: number): Promise<void> {
 
   console.log(`\n=== Starting tuning cycle ${cycleNum} ===`);
 
-  // 1. Start Tuning Session
+  // 1. Start Tuning Session (modal → Guided Tune)
   await demo.clickButton('Start Tuning Session');
+  await demo.clickButton('Guided Tune');
   await demo.waitForText('Erase Blackbox data', WAIT);
 
   // 2. Filter flight: erase → auto-flight → download → analysis → apply

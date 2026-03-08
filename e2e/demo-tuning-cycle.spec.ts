@@ -26,6 +26,9 @@ test.describe.serial('single tuning cycle', () => {
   test('start tuning session', async () => {
     await demo.clickButton('Start Tuning Session');
 
+    // StartTuningModal opens — select Guided Tune
+    await demo.clickButton('Guided Tune');
+
     // Should show filter_flight_pending phase
     await demo.waitForText('Erase Blackbox data');
     await demo.screenshot('02-tuning-started');

@@ -501,6 +501,35 @@ export function generateVerificationDemoBBL(cycle = 0): Buffer {
 }
 
 /**
+ * Generate a demo BBL buffer for Quick Tune (single flight with hover + stick inputs).
+ *
+ * Contains one session with:
+ * - ~15 seconds of flight data at 4000 Hz (I-frame only, iInterval=2)
+ * - Moderate noise (for filter analysis from hover segments)
+ * - 12 step inputs across all 3 axes (for transfer function / PID analysis)
+ * - Cycle-dependent noise and step response quality
+ * - Multi-phase throttle profile for segment detection
+ *
+ * @param cycle - Tuning cycle number (0 = first, higher = progressively cleaner)
+ */
+export function generateQuickDemoBBL(cycle = 0): Buffer {
+  const f = progressiveFactor(cycle);
+  logger.info(`[DEMO] Generating quick tune demo BBL (cycle ${cycle}, factor ${f.toFixed(2)})...`);
+  return buildDemoSession({
+    frameCount: 60000, // 15s at 4000 Hz — enough for hover segments + 12 steps
+    gyroBase: [2, -1, 0],
+    noiseAmplitude: 12 * f,
+    motorHarmonicHz: 160,
+    motorHarmonicAmplitude: 30 * f,
+    electricalNoiseHz: 600,
+    electricalNoiseAmplitude: 6 * f,
+    injectSteps: true,
+    iInterval: 2,
+    responseParams: computeCycleResponseParams(cycle),
+  });
+}
+
+/**
  * Generate a combined demo BBL with both filter-suitable and PID-suitable sessions.
  * Session 1: hover + noise (for filter analysis)
  * Session 2: stick snaps (for PID analysis)

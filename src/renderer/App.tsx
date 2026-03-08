@@ -38,6 +38,7 @@ import type {
   CompletedTuningRecord,
   FilterMetricsSummary,
   PIDMetricsSummary,
+  TransferFunctionMetricsSummary,
 } from '@shared/types/tuning-history.types';
 import { extractFilterMetrics } from '@shared/utils/metricsExtract';
 import type { TuningAction } from './components/TuningStatusBanner/TuningStatusBanner';
@@ -224,6 +225,8 @@ function AppContent() {
             await tuning.updatePhase('filter_analysis', { filterLogId: imported.id });
           } else if (importPhase === 'pid_log_ready') {
             await tuning.updatePhase('pid_analysis', { pidLogId: imported.id });
+          } else if (importPhase === 'quick_log_ready') {
+            await tuning.updatePhase('quick_analysis', { quickLogId: imported.id });
           } else if (importPhase === 'verification_pending') {
             await tuning.updatePhase('verification_pending', { verificationLogId: imported.id });
           }
@@ -251,6 +254,11 @@ function AppContent() {
           } else if (phase === 'pid_log_ready') {
             await tuning.updatePhase('pid_analysis', {
               pidLogId: metadata.id,
+              eraseCompleted: undefined,
+            });
+          } else if (phase === 'quick_log_ready') {
+            await tuning.updatePhase('quick_analysis', {
+              quickLogId: metadata.id,
               eraseCompleted: undefined,
             });
           } else if (phase === 'verification_pending') {
@@ -282,6 +290,16 @@ function AppContent() {
         if (pidLogId) {
           setWizardMode('pid');
           setActiveLogId(pidLogId);
+        } else {
+          toast.info('Download a Blackbox log first');
+        }
+        break;
+      }
+      case 'open_quick_wizard': {
+        const quickLogId = tuning.session?.quickLogId;
+        if (quickLogId) {
+          setWizardMode('quick');
+          setActiveLogId(quickLogId);
         } else {
           toast.info('Download a Blackbox log first');
         }
@@ -355,6 +373,7 @@ function AppContent() {
     feedforwardChanges?: AppliedChange[];
     filterMetrics?: FilterMetricsSummary;
     pidMetrics?: PIDMetricsSummary;
+    transferFunctionMetrics?: TransferFunctionMetricsSummary;
   }) => {
     const phase = tuning.session?.phase;
     if (phase === 'filter_analysis') {
@@ -367,6 +386,14 @@ function AppContent() {
         appliedPIDChanges: changes.pidChanges,
         appliedFeedforwardChanges: changes.feedforwardChanges,
         pidMetrics: changes.pidMetrics,
+      });
+    } else if (phase === 'quick_analysis') {
+      await tuning.updatePhase('quick_applied', {
+        appliedFilterChanges: changes.filterChanges,
+        appliedPIDChanges: changes.pidChanges,
+        appliedFeedforwardChanges: changes.feedforwardChanges,
+        filterMetrics: changes.filterMetrics,
+        transferFunctionMetrics: changes.transferFunctionMetrics,
       });
     }
   };
@@ -454,6 +481,8 @@ function AppContent() {
         setWizardMode('filter');
       } else if (phase === 'pid_analysis') {
         setWizardMode('pid');
+      } else if (phase === 'quick_analysis') {
+        setWizardMode('quick');
       } else {
         setWizardMode('filter');
       }

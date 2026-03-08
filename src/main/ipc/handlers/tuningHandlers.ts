@@ -221,6 +221,11 @@ export function registerTuningHandlers(deps: HandlerDependencies): void {
           }
         }
 
+        // Tell MockMSPClient to generate quick BBL data when quick mode is selected
+        if (resolvedType === 'quick' && deps.isDemoMode && mspClient instanceof MockMSPClient) {
+          mspClient.setQuickTuneMode();
+        }
+
         const session = await tuningSessionManager.createSession(profileId, resolvedType);
         const initialPhase =
           resolvedType === 'quick' ? 'quick_flight_pending' : 'filter_flight_pending';
