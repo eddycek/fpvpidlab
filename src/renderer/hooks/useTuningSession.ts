@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
-import type { TuningSession, TuningPhase } from '@shared/types/tuning.types';
+import type { TuningSession, TuningPhase, TuningType } from '@shared/types/tuning.types';
 
 export interface UseTuningSessionReturn {
   session: TuningSession | null;
   loading: boolean;
-  startSession: () => Promise<void>;
+  startSession: (tuningType?: TuningType) => Promise<void>;
   resetSession: () => Promise<void>;
   updatePhase: (phase: TuningPhase, data?: Partial<TuningSession>) => Promise<void>;
 }
@@ -44,8 +44,8 @@ export function useTuningSession(): UseTuningSessionReturn {
     });
   }, [reload]);
 
-  const startSession = useCallback(async () => {
-    const s = await window.betaflight.startTuningSession();
+  const startSession = useCallback(async (tuningType?: TuningType) => {
+    const s = await window.betaflight.startTuningSession(tuningType);
     setSession(s);
   }, []);
 

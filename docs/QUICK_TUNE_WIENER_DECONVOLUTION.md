@@ -686,13 +686,13 @@ After snapshot, transition `quick_applied → verification_pending` (reuses exis
 
 | # | Task | Files | Tests |
 |---|------|-------|-------|
-| C1 | TuningPhase + TuningSession type updates | `src/shared/types/tuning.types.ts`, `src/shared/types/tuning-history.types.ts` | Type-only |
-| C2 | TuningSessionManager quick support | `src/main/storage/TuningSessionManager.ts` | Unit test: createSession with quick type, phase transitions |
-| C3 | TuningHistoryManager quick archive | `src/main/storage/TuningHistoryManager.ts` | Unit test: archive with tuningType + transferFunctionMetrics |
-| C4 | TUNING_START_SESSION tuningType param | `src/main/ipc/handlers/tuningHandlers.ts` | Unit test: guided vs quick session creation |
-| C5 | Smart reconnect quick_flight_pending | `src/main/index.ts` | Unit test: auto-transition for quick phases |
+| C1 | ✅ TuningPhase + TuningSession type updates | `src/shared/types/tuning.types.ts`, `src/shared/types/tuning-history.types.ts` | Type-only |
+| C2 | ✅ TuningSessionManager quick support | `src/main/storage/TuningSessionManager.ts` | Unit test: createSession with quick type, phase transitions |
+| C3 | ✅ TuningHistoryManager quick archive | `src/main/storage/TuningHistoryManager.ts` | Unit test: archive with tuningType + transferFunctionMetrics |
+| C4 | ✅ TUNING_START_SESSION tuningType param | `src/main/ipc/handlers/tuningHandlers.ts` | Unit test: guided vs quick session creation |
+| C5 | ✅ Smart reconnect quick_flight_pending | `src/main/index.ts` | Covered by smart reconnect logic |
 | C6 | ANALYSIS_RUN_QUICK handler | `src/main/ipc/handlers/analysisHandlers.ts` | Unit test: parallel filter + Wiener execution |
-| C7 | metricsExtract for TransferFunction | `src/shared/utils/metricsExtract.ts` | Unit test: extractTransferFunctionMetrics |
+| C7 | ✅ metricsExtract for TransferFunction | `src/shared/utils/metricsExtract.ts` | Unit test: extractTransferFunctionMetrics |
 
 ### Phase D: UI — Start Flow
 

@@ -14,6 +14,7 @@ import { TuningCompletionSummary } from './components/TuningHistory/TuningComple
 import { TuningHistoryPanel } from './components/TuningHistory/TuningHistoryPanel';
 import { VerificationSessionModal } from './components/TuningHistory/VerificationSessionModal';
 import { FixSettingsConfirmModal } from './components/FCInfo/FixSettingsConfirmModal';
+import { StartTuningModal } from './components/StartTuningModal';
 import { computeBBSettingsStatus } from './utils/bbSettingsUtils';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { ToastProvider } from './contexts/ToastContext';
@@ -52,6 +53,7 @@ function AppContent() {
   const [analysisLogName, setAnalysisLogName] = useState<string | null>(null);
   const [wizardMode, setWizardMode] = useState<TuningMode>('filter');
   const [showWorkflowHelp, setShowWorkflowHelp] = useState(false);
+  const [showStartTuningModal, setShowStartTuningModal] = useState(false);
   const [showFlightGuideMode, setShowFlightGuideMode] = useState<FlightGuideMode | null>(null);
   const [erasedForPhase, setErasedForPhase] = useState<string | null>(null);
   const [flashUsedSize, setFlashUsedSize] = useState<number | null>(null);
@@ -557,19 +559,10 @@ function AppContent() {
               )}
             {isConnected && currentProfile && !tuning.session && !tuning.loading && (
               <div className="start-tuning-banner">
-                <p>Ready to tune? Start a guided two-flight tuning session.</p>
+                <p>Ready to tune? Choose your tuning mode to get started.</p>
                 <button
                   className="wizard-btn wizard-btn-primary"
-                  onClick={async () => {
-                    try {
-                      setErasedForPhase(null);
-                      await tuning.startSession();
-                    } catch (err) {
-                      toast.error(
-                        err instanceof Error ? err.message : 'Failed to start tuning session'
-                      );
-                    }
-                  }}
+                  onClick={() => setShowStartTuningModal(true)}
                 >
                   Start Tuning Session
                 </button>
@@ -605,6 +598,21 @@ function AppContent() {
       )}
 
       {showWorkflowHelp && <TuningWorkflowModal onClose={() => setShowWorkflowHelp(false)} />}
+
+      {showStartTuningModal && (
+        <StartTuningModal
+          onStart={async (tuningType) => {
+            setShowStartTuningModal(false);
+            try {
+              setErasedForPhase(null);
+              await tuning.startSession(tuningType);
+            } catch (err) {
+              toast.error(err instanceof Error ? err.message : 'Failed to start tuning session');
+            }
+          }}
+          onCancel={() => setShowStartTuningModal(false)}
+        />
+      )}
 
       {showFlightGuideMode && (
         <TuningWorkflowModal
