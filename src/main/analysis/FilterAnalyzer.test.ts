@@ -356,4 +356,20 @@ describe('analyze', () => {
     // Too few samples per band → no spectrogram
     expect(result.throttleSpectrogram).toBeUndefined();
   });
+
+  it('should include groupDelay with default settings', async () => {
+    const data = createFlightData({
+      sampleRate: 4000,
+      durationS: 2,
+      backgroundNoise: 0.5,
+    });
+
+    const result = await analyze(data, 0);
+
+    expect(result.groupDelay).toBeDefined();
+    expect(result.groupDelay!.gyroTotalMs).toBeGreaterThan(0);
+    expect(result.groupDelay!.dtermTotalMs).toBeGreaterThan(0);
+    expect(result.groupDelay!.filters.length).toBeGreaterThan(0);
+    expect(result.groupDelay!.referenceFreqHz).toBe(80);
+  });
 });
