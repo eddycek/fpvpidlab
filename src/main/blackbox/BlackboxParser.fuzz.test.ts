@@ -9,10 +9,10 @@ import { BlackboxParser, BlackboxParseError } from './BlackboxParser';
 function pushUVB(arr: number[], value: number): void {
   let v = value;
   while (v >= 0x80) {
-    arr.push((v & 0x7F) | 0x80);
+    arr.push((v & 0x7f) | 0x80);
     v >>>= 7;
   }
-  arr.push(v & 0x7F);
+  arr.push(v & 0x7f);
 }
 
 /** Encode signed value as zigzag VB and push to array */
@@ -29,10 +29,7 @@ function pushSVB(arr: number[], value: number): void {
  * Build a minimal valid BBL header buffer with standard I/P field definitions.
  * Returns only the header section (no frame data).
  */
-function buildMinimalHeaders(options?: {
-  fieldNames?: string;
-  fieldCount?: number;
-}): Buffer {
+function buildMinimalHeaders(options?: { fieldNames?: string; fieldCount?: number }): Buffer {
   const defaultFieldNames = 'loopIteration,time,gyroADC[0],gyroADC[1],gyroADC[2]';
   let fieldNames = options?.fieldNames ?? defaultFieldNames;
 
@@ -45,7 +42,7 @@ function buildMinimalHeaders(options?: {
     fieldNames = names.join(',');
   }
 
-  const fieldCount = fieldNames ? fieldNames.split(',').filter(n => n.trim()).length : 0;
+  const fieldCount = fieldNames ? fieldNames.split(',').filter((n) => n.trim()).length : 0;
   const iSigned = new Array(fieldCount).fill('0').join(',');
   const iPredictors = new Array(fieldCount).fill('0').join(',');
   const iEncodings = new Array(fieldCount).fill('1').join(','); // UNSIGNED_VB
@@ -89,7 +86,7 @@ function buildIFrame(loopIter: number, time: number, gyro: [number, number, numb
 
 /** Full LOG_END event bytes: marker(E=0x45) + type(0xFF) + "End of log\0" */
 function logEndBytes(): Buffer {
-  return Buffer.from([0x45, 0xFF, ...Buffer.from('End of log\0', 'ascii')]);
+  return Buffer.from([0x45, 0xff, ...Buffer.from('End of log\0', 'ascii')]);
 }
 
 // ---------------------------------------------------------------------------
@@ -97,7 +94,6 @@ function logEndBytes(): Buffer {
 // ---------------------------------------------------------------------------
 
 describe('BlackboxParser fuzz / robustness', () => {
-
   it('survives 1000 random bytes without crashing', async () => {
     const randomBytes = Buffer.alloc(1000);
     for (let i = 0; i < 1000; i++) {
@@ -135,7 +131,9 @@ describe('BlackboxParser fuzz / robustness', () => {
         if (err instanceof BlackboxParseError) {
           // Expected - graceful error
         } else {
-          errors.push(`Position ${pos}: unexpected error type: ${(err as Error).constructor.name}: ${(err as Error).message}`);
+          errors.push(
+            `Position ${pos}: unexpected error type: ${(err as Error).constructor.name}: ${(err as Error).message}`
+          );
         }
       }
     }
@@ -163,7 +161,9 @@ describe('BlackboxParser fuzz / robustness', () => {
         if (err instanceof BlackboxParseError) {
           // Expected
         } else {
-          errors.push(`Position ${pos}: unexpected error: ${(err as Error).constructor.name}: ${(err as Error).message}`);
+          errors.push(
+            `Position ${pos}: unexpected error: ${(err as Error).constructor.name}: ${(err as Error).message}`
+          );
         }
       }
     }
@@ -208,11 +208,11 @@ describe('BlackboxParser fuzz / robustness', () => {
     // Build I-frame with loopIteration = 0x0FFFFFFF (max safe for VB encoding
     // within 5 bytes) and time = 0
     const bytes: number[] = [0x49]; // 'I'
-    pushUVB(bytes, 0x0FFFFFFF); // huge iteration
-    pushUVB(bytes, 0);          // time = 0
-    pushSVB(bytes, 10);         // gyro[0]
-    pushSVB(bytes, -5);         // gyro[1]
-    pushSVB(bytes, 3);          // gyro[2]
+    pushUVB(bytes, 0x0fffffff); // huge iteration
+    pushUVB(bytes, 0); // time = 0
+    pushSVB(bytes, 10); // gyro[0]
+    pushSVB(bytes, -5); // gyro[1]
+    pushSVB(bytes, 3); // gyro[2]
     const iframe = Buffer.from(bytes);
 
     const data = Buffer.concat([headers, iframe, logEndBytes()]);
@@ -231,11 +231,11 @@ describe('BlackboxParser fuzz / robustness', () => {
     const headers = buildMinimalHeaders();
 
     const bytes: number[] = [0x49]; // 'I'
-    pushUVB(bytes, 0);            // loopIteration = 0
-    pushUVB(bytes, 0x0FFFFFFF);   // huge time
-    pushSVB(bytes, 10);           // gyro[0]
-    pushSVB(bytes, -5);           // gyro[1]
-    pushSVB(bytes, 3);            // gyro[2]
+    pushUVB(bytes, 0); // loopIteration = 0
+    pushUVB(bytes, 0x0fffffff); // huge time
+    pushSVB(bytes, 10); // gyro[0]
+    pushSVB(bytes, -5); // gyro[1]
+    pushSVB(bytes, 3); // gyro[2]
     const iframe = Buffer.from(bytes);
 
     const data = Buffer.concat([headers, iframe, logEndBytes()]);
@@ -343,7 +343,6 @@ describe('BlackboxParser fuzz / robustness', () => {
     expect(iframe.length).toBeGreaterThan(256);
 
     // Add a second valid small I-frame after the oversize one to verify recovery
-    const headers2 = buildMinimalHeaders({ fieldCount });
     const smallFrame: number[] = [0x49];
     for (let i = 0; i < fieldCount; i++) {
       pushUVB(smallFrame, i); // small values, 1-2 bytes each
@@ -376,11 +375,11 @@ describe('BlackboxParser fuzz / robustness', () => {
 
     // P-frame marker (0x50) with some SVB-encoded deltas
     const pBytes: number[] = [0x50]; // 'P'
-    pushSVB(pBytes, 1);    // loopIteration delta
-    pushSVB(pBytes, 312);  // time delta
-    pushSVB(pBytes, 5);    // gyro[0] delta
-    pushSVB(pBytes, -3);   // gyro[1] delta
-    pushSVB(pBytes, 2);    // gyro[2] delta
+    pushSVB(pBytes, 1); // loopIteration delta
+    pushSVB(pBytes, 312); // time delta
+    pushSVB(pBytes, 5); // gyro[0] delta
+    pushSVB(pBytes, -3); // gyro[1] delta
+    pushSVB(pBytes, 2); // gyro[2] delta
     const pFrame = Buffer.from(pBytes);
 
     // Then a valid I-frame that should still be parseable
@@ -420,27 +419,31 @@ describe('BlackboxParser fuzz / robustness', () => {
     expect(result.sessions.length).toBeGreaterThanOrEqual(2);
   });
 
-  it('handles 10000 repeated valid I-frames without hanging or memory issues', { timeout: 10000 }, async () => {
-    const headers = buildMinimalHeaders();
-    const parts: Buffer[] = [headers];
+  it(
+    'handles 10000 repeated valid I-frames without hanging or memory issues',
+    { timeout: 10000 },
+    async () => {
+      const headers = buildMinimalHeaders();
+      const parts: Buffer[] = [headers];
 
-    for (let i = 0; i < 10000; i++) {
-      const loopIter = i * 32;
-      const time = loopIter * 312;
-      parts.push(buildIFrame(loopIter, time, [10 + (i % 50), -(5 + (i % 30)), i % 20]));
+      for (let i = 0; i < 10000; i++) {
+        const loopIter = i * 32;
+        const time = loopIter * 312;
+        parts.push(buildIFrame(loopIter, time, [10 + (i % 50), -(5 + (i % 30)), i % 20]));
+      }
+
+      parts.push(logEndBytes());
+      const data = Buffer.concat(parts);
+
+      const result = await BlackboxParser.parse(data);
+
+      expect(result).toHaveProperty('sessions');
+      expect(result.success).toBe(true);
+      expect(result.sessions.length).toBeGreaterThanOrEqual(1);
+      // Should have parsed a substantial number of frames
+      expect(result.sessions[0].flightData.frameCount).toBeGreaterThan(100);
     }
-
-    parts.push(logEndBytes());
-    const data = Buffer.concat(parts);
-
-    const result = await BlackboxParser.parse(data);
-
-    expect(result).toHaveProperty('sessions');
-    expect(result.success).toBe(true);
-    expect(result.sessions.length).toBeGreaterThanOrEqual(1);
-    // Should have parsed a substantial number of frames
-    expect(result.sessions[0].flightData.frameCount).toBeGreaterThan(100);
-  });
+  );
 
   it('survives a buffer filled with every possible byte value (0x00-0xFF)', async () => {
     const data = Buffer.alloc(256);
@@ -472,23 +475,27 @@ describe('BlackboxParser fuzz / robustness', () => {
     }
   });
 
-  it('handles valid headers followed by repeating 0xFF bytes (potential false LOG_END flood)', { timeout: 10000 }, async () => {
-    const headers = buildMinimalHeaders();
+  it(
+    'handles valid headers followed by repeating 0xFF bytes (potential false LOG_END flood)',
+    { timeout: 10000 },
+    async () => {
+      const headers = buildMinimalHeaders();
 
-    // Add a valid I-frame first so we have a parseable session
-    const iframe = buildIFrame(0, 0, [100, -50, 30]);
+      // Add a valid I-frame first so we have a parseable session
+      const iframe = buildIFrame(0, 0, [100, -50, 30]);
 
-    // Then flood with 0xFF bytes (0x45=E marker + 0xFF=LOG_END type appears frequently)
-    const flood = Buffer.alloc(2000, 0xFF);
+      // Then flood with 0xFF bytes (0x45=E marker + 0xFF=LOG_END type appears frequently)
+      const flood = Buffer.alloc(2000, 0xff);
 
-    const data = Buffer.concat([headers, iframe, flood]);
+      const data = Buffer.concat([headers, iframe, flood]);
 
-    try {
-      const result = await BlackboxParser.parse(data);
-      expect(result).toHaveProperty('sessions');
-      expect(result.fileSize).toBe(data.length);
-    } catch (err) {
-      expect(err).toBeInstanceOf(BlackboxParseError);
+      try {
+        const result = await BlackboxParser.parse(data);
+        expect(result).toHaveProperty('sessions');
+        expect(result.fileSize).toBe(data.length);
+      } catch (err) {
+        expect(err).toBeInstanceOf(BlackboxParseError);
+      }
     }
-  });
+  );
 });

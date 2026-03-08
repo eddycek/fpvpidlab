@@ -47,9 +47,6 @@ export function computeStepResponse(
   const tailEnd = endIndex;
   const steadyStateValue = mean(gyro.values, tailStart, tailEnd);
 
-  // Expected target: baseline + magnitude
-  const target = baseline + magnitude;
-
   // Use steadyState for metric computation (what the gyro actually converges to)
   const effectiveTarget = steadyStateValue;
   const effectiveMagnitude = effectiveTarget - baseline;

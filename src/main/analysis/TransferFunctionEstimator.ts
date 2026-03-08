@@ -27,9 +27,6 @@ const TF_MAX_FREQ_HZ = 500;
 /** Synthetic step response duration (seconds) */
 const STEP_RESPONSE_DURATION_S = 0.5;
 
-/** Impulse response extraction region from windowed IFFT (seconds) */
-const IMPULSE_REGION_S = 1.5;
-
 /** Bandwidth threshold: -3 dB below DC gain */
 const BANDWIDTH_THRESHOLD_DB = -3;
 
@@ -338,7 +335,7 @@ export function computeSyntheticStepResponse(
 ): SyntheticStepResponse {
   const maxSamples = Math.min(
     Math.floor(STEP_RESPONSE_DURATION_S * sampleRateHz),
-    Math.floor(impulseResponse.length / 2) // Use first half only (IMPULSE_REGION_S from design)
+    Math.floor(impulseResponse.length / 2) // Use first half only
   );
 
   if (maxSamples < 2) {

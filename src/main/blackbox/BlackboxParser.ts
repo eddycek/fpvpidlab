@@ -16,7 +16,6 @@ import {
   MAX_TIME_JUMP_US,
   MAX_I_FRAME_TIME_BACKWARD_US,
   MAX_I_FRAME_ITER_BACKWARD,
-  PROGRESS_INTERVAL,
   YIELD_INTERVAL,
 } from './constants';
 import { StreamReader } from './StreamReader';
@@ -75,21 +74,16 @@ export class BlackboxParser {
 
     for (let i = 0; i < sessionBoundaries.length; i++) {
       const start = sessionBoundaries[i];
-      const end = i + 1 < sessionBoundaries.length
-        ? sessionBoundaries[i + 1]
-        : data.length;
+      const end = i + 1 < sessionBoundaries.length ? sessionBoundaries[i + 1] : data.length;
 
-      const session = await BlackboxParser.parseSession(
-        data, start, end, i,
-        (bytesProcessed) => {
-          onProgress?.({
-            bytesProcessed: start + bytesProcessed,
-            totalBytes: data.length,
-            percent: Math.round(((start + bytesProcessed) / data.length) * 100),
-            currentSession: i,
-          });
-        }
-      );
+      const session = await BlackboxParser.parseSession(data, start, end, i, (bytesProcessed) => {
+        onProgress?.({
+          bytesProcessed: start + bytesProcessed,
+          totalBytes: data.length,
+          percent: Math.round(((start + bytesProcessed) / data.length) * 100),
+          currentSession: i,
+        });
+      });
 
       if (session) {
         sessions.push(session);
@@ -170,7 +164,7 @@ export class BlackboxParser {
     let frameCount = 0;
 
     // Track previous frames for P-frame prediction
-    let previousIFrame: number[] | null = null;
+    let _previousIFrame: number[] | null = null;
     let previousFrame: number[] | null = null;
     let previousFrame2: number[] | null = null;
 
@@ -179,8 +173,8 @@ export class BlackboxParser {
     const dummyPrev = new Array(header.pFieldDefs.length).fill(0);
 
     // Field indices for iteration/time validation
-    const loopIterIdx = header.iFieldDefs.findIndex(d => d.name === FIELD_NAMES.LOOP_ITERATION);
-    const timeIdx = header.iFieldDefs.findIndex(d => d.name === FIELD_NAMES.TIME);
+    const loopIterIdx = header.iFieldDefs.findIndex((d) => d.name === FIELD_NAMES.LOOP_ITERATION);
+    const timeIdx = header.iFieldDefs.findIndex((d) => d.name === FIELD_NAMES.TIME);
     let lastIteration = -1;
     let lastTime = -1;
 
@@ -219,7 +213,9 @@ export class BlackboxParser {
               break;
             }
 
-            if (!BlackboxParser.isIFrameValid(values, loopIterIdx, timeIdx, lastIteration, lastTime)) {
+            if (
+              !BlackboxParser.isIFrameValid(values, loopIterIdx, timeIdx, lastIteration, lastTime)
+            ) {
               // Semantic failure — invalidate prediction but don't resync
               // (bytes were consumed correctly, stream position is valid)
               corruptedFrameCount++;
@@ -232,7 +228,7 @@ export class BlackboxParser {
             // I-frames reset prediction state (matches BF viewer mainHistory)
             previousFrame = values;
             previousFrame2 = values;
-            previousIFrame = values;
+            _previousIFrame = values;
             frameCount++;
             if (loopIterIdx >= 0) lastIteration = values[loopIterIdx];
             if (timeIdx >= 0) lastTime = values[timeIdx];
@@ -260,7 +256,9 @@ export class BlackboxParser {
               break;
             }
 
-            if (!BlackboxParser.isFrameValid(values, loopIterIdx, timeIdx, lastIteration, lastTime)) {
+            if (
+              !BlackboxParser.isFrameValid(values, loopIterIdx, timeIdx, lastIteration, lastTime)
+            ) {
               corruptedFrameCount++;
               previousFrame = null;
               previousFrame2 = null;
@@ -325,9 +323,7 @@ export class BlackboxParser {
     }
 
     // Extract flight data
-    const flightData = BlackboxParser.extractFlightData(
-      header, iFrames, pFrames, warnings
-    );
+    const flightData = BlackboxParser.extractFlightData(header, iFrames, pFrames, warnings);
 
     return {
       index: sessionIndex,
@@ -481,9 +477,8 @@ export class BlackboxParser {
       }
     }
 
-    const durationSeconds = frameCount > 1
-      ? timeArray[frameCount - 1] - timeArray[0]
-      : frameCount * dt;
+    const durationSeconds =
+      frameCount > 1 ? timeArray[frameCount - 1] - timeArray[0] : frameCount * dt;
 
     // Helper to extract a channel
     function extractChannel(fieldName: string): TimeSeries {
@@ -506,7 +501,7 @@ export class BlackboxParser {
 
     // Extract setpoint (4 channels: roll, pitch, yaw, throttle)
     // Try "setpoint[N]" first, fall back to "rcCommand[N]"
-    const setpointNames = [0, 1, 2, 3].map(i => {
+    const setpointNames = [0, 1, 2, 3].map((i) => {
       const sp = `${FIELD_NAMES.SETPOINT_PREFIX}${i}]`;
       if (fieldMap.has(sp)) return sp;
       const rc = `${FIELD_NAMES.RC_COMMAND_PREFIX}${i}]`;
@@ -570,23 +565,27 @@ export class BlackboxParser {
       const vals = gyro[axis].values;
       if (vals.length === 0) continue;
 
-      let min = Infinity, max = -Infinity, sum = 0, zeroCount = 0;
+      let min = Infinity,
+        max = -Infinity,
+        zeroCount = 0;
       for (let i = 0; i < vals.length; i++) {
         const v = vals[i];
         if (v < min) min = v;
         if (v > max) max = v;
-        sum += v;
         if (v === 0) zeroCount++;
       }
-      const mean = sum / vals.length;
       const range = max - min;
 
       if (range < 1) {
         warnings.push(`gyro ${axisNames[axis]}: constant value ${min} — likely parsing error`);
       } else if (zeroCount > vals.length * 0.9) {
-        warnings.push(`gyro ${axisNames[axis]}: ${((zeroCount / vals.length) * 100).toFixed(0)}% zeros — likely parsing error`);
+        warnings.push(
+          `gyro ${axisNames[axis]}: ${((zeroCount / vals.length) * 100).toFixed(0)}% zeros — likely parsing error`
+        );
       } else if (max > 32000 || min < -32000) {
-        warnings.push(`gyro ${axisNames[axis]}: extreme range [${min.toFixed(0)}, ${max.toFixed(0)}] — possible corruption`);
+        warnings.push(
+          `gyro ${axisNames[axis]}: extreme range [${min.toFixed(0)}, ${max.toFixed(0)}] — possible corruption`
+        );
       }
     }
 
@@ -623,8 +622,8 @@ export class BlackboxParser {
   ): number[][] {
     // Build P→I field index mapping
     const pToIMap = BlackboxParser.buildFieldMapping(
-      header.pFieldDefs.map(d => d.name),
-      header.iFieldDefs.map(d => d.name)
+      header.pFieldDefs.map((d) => d.name),
+      header.iFieldDefs.map((d) => d.name)
     );
 
     const fieldCount = header.iFieldDefs.length;
@@ -634,8 +633,8 @@ export class BlackboxParser {
     // Since P-frames come between I-frames, and we know the I-interval,
     // we can interleave them. However, the simplest correct approach
     // is to use the loop iteration value to sort them.
-    const loopIterIdxI = header.iFieldDefs.findIndex(d => d.name === FIELD_NAMES.LOOP_ITERATION);
-    const loopIterIdxP = header.pFieldDefs.findIndex(d => d.name === FIELD_NAMES.LOOP_ITERATION);
+    const loopIterIdxI = header.iFieldDefs.findIndex((d) => d.name === FIELD_NAMES.LOOP_ITERATION);
+    const loopIterIdxP = header.pFieldDefs.findIndex((d) => d.name === FIELD_NAMES.LOOP_ITERATION);
 
     // If we can't find loop iteration, just concatenate in order
     if (loopIterIdxI === -1) {
@@ -664,7 +663,7 @@ export class BlackboxParser {
     // Sort by loop iteration
     entries.sort((a, b) => a.loopIter - b.loopIter);
 
-    return entries.map(e => e.values);
+    return entries.map((e) => e.values);
   }
 
   /**
@@ -677,7 +676,7 @@ export class BlackboxParser {
       iNameMap.set(iNames[i], i);
     }
 
-    return pNames.map(name => iNameMap.get(name) ?? -1);
+    return pNames.map((name) => iNameMap.get(name) ?? -1);
   }
 
   /**
@@ -850,6 +849,6 @@ export class BlackboxParser {
    * Yield to the event loop to keep Electron responsive.
    */
   private static yield(): Promise<void> {
-    return new Promise(resolve => setImmediate(resolve));
+    return new Promise((resolve) => setImmediate(resolve));
   }
 }

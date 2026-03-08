@@ -228,8 +228,8 @@ describe('StepMetrics', () => {
       const numSamples = 2000;
       const stepMag = 300;
 
-      const gyro = makeSeries((i) => stepMag, numSamples);
-      const setpoint = makeSeries((i) => stepMag, numSamples);
+      const gyro = makeSeries(() => stepMag, numSamples);
+      const setpoint = makeSeries(() => stepMag, numSamples);
       const step = makeStep(0, 1200, stepMag);
 
       const result = computeStepResponse(setpoint, gyro, step, SAMPLE_RATE);
