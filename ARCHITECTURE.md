@@ -575,7 +575,7 @@ Three view modes based on state:
 
 ```
 analysisLogId set?  → <AnalysisOverview logId={...} />     (read-only analysis)
-activeLogId set?    → <TuningWizard logId={...} mode={...} /> (guided wizard)
+activeLogId set?    → <TuningWizard logId={...} mode={...} /> (tuning wizard)
 else                → Dashboard (ConnectionPanel, ProfileSelector, TuningStatusBanner,
                        FCInfoDisplay, BlackboxStatus, SnapshotManager)
 ```
@@ -585,7 +585,7 @@ else                → Dashboard (ConnectionPanel, ProfileSelector, TuningStatu
 - `tuning.session` — drives TuningStatusBanner visibility and BlackboxStatus readonly mode
 - `erasedForPhase: string | null` — tracks flash erase per tuning phase (avoids stale boolean)
 - `wizardMode: 'filter' | 'pid'` — which analysis to run when wizard opens
-- `analysisLogId` vs `activeLogId` — read-only overview vs guided wizard
+- `analysisLogId` vs `activeLogId` — read-only overview vs tuning wizard
 
 ### Component Hierarchy
 
@@ -656,10 +656,10 @@ Built with **Recharts** (SVG):
 
 ## Tuning State Machine
 
-State machine persisted per-profile in `{userData}/data/tuning/{profileId}.json`. Two modes: **Guided** (2 flights, 10 phases) and **Quick** (1 flight, 6 phases).
+State machine persisted per-profile in `{userData}/data/tuning/{profileId}.json`. Two modes: **Deep Tune** (2 flights, 10 phases) and **Flash Tune** (1 flight, 6 phases).
 
 ```
-Guided mode:                                Quick mode:
+Deep Tune mode:                             Flash Tune mode:
 
        START SESSION                              START SESSION
             │                                          │
@@ -832,4 +832,4 @@ Hardware error (FC timeout, USB disconnect)
 
 **Pre-commit hook** (husky + lint-staged) blocks commits when tests fail. All async UI tests use `waitFor()`. Mock layer: `src/renderer/test/setup.ts` mocks entire `window.betaflight` API.
 
-**Playwright E2E** (demo mode): Launches real Electron app with mock FC, clicks through full tuning workflow (guided and quick tune). Run via `npm run test:e2e` (22 tests) or `npm run demo:generate-history` (5-cycle generator). See `e2e/` directory and [docs/OFFLINE_UX_TESTING.md](./docs/OFFLINE_UX_TESTING.md).
+**Playwright E2E** (demo mode): Launches real Electron app with mock FC, clicks through full tuning workflow (Deep Tune and Flash Tune). Run via `npm run test:e2e` (22 tests) or `npm run demo:generate-history` (5-cycle generator). See `e2e/` directory and [docs/OFFLINE_UX_TESTING.md](./docs/OFFLINE_UX_TESTING.md).

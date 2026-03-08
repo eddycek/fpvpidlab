@@ -6,7 +6,7 @@ Most FPV pilots tune their quads by hand — tweaking PID numbers, test flying, 
 
 **What makes it different:**
 - **Fully automated recommendations** — not just graphs, but actual filter cutoffs and PID values ready to flash
-- **Two tuning modes** — Guided (2 dedicated flights, max accuracy) or Quick Tune (any single flight via transfer function estimation)
+- **Two tuning modes** — Deep Tune (2 dedicated flights, max accuracy) or Flash Tune (any single flight via transfer function estimation)
 - **Convergent by design** — re-analyzing the same log always produces the same result, no recommendation drift
 - **Safety-first** — every apply creates an automatic rollback snapshot, all values clamped to proven safe bounds
 - **Multi-quad profiles** — auto-detects each FC by serial number, stores configs and tuning history per quad
@@ -120,7 +120,7 @@ See [SPEC.md](./SPEC.md) for detailed phase tracking and test counts.
 - Warns about insufficient hover time, missing axes, too few steps
 - Flight quality score: composite 0-100 metric tracking tuning progress across sessions
 
-### Two-Flight Guided Workflow
+### Deep Tune (Two-Flight Workflow)
 - Stateful tuning session: filters first (hover + throttle sweeps), then PIDs (stick snaps)
 - Step-by-step banner with progress indicator (10 phases including optional verification)
 - Smart reconnect detection: auto-advances when flight data detected
@@ -129,7 +129,7 @@ See [SPEC.md](./SPEC.md) for detailed phase tracking and test counts.
 - Optional verification hover after PID apply for before/after noise comparison
 - Tuning completion summary with applied changes, noise metrics, and PID response data
 
-### Quick Tune (Single Flight)
+### Flash Tune (Single Flight)
 - Analyze filters and PIDs from any single flight (freestyle, cruise, etc.)
 - Transfer function estimation via Wiener deconvolution for PID recommendations
 - Bode plot (magnitude + phase) with bandwidth/margin indicators
@@ -228,8 +228,8 @@ npm run test:e2e:ui                  # Build + Playwright UI
 
 # Demo data generation
 npm run demo:generate-history        # Generate 5 mixed tuning sessions (~2 min)
-npm run demo:generate-history:full   # Generate 5 guided sessions
-npm run demo:generate-history:quick  # Generate 5 quick tune sessions
+npm run demo:generate-history:deep   # Generate 5 Deep Tune sessions
+npm run demo:generate-history:flash  # Generate 5 Flash Tune sessions
 
 # Code quality
 npm run lint                         # ESLint check
@@ -248,7 +248,7 @@ All UI changes must include tests. Tests automatically run before commits. Cover
 
 **Unit tests:** 2180 tests across 107 files — MSP protocol, storage managers, IPC handlers, UI components, hooks, BBL parser fuzz, analysis pipeline validation.
 
-**Playwright E2E:** 25 tests across 4 spec files — launches real Electron app in demo mode, walks through complete tuning cycles (guided and quick tune).
+**Playwright E2E:** 25 tests across 4 spec files — launches real Electron app in demo mode, walks through complete tuning cycles (Deep Tune and Flash Tune).
 
 See [TESTING.md](./TESTING.md) for complete testing guidelines, test inventory, and best practices.
 
@@ -352,7 +352,7 @@ pidlab/
 │   │   │   ├── TuningWizard/          # Multi-step guided wizard
 │   │   │   │   ├── charts/            # SpectrumChart, StepResponseChart, BodePlot, AxisTabs
 │   │   │   │   ├── FilterAnalysisStep, PIDAnalysisStep  # Analysis result views
-│   │   │   │   ├── QuickAnalysisStep  # Combined filter+PID for Quick Tune
+│   │   │   │   ├── QuickAnalysisStep  # Combined filter+PID for Flash Tune
 │   │   │   │   ├── SessionSelectStep, TestFlightGuideStep # Pre-analysis steps
 │   │   │   │   ├── TuningSummaryStep, WizardProgress     # Summary + progress
 │   │   │   │   ├── RecommendationCard, ApplyConfirmationModal
@@ -366,7 +366,7 @@ pidlab/
 │   │   │   │   ├── QualityTrendChart        # Flight quality score progression
 │   │   │   │   └── AppliedChangesTable      # Setting changes with % diff
 │   │   │   ├── TuningWorkflowModal/   # Two-flight workflow help
-│   │   │   ├── StartTuningModal.tsx   # Guided vs Quick Tune mode selector
+│   │   │   ├── StartTuningModal.tsx   # Deep Tune vs Flash Tune mode selector
 │   │   │   ├── Toast/                 # Toast notification system
 │   │   │   ├── ProfileWizard.tsx      # New FC profile creation wizard
 │   │   │   ├── PresetSelector.tsx     # Preset profile picker
@@ -405,8 +405,8 @@ pidlab/
 ├── e2e/                         # Playwright E2E tests (demo mode)
 │   ├── electron-app.ts                # Shared fixture (launchDemoApp, helpers)
 │   ├── demo-smoke.spec.ts             # 4 smoke tests
-│   ├── demo-tuning-cycle.spec.ts      # 11 guided tuning cycle tests
-│   ├── demo-quick-tune-cycle.spec.ts  # 7 quick tune cycle tests
+│   ├── demo-tuning-cycle.spec.ts      # 11 Deep Tune cycle tests
+│   ├── demo-quick-tune-cycle.spec.ts  # 7 Flash Tune cycle tests
 │   └── demo-generate-history.spec.ts  # Mixed history generator
 │
 └── docs/                        # Design documents (see docs/README.md for index)
@@ -444,7 +444,7 @@ If settings are wrong, click **Fix Settings** in the FC info panel — the app s
 
 ### 3. Guided Two-Flight Tuning
 
-Click **Start Tuning Session** and select **Guided Tuning**. The status banner at the top tracks your progress through 10 phases:
+Click **Start Tuning Session** and select **Deep Tune**. The status banner at the top tracks your progress through 10 phases:
 
 #### Flight 1: Filter Tuning
 1. **Erase Flash** — Clear old Blackbox data before flying
@@ -471,9 +471,9 @@ Click **Start Tuning Session** and select **Guided Tuning**. The status banner a
 
 The session shows a **completion summary** with all applied changes, noise metrics, and PID response data. You can start a new tuning cycle to iterate further. Past sessions are archived in the **Tuning History** panel on the dashboard.
 
-### 4. Quick Tune (Single Flight)
+### 4. Flash Tune (Single Flight)
 
-Click **Start Tuning Session** and select **Quick Tune**:
+Click **Start Tuning Session** and select **Flash Tune**:
 
 1. **Erase Flash** — Clear old data
 2. **Fly any flight** — Freestyle, cruise, stick snaps — any 30-60s flight works
@@ -481,9 +481,9 @@ Click **Start Tuning Session** and select **Quick Tune**:
 4. **Apply all** — Combined filter + PID changes in one click
 5. **Optional verification** — Same as guided mode
 
-Quick Tune uses transfer function estimation instead of step detection, so it works with any flight style. Confidence is capped at medium (less precise than dedicated stick snaps). Best for experienced pilots iterating on an existing tune.
+Flash Tune uses transfer function estimation instead of step detection, so it works with any flight style. Confidence is capped at medium (less precise than dedicated stick snaps). Best for experienced pilots iterating on an existing tune.
 
-### 5. Quick Analysis (No Tuning Session)
+### 5. Standalone Analysis (No Tuning Session)
 
 If you just want to analyze a log without applying changes:
 
@@ -778,7 +778,7 @@ Analysis results are visualized with interactive SVG charts (Recharts):
 
 - **Spectrum Chart** — FFT noise spectrum per axis (roll/pitch/yaw), with noise floor reference lines and peak frequency markers. Helps users visually understand where noise lives in the frequency domain.
 - **Step Response Chart** — Overlaid setpoint vs. gyro traces for individual steps, with prev/next navigation and a metrics overlay (overshoot %, rise time, settling time, latency). Shows exactly how the quad tracked each stick input.
-- **Bode Plot** — Transfer function magnitude (dB) and phase (degrees) vs frequency. Shows bandwidth, gain margin, and phase margin from Wiener deconvolution. Available in Quick Tune wizard and AnalysisOverview.
+- **Bode Plot** — Transfer function magnitude (dB) and phase (degrees) vs frequency. Shows bandwidth, gain margin, and phase margin from Wiener deconvolution. Available in Flash Tune wizard and AnalysisOverview.
 - **Noise Comparison Chart** — Before/after spectrum overlay with per-axis dB delta indicators. Shows tuning improvement on completion.
 - **Quality Trend Chart** — Flight quality score progression across tuning sessions. Minimum 2 data points to render.
 - **Axis Tabs** — Shared roll/pitch/yaw/all tab selector for all chart types.

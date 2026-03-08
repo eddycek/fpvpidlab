@@ -2,7 +2,7 @@
  * Demo mode Flash Tune cycle E2E test.
  *
  * Walks through one complete Flash Tune cycle:
- *   Start (Quick) → Erase → (auto-flight) → Download → Quick Wizard
+ *   Start (Flash) → Erase → (auto-flight) → Download → Flash Tune Wizard
  *   (auto-runs filter + TF analysis) → Apply All → Skip verification → Complete → Dismiss
  *
  * Then verifies the tuning history shows the completed session with "(Flash Tune)" label.
@@ -22,37 +22,37 @@ test.afterAll(async () => {
 });
 
 test.describe.serial('quick tune cycle', () => {
-  test('start quick tune session', async () => {
+  test('start flash tune session', async () => {
     await demo.clickButton('Start Tuning Session');
 
     // StartTuningModal opens — select Flash Tune
     await demo.clickButton('Flash Tune');
 
-    // Should show quick_flight_pending phase
+    // Should show flash_flight_pending phase
     await demo.waitForText('Erase Blackbox data');
     await demo.screenshot('quick-01-started');
   });
 
-  test('erase flash for quick flight', async () => {
+  test('erase flash for flash tune flight', async () => {
     await demo.clickButton('Erase Flash');
 
-    // After erase, demo auto-flight → reconnect → quick_log_ready
+    // After erase, demo auto-flight → reconnect → flash_log_ready
     await demo.waitForText('Flight done', 20_000);
     await demo.screenshot('quick-02-flight-done');
   });
 
-  test('download quick log', async () => {
+  test('download flash tune log', async () => {
     await demo.clickButton('Download Log');
 
-    // Wait for download + parse → quick_analysis phase
+    // Wait for download + parse → flash_analysis phase
     await demo.waitForText('Open Flash Tune Wizard', 20_000);
     await demo.screenshot('quick-03-log-downloaded');
   });
 
-  test('run quick analysis in wizard', async () => {
+  test('run flash tune analysis in wizard', async () => {
     await demo.clickButton('Open Flash Tune Wizard');
 
-    // Quick wizard auto-runs both analyses in parallel
+    // Flash Tune wizard auto-runs both analyses in parallel
     // Wait for "Continue to Summary" to appear (both analyses done)
     await demo.page
       .getByRole('button', { name: /Continue to Summary/i })
@@ -63,7 +63,7 @@ test.describe.serial('quick tune cycle', () => {
   test('apply all changes via wizard', async () => {
     await demo.clickButton(/Continue to Summary/i);
 
-    // Summary shows "Apply All Changes" button (mode=quick)
+    // Summary shows "Apply All Changes" button (mode=flash)
     await demo.page
       .getByRole('button', { name: 'Apply All Changes' })
       .waitFor({ state: 'visible', timeout: 10_000 });
@@ -87,7 +87,7 @@ test.describe.serial('quick tune cycle', () => {
   });
 
   test('skip verification and complete', async () => {
-    // After apply + reboot, dashboard shows quick_applied with "Skip & Complete"
+    // After apply + reboot, dashboard shows flash_applied with "Skip & Complete"
     await demo.page
       .getByRole('button', { name: 'Skip & Complete' })
       .waitFor({ state: 'visible', timeout: 30_000 });
@@ -99,12 +99,12 @@ test.describe.serial('quick tune cycle', () => {
     await demo.screenshot('quick-07-complete');
   });
 
-  test('dismiss and check history shows quick tune', async () => {
+  test('dismiss and check history shows flash tune', async () => {
     const dismissBtn = demo.page.getByRole('button', { name: 'Dismiss', exact: true });
     await dismissBtn.waitFor({ state: 'visible', timeout: 10_000 });
     await dismissBtn.click();
 
-    // Tuning History should show the completed quick tune session
+    // Tuning History should show the completed Flash Tune session
     await demo.waitForText('Tuning History', 10_000);
     await demo.waitForText('Flash Tune', 10_000);
     await demo.screenshot('quick-08-history');
