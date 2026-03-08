@@ -11,6 +11,7 @@ import type {
   AnalysisProgress,
   AnalysisWarning,
   AxisStepProfile,
+  BayesianSuggestion,
   PIDAnalysisResult,
   StepResponse,
 } from '@shared/types/analysis.types';
@@ -27,6 +28,7 @@ import { estimateAllAxes, type TransferFunctionResult } from './TransferFunction
 import { STEP_RESPONSE_WINDOW_MAX_MS } from './constants';
 import { analyzeCrossAxisCoupling } from './CrossAxisDetector';
 import { analyzePropWash } from './PropWashDetector';
+import { suggestNextPID, type PIDObservation } from './BayesianPIDOptimizer';
 
 /** Default PID configuration if none provided */
 const DEFAULT_PIDS: PIDConfiguration = {
@@ -45,6 +47,7 @@ const DEFAULT_PIDS: PIDConfiguration = {
  * @param flightPIDs - PIDs from the BBL header (flight-time PIDs) for convergent recommendations
  * @param rawHeaders - BBL raw headers for feedforward context extraction
  * @param flightStyle - Pilot's flying style preference (affects thresholds)
+ * @param historyObservations - Optional historical (PID gains -> quality score) data for Bayesian optimization
  * @returns Complete PID analysis result with recommendations
  */
 export async function analyzePID(
@@ -54,7 +57,8 @@ export async function analyzePID(
   onProgress?: (progress: AnalysisProgress) => void,
   flightPIDs?: PIDConfiguration,
   rawHeaders?: Map<string, string>,
-  flightStyle: FlightStyle = 'balanced'
+  flightStyle: FlightStyle = 'balanced',
+  historyObservations?: PIDObservation[]
 ): Promise<PIDAnalysisResult> {
   const startTime = performance.now();
 
@@ -185,6 +189,12 @@ export async function analyzePID(
     });
   }
 
+  // Bayesian PID optimization (if history available)
+  let bayesianSuggestion: BayesianSuggestion | undefined;
+  if (historyObservations && historyObservations.length >= 3) {
+    bayesianSuggestion = suggestNextPID(historyObservations) ?? undefined;
+  }
+
   return {
     roll,
     pitch,
@@ -201,6 +211,7 @@ export async function analyzePID(
     ...(warnings.length > 0 ? { warnings } : {}),
     ...(crossAxisCoupling ? { crossAxisCoupling } : {}),
     ...(propWash ? { propWash } : {}),
+    ...(bayesianSuggestion ? { bayesianSuggestion } : {}),
   };
 }
 

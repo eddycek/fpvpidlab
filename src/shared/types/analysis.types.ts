@@ -335,6 +335,16 @@ export interface PIDRecommendation {
   confidence: 'high' | 'medium' | 'low';
 }
 
+/** Bayesian optimizer suggestion for next PID gains to try */
+export interface BayesianSuggestion {
+  /** Suggested PID gains [P, I, D] */
+  gains: [number, number, number];
+  /** Expected improvement over current best */
+  expectedImprovement: number;
+  /** Confidence in the suggestion */
+  confidence: 'high' | 'medium' | 'low';
+}
+
 /** Complete PID analysis result */
 export interface PIDAnalysisResult {
   /** Step response profile for roll axis */
@@ -369,6 +379,8 @@ export interface PIDAnalysisResult {
   crossAxisCoupling?: CrossAxisCoupling;
   /** Prop wash analysis results */
   propWash?: PropWashAnalysis;
+  /** Bayesian optimizer suggestion for next PID gains */
+  bayesianSuggestion?: BayesianSuggestion;
 }
 
 // ---- Cross-Axis Coupling Types ----
