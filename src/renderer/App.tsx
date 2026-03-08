@@ -202,11 +202,20 @@ function AppContent() {
         }
         break;
       case 'skip_erase': {
-        // User already erased/formatted SD card manually — persist flag to survive restart
         const currentPhaseSkip = tuning.session?.phase;
         if (currentPhaseSkip === 'filter_applied') {
           await tuning.updatePhase('pid_flight_pending', { eraseSkipped: true });
+        } else if (flashUsedSize != null && flashUsedSize > 0) {
+          // Flash has data — advance directly to log_ready (user wants to use existing data)
+          const logReadyPhase =
+            currentPhaseSkip === 'quick_flight_pending'
+              ? 'quick_log_ready'
+              : currentPhaseSkip === 'filter_flight_pending'
+                ? 'filter_log_ready'
+                : 'pid_log_ready';
+          await tuning.updatePhase(logReadyPhase);
         } else {
+          // No data on flash — persist eraseSkipped flag, wait for reconnect after flight
           await tuning.updatePhase(tuning.session!.phase, { eraseSkipped: true });
         }
         setBbRefreshKey((k) => k + 1);

@@ -146,7 +146,7 @@ export const VERIFICATION_FLIGHT_PHASES: FlightPhase[] = [
 ];
 
 export const VERIFICATION_FLIGHT_TIPS: string[] = [
-  'Fly the same style as your filter test flight — hover + throttle sweeps',
+  'Hover + throttle sweeps — same as a filter test flight',
   'Stay at the same altitude (2–5 meters) for comparable data',
   'Keep movements gentle — this is a noise measurement, not acro',
   'After downloading, the app overlays before/after spectra automatically',
