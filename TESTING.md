@@ -181,8 +181,8 @@ npm run test:ui           # Visual interface with DOM snapshots
 | `SnapshotManager/snapshotDiffUtils.test.ts` | 24 | CLI diff parsing, change computation |
 | `Toast/Toast.test.tsx` | 14 | Toast notification rendering and lifecycle |
 | `Toast/ToastContainer.test.tsx` | 6 | Toast container layout and stacking |
-| `StartTuningModal.test.tsx` | 6 | Start tuning modal, guided/quick tune selection, cancel |
-| `TuningStatusBanner/TuningStatusBanner.test.tsx` | 62 | Workflow banner, step indicator, actions, downloading, applied phases, BB settings pre-flight warning, verification flow, flashUsedSize-based erased state, import file, skip erase, SD card labels + eraseCompleted, quick tune phases |
+| `StartTuningModal.test.tsx` | 6 | Start tuning modal, Deep Tune/Flash Tune selection, cancel |
+| `TuningStatusBanner/TuningStatusBanner.test.tsx` | 62 | Workflow banner, step indicator, actions, downloading, applied phases, BB settings pre-flight warning, verification flow, flashUsedSize-based erased state, import file, skip erase, SD card labels + eraseCompleted, Flash Tune phases |
 | `TuningWizard/TuningWizard.test.tsx` | 47 | Multi-step wizard flow, results display, apply, mode-aware routing, onApplyComplete with metrics, FF warning, RPM status, flight style display |
 | `TuningWizard/FlightGuideContent.test.tsx` | 9 | Flight guide content rendering, version-aware tip filtering |
 | `TuningWizard/TestFlightGuideStep.test.tsx` | 5 | Flight guide step integration |
@@ -199,8 +199,8 @@ npm run test:ui           # Visual interface with DOM snapshots
 | `TuningWizard/charts/AxisTabs.test.tsx` | 6 | Tab rendering, selection, aria-selected, onChange callback |
 | `TuningHistory/AppliedChangesTable.test.tsx` | 7 | Setting changes table, percent formatting, empty state, zero value handling |
 | `TuningHistory/NoiseComparisonChart.test.tsx` | 9 | Before/after spectrum overlay, delta pill, axis tabs, empty state |
-| `TuningHistory/TuningCompletionSummary.test.tsx` | 17 | Completion summary with/without verification, noise chart, changes, PID metrics, actions, quality score badge with tier label, re-analyze button, quick tune title |
-| `TuningHistory/TuningHistoryPanel.test.tsx` | 17 | History list, expand/collapse, detail view with duration/flights, empty/loading states, quality score badge with tier label, trend chart, re-analyze verification, quick tune label |
+| `TuningHistory/TuningCompletionSummary.test.tsx` | 17 | Completion summary with/without verification, noise chart, changes, PID metrics, actions, quality score badge with tier label, re-analyze button, Flash Tune title |
+| `TuningHistory/TuningHistoryPanel.test.tsx` | 17 | History list, expand/collapse, detail view with duration/flights, empty/loading states, quality score badge with tier label, trend chart, re-analyze verification, Flash Tune label |
 | `TuningHistory/VerificationSessionModal.test.tsx` | 7 | Auto-analyze single session, multi-session picker, reverse order, cancel, error/parsing states |
 | `TuningHistory/QualityTrendChart.test.tsx` | 5 | Trend chart rendering, minimum data threshold, null score handling |
 | `ProfileWizard.test.tsx` | 6 | Profile creation wizard, flight style selector, preset mapping |
@@ -273,7 +273,7 @@ npm run test:ui           # Visual interface with DOM snapshots
 | `storage/ProfileManager.test.ts` | 23 | Profile CRUD, preset creation, current profile, link/unlink snapshots, export |
 | `storage/SnapshotManager.test.ts` | 16 | Snapshot creation via MSP, baseline management, server-side filtering, delete protection |
 | `storage/BlackboxManager.test.ts` | 15 | Log save/list/get/delete/export, profile filtering, soft delete, initialization |
-| `storage/TuningSessionManager.test.ts` | 20 | Session CRUD, phase transitions, per-profile persistence, quick tune phases |
+| `storage/TuningSessionManager.test.ts` | 20 | Session CRUD, phase transitions, per-profile persistence, Flash Tune phases |
 | `storage/TuningHistoryManager.test.ts` | 25 | History archive, retrieval ordering, corrupted data handling, per-profile isolation, delete, updateLatestVerification, updateRecordVerification, tuningType field |
 
 ### Blackbox Parser
@@ -349,7 +349,7 @@ npm run test:ui           # Visual interface with DOM snapshots
 
 | File | Tests | Description |
 |------|-------|-------------|
-| `demo/MockMSPClient.test.ts` | 47 | Mock FC connection, state management, FC info, PID/filter/FF config, blackbox, CLI, save/reboot, flags, flight type cycling, advancePastVerification, quick tune mode |
+| `demo/MockMSPClient.test.ts` | 47 | Mock FC connection, state management, FC info, PID/filter/FF config, blackbox, CLI, save/reboot, flags, flight type cycling, advancePastVerification, Flash Tune mode |
 | `demo/DemoDataGenerator.test.ts` | 22 | BBL generation for filter/PID/quick analysis, multi-session, header metadata, step inputs, throttle sweeps, progressive noise reduction |
 
 ### Playwright E2E Tests (Demo Mode)
@@ -359,9 +359,9 @@ End-to-end tests that launch the real Electron app in demo mode and walk through
 | File | Tests | Description |
 |------|-------|-------------|
 | `e2e/demo-smoke.spec.ts` | 4 | App launch, auto-connect, dashboard elements (blackbox, start tuning, reset demo) |
-| `e2e/demo-tuning-cycle.spec.ts` | 11 | Full guided tuning cycle: start → modal → erase → download → filter wizard → apply → PID wizard → apply → skip verify → complete → dismiss → check history |
-| `e2e/demo-quick-tune-cycle.spec.ts` | 7 | Full quick tune cycle: start → modal (Quick) → erase → download → quick wizard (auto-analysis) → apply all → skip verify → complete → dismiss → check history |
-| `e2e/demo-generate-history.spec.ts` | 3 | Generates completed tuning sessions in 3 modes: mixed, guided-only, quick-only (excluded from normal `test:e2e` runs, run via `npm run demo:generate-history`) |
+| `e2e/demo-tuning-cycle.spec.ts` | 11 | Full Deep Tune cycle: start → modal → erase → download → filter wizard → apply → PID wizard → apply → skip verify → complete → dismiss → check history |
+| `e2e/demo-quick-tune-cycle.spec.ts` | 7 | Full Flash Tune cycle: start → modal (Flash) → erase → download → flash wizard (auto-analysis) → apply all → skip verify → complete → dismiss → check history |
+| `e2e/demo-generate-history.spec.ts` | 3 | Generates completed tuning sessions in 3 modes: mixed, deep-only, flash-only (excluded from normal `test:e2e` runs, run via `npm run demo:generate-history`) |
 
 **E2E infrastructure:**
 - `e2e/electron-app.ts` — Shared fixture with `launchDemoApp()`, screenshot helpers, button/text wait utilities

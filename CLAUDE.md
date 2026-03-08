@@ -71,7 +71,7 @@ npm run rebuild
 - React application with hooks-based state management
 - No direct IPC access - uses `window.betaflight` API only
 - Event subscriptions via `onConnectionChanged`, `onProfileChanged`, `onNewFCDetected`
-- Tuning wizard: `src/renderer/components/TuningWizard/` (guided tuning flow, mode='filter'/'pid' only)
+- Tuning wizard: `src/renderer/components/TuningWizard/` (Deep Tune flow, mode='filter'/'pid' only)
 - Analysis overview: `src/renderer/components/AnalysisOverview/` (read-only single-page analysis)
 
 ### Multi-Drone Profile System
@@ -140,7 +140,7 @@ IPC handlers are split into domain modules under `src/main/ipc/handlers/`:
 | `pidHandlers.ts` | 3 | PID get/set/save |
 | `blackboxHandlers.ts` | 9 | Info, download, list, delete, erase, folder, test, parse, import |
 | `analysisHandlers.ts` | 3 | Filter, PID, and transfer function analysis |
-| `tuningHandlers.ts` | 8 | Apply, session CRUD (guided + quick), history, update verification, update history verification |
+| `tuningHandlers.ts` | 8 | Apply, session CRUD (deep + flash), history, update verification, update history verification |
 | `index.ts` | — | DI container, `registerIPCHandlers()` |
 
 **Request-Response Pattern**:
@@ -246,7 +246,7 @@ Analyzes system transfer function via Wiener deconvolution for PID recommendatio
 **Pipeline**: TransferFunctionEstimator (setpoint → gyro deconvolution → H(f) = S_xy(f) / S_xx(f))
 
 - **TransferFunctionEstimator**: Cross-spectral density estimation, bandwidth/phase margin extraction, PID recommendations based on frequency response characteristics
-- Used in Quick Tune mode for combined filter + PID analysis from a single flight
+- Used in Flash Tune mode for combined filter + PID analysis from a single flight
 - IPC: `ANALYSIS_RUN_TRANSFER_FUNCTION` + `EVENT_ANALYSIS_PROGRESS`
 
 ### Data Quality Scoring (`src/main/analysis/DataQualityScorer.ts`)
@@ -264,13 +264,13 @@ Rates flight data quality 0-100 before generating recommendations. Integrated in
 
 ### Stateful Tuning Session
 
-Two tuning modes: **Guided** (2-flight, filters then PIDs) and **Quick** (1-flight, combined analysis via Wiener deconvolution).
+Two tuning modes: **Deep Tune** (2-flight, filters then PIDs) and **Flash Tune** (1-flight, combined analysis via Wiener deconvolution).
 
-**TuningType**: `'guided' | 'quick'` — selected at session start via `StartTuningModal`
+**TuningType**: `'guided' | 'quick'` (internal values) — displayed as "Deep Tune" / "Flash Tune" via `TUNING_TYPE_LABELS`
 
-**Guided State Machine** (`TuningPhase`): filter_flight_pending → filter_log_ready → filter_analysis → filter_applied → pid_flight_pending → pid_log_ready → pid_analysis → pid_applied → verification_pending → completed
+**Deep Tune State Machine** (`TuningPhase`): filter_flight_pending → filter_log_ready → filter_analysis → filter_applied → pid_flight_pending → pid_log_ready → pid_analysis → pid_applied → verification_pending → completed
 
-**Quick State Machine** (`TuningPhase`): quick_flight_pending → quick_log_ready → quick_analysis → quick_applied → verification_pending → completed
+**Flash Tune State Machine** (`TuningPhase`): quick_flight_pending → quick_log_ready → quick_analysis → quick_applied → verification_pending → completed
 
 - **TuningSessionManager** (`src/main/storage/`): CRUD for per-profile session files at `{userData}/data/tuning/{profileId}.json`
 - **useTuningSession hook**: Manages session lifecycle with IPC and event subscription
@@ -293,12 +293,12 @@ Read-only single-page analysis view. Opened when user clicks "Analyze" on a down
 
 ### Tuning Wizard (`src/renderer/components/TuningWizard/`)
 
-Guided multi-step wizard for active tuning sessions. Supports mode-aware step routing.
+Multi-step wizard for active tuning sessions (Deep Tune and Flash Tune). Supports mode-aware step routing.
 
 **Steps by mode** (used only during active tuning sessions):
 - `filter`: Flight Guide → Session → Filters → Summary (skips PIDs)
 - `pid`: Flight Guide → Session → PIDs → Summary (skips Filters)
-- `quick`: Session → Quick Analysis (filter + TF in parallel, auto-runs) → Summary
+- `quick`: Session → Flash Tune Analysis (filter + TF in parallel, auto-runs) → Summary
 
 - **useTuningWizard hook**: State management for parse/filter/PID analysis and apply lifecycle, mode-aware auto-advance and apply
 - **WizardProgress**: Visual step indicator with done/current/upcoming states, dynamic step filtering by mode
@@ -410,7 +410,7 @@ npm run demo:generate-history # Build + generate 5 tuning sessions (~2 min)
 - `E2E_USER_DATA_DIR` env var → `app.setPath('userData', ...)` in `src/main/index.ts` for test isolation
 - Clean state: `.e2e-userdata/` is wiped before each test file
 - `test:e2e` uses `--grep-invert 'generate 5'` to exclude slow generator
-- 4 spec files: smoke (4), guided cycle (11), quick tune cycle (7), history generator (1)
+- 4 spec files: smoke (4), Deep Tune cycle (11), Flash Tune cycle (7), history generator (1)
 - `vitest.config.ts` excludes `e2e/` to prevent Vitest from picking up Playwright specs
 - `advancePastVerification()` in MockMSPClient keeps flight type cycling correct when verification is skipped
 

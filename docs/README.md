@@ -21,7 +21,7 @@ Overview of all design documents in this directory. Completed documents are arch
 | [FLIGHT_STYLE_PROFILES](./complete/FLIGHT_STYLE_PROFILES.md) | #71–#78 | Smooth/Balanced/Aggressive flight style selector, style-based PID thresholds, preset defaults |
 | [OFFLINE_UX_TESTING](./complete/OFFLINE_UX_TESTING.md) | — | Demo mode (`--demo` flag) for offline UX testing. 25 Playwright E2E tests |
 | [PROJECT_QUALITY_REPORT_2026-02-14](./complete/PROJECT_QUALITY_REPORT_2026-02-14.md) | #120 | Point-in-time quality assessment (Feb 14, 2026) |
-| [QUICK_TUNE_WIENER_DECONVOLUTION](./complete/QUICK_TUNE_WIENER_DECONVOLUTION.md) | #146–#152 | Single-flight Quick Tune mode via Wiener deconvolution: transfer function estimation, Bode plots, dual-mode tuning (Guided vs Quick) |
+| [QUICK_TUNE_WIENER_DECONVOLUTION](./complete/QUICK_TUNE_WIENER_DECONVOLUTION.md) | #146–#152 | Single-flight Flash Tune mode via Wiener deconvolution: transfer function estimation, Bode plots, dual-mode tuning (Deep Tune vs Flash Tune) |
 | [RPM_FILTER_AWARENESS](./complete/RPM_FILTER_AWARENESS.md) | #63–#69 | RPM filter detection via MSP/BBL, RPM-aware filter bounds, dynamic notch optimization |
 | [SD_CARD_BLACKBOX_SUPPORT](./complete/SD_CARD_BLACKBOX_SUPPORT.md) | #105, #142 | SD card blackbox storage via MSC mode + tuning session fixes |
 | [TUNING_HISTORY_AND_COMPARISON](./complete/TUNING_HISTORY_AND_COMPARISON.md) | #96–#99 | Tuning session history + before/after comparison on completion |

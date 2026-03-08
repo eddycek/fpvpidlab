@@ -57,8 +57,8 @@ High-level user journey:
 |------|-------------|--------|
 | 1 | Connect drone over USB; read Betaflight version/target; create baseline backup snapshot | :white_check_mark: MSP connect + FC info + auto-baseline snapshot + smart reconnect detection |
 | 2 | Configure Blackbox logging for analysis (high logging rate, correct debug mode); ensure prerequisite settings | :white_check_mark: Blackbox info read + diagnostics (debug_mode, logging rate warnings). One-click "Fix Settings" in FCInfoDisplay + pre-flight warning in TuningStatusBanner → CLI commands → save & reboot. |
-| 3 | Filter tuning: guided throttle-sweep test flight; retrieve log; run noise analysis; propose safe filter adjustments; apply | :white_check_mark: Full pipeline with guided two-flight workflow, post-erase guidance, FFT analysis, interactive spectrum charts, auto-apply via CLI. |
-| 4 | PID tuning: guided stick snap test flight; retrieve log; analyze step responses; apply P/D recommendations | :white_check_mark: Step response analysis, interactive step response charts, auto-apply via MSP, optional verification hover with before/after noise comparison. D sweep multi-log comparison deferred. |
+| 3 | Filter tuning: throttle-sweep test flight; retrieve log; run noise analysis; propose safe filter adjustments; apply | :white_check_mark: Full pipeline with Deep Tune two-flight workflow, post-erase guidance, FFT analysis, interactive spectrum charts, auto-apply via CLI. |
+| 4 | PID tuning: stick snap test flight; retrieve log; analyze step responses; apply P/D recommendations | :white_check_mark: Step response analysis, interactive step response charts, auto-apply via MSP, optional verification hover with before/after noise comparison. D sweep multi-log comparison deferred. |
 | 5 | Restore other parameters (FeedForward, I, dynamic damping if used); store tuned snapshot; test-fly; rollback if needed | :construction: Snapshot restore/rollback :white_check_mark:. FF detection + FF-aware PID analysis + MSP read :white_check_mark:. FF write-back via CLI apply :white_check_mark: (PR #116). I write-back tuning :x:. |
 
 ---
@@ -104,7 +104,7 @@ High-level user journey:
 
 | Requirement | Status | Notes |
 |-------------|--------|-------|
-| P/D balance: run guided stick snap flights; compute step responses; recommend P/D adjustments | :white_check_mark: | Step detection + metrics + scoring + recommendations + interactive step response chart |
+| P/D balance: run stick snap flights; compute step responses; recommend P/D adjustments | :white_check_mark: | Step detection + metrics + scoring + recommendations + interactive step response chart |
 | Flight style-aware PID thresholds (smooth/balanced/aggressive) | :white_check_mark: | Per-profile FlightStyle selector, style-based PID_STYLE_THRESHOLDS map, preset defaults, UI context display |
 | D sweep multi-log comparison (vary D, compare response quality) | :fast_forward: | Deferred — requires multi-flight iterative workflow. |
 | Master gain step: scale P/D together; detect onset of oscillation | :fast_forward: | Deferred — requires multi-flight iterative workflow. |
@@ -179,7 +179,7 @@ High-level user journey:
 | Consideration | Status | Notes |
 |---------------|--------|-------|
 | Market pain is real: many pilots struggle with tuning | N/A | Validated by spec |
-| Differentiator: end-to-end guided workflow + automated recommendations + rollback + beginner explanations | :white_check_mark: | Full end-to-end pipeline with two-flight guided workflow |
+| Differentiator: end-to-end tuning workflow + automated recommendations + rollback + beginner explanations | :white_check_mark: | Full end-to-end pipeline with Deep Tune (two-flight) and Flash Tune (single-flight) workflows |
 | Monetization paths (later): open-core or freemium | :fast_forward: | Post-MVP |
 | MVP should be fully usable offline without accounts | :white_check_mark: | No accounts, no network, fully local |
 
@@ -195,7 +195,7 @@ High-level user journey:
 | Blackbox log import/download + parsing | :white_check_mark: | Complete (245 parser tests incl. fuzz) |
 | Filter analysis + apply changes | :white_check_mark: | Complete with interactive charts |
 | PID analysis (P/D balance) + apply changes | :white_check_mark: | Complete with interactive charts. Master gain deferred. |
-| Guided tutorial screens for required test flights | :white_check_mark: | Two-flight guided workflow with status banner, flight guides, post-erase guidance |
+| Tutorial screens for required test flights | :white_check_mark: | Deep Tune workflow with status banner, flight guides, post-erase guidance |
 | Export session report (PDF/HTML) | :fast_forward: | Deferred to future iteration |
 
 ---
@@ -232,7 +232,7 @@ High-level user journey:
 - Blackbox binary log parser (245 tests, validated against BF Explorer)
 - FFT analysis engine (127 tests, Welch's method, peak detection, RPM-aware)
 - Step response analyzer (95 tests, flight-PID anchoring, FF-aware)
-- Guided wizard UI (5-step flow)
+- Tuning wizard UI (5-step flow)
 - Auto-apply recommendations (MSP PIDs → snapshot → CLI filters → save)
 - Convergent recommendations (idempotent)
 - Snapshot restore/rollback with safety backup
@@ -324,8 +324,8 @@ Automated Playwright E2E tests that launch the real Electron app in demo mode (m
 **Completed:**
 - Playwright E2E infrastructure: `e2e/electron-app.ts` fixture with `launchDemoApp()`, screenshot helpers, isolated `E2E_USER_DATA_DIR`
 - 4 smoke tests: app launch, auto-connect, dashboard elements
-- 11 guided tuning cycle tests: complete filter + PID cycle with wizard, apply, skip verification, dismiss, history check
-- 7 quick tune cycle tests: single-flight quick tune cycle with parallel analysis, apply all, history check
+- 11 Deep Tune cycle tests: complete filter + PID cycle with wizard, apply, skip verification, dismiss, history check
+- 7 Flash Tune cycle tests: single-flight Flash Tune cycle with parallel analysis, apply all, history check
 - 5-cycle history generator: `npm run demo:generate-history` for populating tuning history with progressive quality scores
 - `advancePastVerification()` fix: keeps mock FC flight type cycle in sync when verification is skipped across multiple cycles
 - Total: 25 Playwright E2E tests (22 in normal runs + 1 generator)
@@ -362,7 +362,7 @@ Automated end-to-end tests running in CI pipeline against a real FC connected to
 | Phase 4: Two-Flight Workflow | **100%** :white_check_mark: | Session state machine, smart reconnect, status banner, verification flight, tuning history |
 | Phase 5: Manual Testing & UX Polish | **0%** :x: | Next up |
 | Phase 6: CI/CD & Releases | **100%** :white_check_mark: | CI pipeline, cross-platform releases, ESLint/Prettier, ErrorBoundary, handler split, data quality, flight quality score |
-| Phase 7a: Demo E2E (Playwright) | **100%** :white_check_mark: | 23 Playwright tests (demo mode, guided + quick tune) |
+| Phase 7a: Demo E2E (Playwright) | **100%** :white_check_mark: | 23 Playwright tests (demo mode, Deep Tune + Flash Tune) |
 | Phase 7b: Real FC E2E | **0%** :x: | After Phase 5 |
 
 ### Remaining Spec Items (deferred to future iterations)

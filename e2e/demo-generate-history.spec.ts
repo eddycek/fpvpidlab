@@ -2,9 +2,9 @@
  * Generates completed tuning sessions in demo mode.
  *
  * Three modes (run via npm scripts):
- *   npm run demo:generate-history       — 5 mixed sessions (3 guided + 2 quick)
- *   npm run demo:generate-history:full  — 5 guided sessions
- *   npm run demo:generate-history:quick — 5 quick tune sessions
+ *   npm run demo:generate-history        — 5 mixed sessions (3 deep + 2 flash)
+ *   npm run demo:generate-history:deep   — 5 deep tune sessions
+ *   npm run demo:generate-history:flash  — 5 flash tune sessions
  */
 import { test, expect } from '@playwright/test';
 import { launchDemoApp, type DemoApp } from './electron-app';
@@ -152,7 +152,7 @@ async function runQuickCycle(cycleNum: number): Promise<void> {
   await modal.getByRole('button', { name: 'Flash Tune' }).click();
   await demo.waitForText('Erase Blackbox data', WAIT);
 
-  // 2. Quick flight: erase → auto-flight → download → quick wizard → apply
+  // 2. Flash Tune flight: erase → auto-flight → download → flash wizard → apply
   await demo.clickButton('Erase Flash');
   await demo.waitForText('Flight done', WAIT);
   await demo.clickButton('Download Log');
@@ -219,7 +219,7 @@ async function verifyHistory(): Promise<void> {
 // ---------------------------------------------------------------------------
 
 test('generate 5 mixed sessions', async () => {
-  // guided → quick → guided → quick → guided
+  // deep → flash → deep → flash → deep
   for (let i = 1; i <= 5; i++) {
     if (i % 2 === 0) {
       await runQuickCycle(i);
@@ -230,14 +230,14 @@ test('generate 5 mixed sessions', async () => {
   await verifyHistory();
 });
 
-test('generate 5 guided sessions', async () => {
+test('generate 5 deep sessions', async () => {
   for (let i = 1; i <= 5; i++) {
     await runGuidedCycle(i);
   }
   await verifyHistory();
 });
 
-test('generate 5 quick sessions', async () => {
+test('generate 5 flash sessions', async () => {
   for (let i = 1; i <= 5; i++) {
     await runQuickCycle(i);
   }
