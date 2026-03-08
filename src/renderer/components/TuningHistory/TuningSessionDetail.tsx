@@ -18,6 +18,7 @@ function formatDuration(startIso: string, endIso: string): string {
 
 function flightCount(record: CompletedTuningRecord): number {
   let count = 0;
+  if (record.quickLogId) count++;
   if (record.filterLogId) count++;
   if (record.pidLogId) count++;
   if (record.verificationLogId) count++;

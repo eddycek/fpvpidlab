@@ -154,6 +154,14 @@ describe('TuningHistoryPanel', () => {
     expect(headers[1]).toHaveAttribute('aria-expanded', 'true');
   });
 
+  it('shows "(Quick Tune)" suffix for quick tune records', () => {
+    const record = makeRecord('r1', '2026-02-10T00:00:00Z');
+    record.tuningType = 'quick';
+    render(<TuningHistoryPanel history={[record]} loading={false} />);
+
+    expect(screen.getByText(/Quick Tune/)).toBeInTheDocument();
+  });
+
   it('shows noise level in summary', () => {
     const records = [makeRecord('r1', '2026-02-10T00:00:00Z')];
     render(<TuningHistoryPanel history={records} loading={false} />);

@@ -31,10 +31,15 @@ function formatDuration(startIso: string, endIso: string): string {
 
 function flightCount(session: TuningSession): number {
   let count = 0;
+  if (session.quickLogId) count++;
   if (session.filterLogId) count++;
   if (session.pidLogId) count++;
   if (session.verificationLogId) count++;
   return count;
+}
+
+function completionTitle(session: TuningSession): string {
+  return session.tuningType === 'quick' ? 'Quick Tune Complete' : 'Tuning Complete';
 }
 
 export function TuningCompletionSummary({
@@ -61,7 +66,7 @@ export function TuningCompletionSummary({
       <div className="completion-summary-header">
         <div>
           <h3 className="completion-summary-title">
-            {'\u2705'} Tuning Complete
+            {'\u2705'} {completionTitle(session)}
             {score && (
               <span className={`quality-score-badge quality-score-${score.tier}`}>
                 {score.overall} {TIER_LABELS[score.tier]}

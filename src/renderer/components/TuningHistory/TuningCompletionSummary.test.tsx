@@ -269,6 +269,26 @@ describe('TuningCompletionSummary', () => {
     expect(badge!.textContent).toMatch(/\d+\s+(Excellent|Good|Fair|Poor)/);
   });
 
+  it('shows "Quick Tune Complete" for quick tuning sessions', () => {
+    const quickSession: TuningSession = {
+      ...baseSession,
+      tuningType: 'quick',
+      quickLogId: 'log-q1',
+      filterLogId: undefined,
+      pidLogId: undefined,
+    };
+    render(
+      <TuningCompletionSummary
+        session={quickSession}
+        onDismiss={onDismiss}
+        onStartNew={onStartNew}
+      />
+    );
+
+    expect(screen.getByText(/Quick Tune Complete/)).toBeInTheDocument();
+    expect(screen.getByText(/1 flight/)).toBeInTheDocument();
+  });
+
   it('includes pidMetrics in quality score (higher score than filter-only)', () => {
     // With pidMetrics: 4 components score → higher total
     const { container } = render(
