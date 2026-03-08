@@ -230,6 +230,14 @@ export function AnalysisOverview({ logId, logName, onExit }: AnalysisOverviewPro
                 {overview.filterResult.dataQuality.overall}/100)
               </span>
             )}
+            {overview.filterResult.windDisturbance && (
+              <span
+                className={`analysis-meta-pill wind-${overview.filterResult.windDisturbance.level}`}
+                title={overview.filterResult.windDisturbance.summary}
+              >
+                Wind: {overview.filterResult.windDisturbance.level}
+              </span>
+            )}
           </div>
 
           {overview.filterResult.rpmFilterActive && (

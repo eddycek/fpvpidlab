@@ -43,6 +43,8 @@ export interface FilterMetricsSummary {
   spectrum?: CompactSpectrum;
   /** Data quality score summary */
   dataQuality?: { overall: number; tier: string };
+  /** Wind/disturbance level during hover segments */
+  windDisturbance?: { level: string; worstVariance: number };
 }
 
 /** Compact per-axis PID step response metrics */

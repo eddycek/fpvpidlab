@@ -120,6 +120,8 @@ export interface FilterAnalysisResult {
   throttleSpectrogram?: ThrottleSpectrogramResult;
   /** Estimated group delay of the current filter chain */
   groupDelay?: FilterGroupDelay;
+  /** Wind/disturbance detection result */
+  windDisturbance?: WindDisturbanceResult;
 }
 
 // ---- Throttle Spectrogram Types ----
@@ -443,6 +445,27 @@ export interface PropWashEvent {
   severityRatio: number;
   /** Per-axis energy in the prop wash band */
   axisEnergy: { roll: number; pitch: number; yaw: number };
+}
+
+// ---- Wind Disturbance Detection Types ----
+
+/** Disturbance level classification */
+export type DisturbanceLevel = 'calm' | 'moderate' | 'windy';
+
+/** Wind/disturbance detection result from gyro variance during hover */
+export interface WindDisturbanceResult {
+  /** Per-axis gyro variance during hover (deg/s²) */
+  axisVariance: [number, number, number];
+  /** Worst-case (maximum) variance across roll and pitch */
+  worstVariance: number;
+  /** Overall disturbance classification */
+  level: DisturbanceLevel;
+  /** Total hover time analyzed (seconds) */
+  hoverDurationS: number;
+  /** Number of hover samples used */
+  hoverSampleCount: number;
+  /** Human-readable summary */
+  summary: string;
 }
 
 /** Complete prop wash analysis result */

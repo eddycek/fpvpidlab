@@ -125,6 +125,14 @@ export function extractFilterMetrics(result: FilterAnalysisResult): FilterMetric
     ...(result.dataQuality
       ? { dataQuality: { overall: result.dataQuality.overall, tier: result.dataQuality.tier } }
       : {}),
+    ...(result.windDisturbance
+      ? {
+          windDisturbance: {
+            level: result.windDisturbance.level,
+            worstVariance: round2(result.windDisturbance.worstVariance),
+          },
+        }
+      : {}),
   };
 }
 

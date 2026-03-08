@@ -1,6 +1,6 @@
 # Tuning Precision Improvements
 
-> **Status**: Active (PRs #119–#120, #137, #146–#152, #156–#160 — 10/15 implemented)
+> **Status**: Active (PRs #119–#120, #137, #146–#152, #156–#160 — 11/15 implemented)
 
 Research-based analysis of techniques to improve tuning recommendation accuracy. Prioritized by impact and implementation effort.
 
@@ -244,7 +244,7 @@ Before PID tuning, check for extreme noise floor (>-20 dB), asymmetric per-axis 
 
 When throttle spectrogram shows noise significantly increasing with throttle, recommend dynamic lowpass (throttle-ramped cutoff) instead of static. Lower latency at low throttle, more filtering at high throttle.
 
-### 15. Wind/Disturbance Detection
+### 15. ✅ Wind/Disturbance Detection — `WindDisturbanceDetector.ts`
 
 Analyze gyro variance during steady hover to estimate wind level. High variance = lower confidence in recommendations. Report: "High disturbance detected — consider retesting in calmer conditions."
 

@@ -771,6 +771,43 @@ describe('AnalysisOverview', () => {
     });
   });
 
+  it('shows wind disturbance pill when windDisturbance is present', async () => {
+    const filterWithWind: FilterAnalysisResult = {
+      ...mockFilterResult,
+      windDisturbance: {
+        axisVariance: [10, 8, 5],
+        worstVariance: 10,
+        level: 'calm',
+        hoverDurationS: 5.0,
+        hoverSampleCount: 20000,
+        summary: 'Calm conditions detected (gyro variance 10 deg/s²). Tuning data is reliable.',
+      },
+    };
+    vi.mocked(window.betaflight.parseBlackboxLog).mockResolvedValue(mockParseResult);
+    vi.mocked(window.betaflight.analyzeFilters).mockResolvedValue(filterWithWind);
+    vi.mocked(window.betaflight.analyzePID).mockResolvedValue(mockPIDResult);
+
+    render(<AnalysisOverview logId="log-1" logName="blackbox_2026-02-11.bbl" onExit={onExit} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Wind: calm')).toBeInTheDocument();
+    });
+  });
+
+  it('does not show wind disturbance pill when windDisturbance is absent', async () => {
+    vi.mocked(window.betaflight.parseBlackboxLog).mockResolvedValue(mockParseResult);
+    vi.mocked(window.betaflight.analyzeFilters).mockResolvedValue(mockFilterResult);
+    vi.mocked(window.betaflight.analyzePID).mockResolvedValue(mockPIDResult);
+
+    render(<AnalysisOverview logId="log-1" logName="blackbox_2026-02-11.bbl" onExit={onExit} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('low')).toBeInTheDocument();
+    });
+
+    expect(screen.queryByText(/Wind:/)).not.toBeInTheDocument();
+  });
+
   it('log name is not clickable for single-session logs', async () => {
     vi.mocked(window.betaflight.parseBlackboxLog).mockResolvedValue(mockParseResult);
     vi.mocked(window.betaflight.analyzeFilters).mockResolvedValue(mockFilterResult);

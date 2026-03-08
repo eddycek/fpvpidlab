@@ -22,6 +22,7 @@ import { recommend, generateSummary, isRpmFilterActive } from './FilterRecommend
 import { scoreFilterDataQuality, adjustFilterConfidenceByQuality } from './DataQualityScorer';
 import { computeThrottleSpectrogram } from './ThrottleSpectrogramAnalyzer';
 import { estimateGroupDelay } from './GroupDelayEstimator';
+import { analyzeWindDisturbance } from './WindDisturbanceDetector';
 import { FFT_WINDOW_SIZE, FREQUENCY_MIN_HZ, FREQUENCY_MAX_HZ } from './constants';
 
 /** Maximum number of segments to use (more = slower but more accurate) */
@@ -143,6 +144,9 @@ export async function analyze(
   // Step 5: Estimate group delay
   const groupDelay = estimateGroupDelay(currentSettings);
 
+  // Step 6: Wind/disturbance detection
+  const windDisturbance = analyzeWindDisturbance(flightData);
+
   onProgress?.({ step: 'recommending', percent: 100 });
 
   return {
@@ -157,6 +161,7 @@ export async function analyze(
     ...(qualityResult.warnings.length > 0 ? { warnings: qualityResult.warnings } : {}),
     ...(throttleSpectrogram?.bandsWithData ? { throttleSpectrogram } : {}),
     groupDelay,
+    windDisturbance,
   };
 }
 
@@ -210,6 +215,9 @@ async function analyzeEntireFlight(
 
   const groupDelay = estimateGroupDelay(currentSettings);
 
+  // Wind/disturbance detection
+  const windDisturbance = analyzeWindDisturbance(flightData);
+
   return {
     noise: noiseProfile,
     recommendations,
@@ -222,6 +230,7 @@ async function analyzeEntireFlight(
     dataQuality,
     ...(throttleSpectrogram?.bandsWithData ? { throttleSpectrogram } : {}),
     groupDelay,
+    windDisturbance,
   };
 }
 

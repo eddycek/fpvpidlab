@@ -112,6 +112,14 @@ export function FilterAnalysisStep({
               Data: {filterResult.dataQuality.tier} ({filterResult.dataQuality.overall}/100)
             </span>
           )}
+          {filterResult.windDisturbance && (
+            <span
+              className={`analysis-meta-pill wind-${filterResult.windDisturbance.level}`}
+              title={filterResult.windDisturbance.summary}
+            >
+              Wind: {filterResult.windDisturbance.level}
+            </span>
+          )}
         </div>
 
         {filterResult.rpmFilterActive && (

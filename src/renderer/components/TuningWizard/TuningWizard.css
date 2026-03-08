@@ -457,6 +457,22 @@
   color: #ff8787;
 }
 
+/* Wind disturbance level pills */
+.analysis-meta-pill.wind-calm {
+  background: rgba(81, 207, 102, 0.12);
+  color: #51cf66;
+}
+
+.analysis-meta-pill.wind-moderate {
+  background: rgba(255, 212, 59, 0.12);
+  color: #ffd43b;
+}
+
+.analysis-meta-pill.wind-windy {
+  background: rgba(255, 135, 135, 0.12);
+  color: #ff8787;
+}
+
 /* Noise details toggle */
 .noise-details-toggle {
   background: none;
