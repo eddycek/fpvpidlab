@@ -130,6 +130,17 @@ export const RESONANCE_ACTION_THRESHOLD_DB = 12;
 /** Margin below a resonance peak when lowering cutoff (Hz) */
 export const RESONANCE_CUTOFF_MARGIN_HZ = 20;
 
+// ---- Propwash Safety Floor ----
+
+/** Propwash-aware minimum gyro LPF1 cutoff (Hz). Prevents excessive phase delay
+ * that degrades propwash recovery during aggressive maneuvers (flips, rolls).
+ * Only applies to noise-floor-based recommendations, not resonance-based. */
+export const PROPWASH_GYRO_LPF1_FLOOR_HZ = 100;
+
+/** Noise floor threshold (dB) above which the propwash floor is bypassed.
+ * When noise is this severe, aggressive filtering takes priority over propwash handling. */
+export const PROPWASH_FLOOR_BYPASS_DB = -15;
+
 // ---- Step Detection ----
 
 /** Minimum setpoint change to count as a step (deg/s) */
@@ -138,8 +149,17 @@ export const STEP_MIN_MAGNITUDE_DEG_S = 100;
 /** Minimum setpoint derivative (deg/s per second) for edge detection */
 export const STEP_DERIVATIVE_THRESHOLD = 500;
 
-/** Window after step to measure response (ms) */
+/** Default window after step to measure response (ms) — fallback when adaptive not available */
 export const STEP_RESPONSE_WINDOW_MS = 300;
+
+/** Maximum response window for first-pass adaptive detection (ms) — generous for large quads */
+export const STEP_RESPONSE_WINDOW_MAX_MS = 500;
+
+/** Minimum response window (ms) — prevents clipping for tiny quads */
+export const STEP_RESPONSE_WINDOW_MIN_MS = 150;
+
+/** Multiplier for median settling time to compute adaptive window */
+export const ADAPTIVE_WINDOW_SETTLING_MULTIPLIER = 2;
 
 /** Minimum gap between steps to avoid rapid reversals (ms) */
 export const STEP_COOLDOWN_MS = 100;
@@ -186,12 +206,43 @@ export interface PIDStyleThresholds {
   ringingMax: number;
   moderateOvershoot: number;
   sluggishRise: number;
+  /** Steady-state error threshold (%) above which I is considered too low */
+  steadyStateErrorMax: number;
+  /** Steady-state error threshold (%) below which I might be safely reduced */
+  steadyStateErrorLow: number;
 }
 
 export const PID_STYLE_THRESHOLDS: Record<FlightStyle, PIDStyleThresholds> = {
-  smooth:     { overshootIdeal: 3,  overshootMax: 12, settlingMax: 250, ringingMax: 1, moderateOvershoot: 8,  sluggishRise: 120 },
-  balanced:   { overshootIdeal: 10, overshootMax: 25, settlingMax: 200, ringingMax: 2, moderateOvershoot: 15, sluggishRise: 80  },
-  aggressive: { overshootIdeal: 18, overshootMax: 35, settlingMax: 150, ringingMax: 3, moderateOvershoot: 25, sluggishRise: 50  },
+  smooth: {
+    overshootIdeal: 3,
+    overshootMax: 12,
+    settlingMax: 250,
+    ringingMax: 1,
+    moderateOvershoot: 8,
+    sluggishRise: 120,
+    steadyStateErrorMax: 8,
+    steadyStateErrorLow: 2,
+  },
+  balanced: {
+    overshootIdeal: 10,
+    overshootMax: 25,
+    settlingMax: 200,
+    ringingMax: 2,
+    moderateOvershoot: 15,
+    sluggishRise: 80,
+    steadyStateErrorMax: 5,
+    steadyStateErrorLow: 1,
+  },
+  aggressive: {
+    overshootIdeal: 18,
+    overshootMax: 35,
+    settlingMax: 150,
+    ringingMax: 3,
+    moderateOvershoot: 25,
+    sluggishRise: 50,
+    steadyStateErrorMax: 3,
+    steadyStateErrorLow: 1,
+  },
 } as const;
 
 // ---- PID Safety Bounds ----
@@ -208,8 +259,47 @@ export const D_GAIN_MIN = 15;
 /** Maximum D gain */
 export const D_GAIN_MAX = 80;
 
+// ---- D/P Damping Ratio ----
+
+/** Minimum healthy D/P ratio. Below this the quad is underdamped (bouncy, oscillatory).
+ * Typical BF defaults: D/P ≈ 0.55-0.65. Only checked on roll/pitch (yaw D often 0). */
+export const DAMPING_RATIO_MIN = 0.45;
+
+/** Maximum healthy D/P ratio. Above this the quad is overdamped (sluggish motors, noise amplification). */
+export const DAMPING_RATIO_MAX = 0.85;
+
+/** Minimum D/P change (in absolute terms) to emit a damping ratio recommendation.
+ * Prevents trivial 1-point adjustments from rounding. */
+export const DAMPING_RATIO_DEADZONE = 3;
+
 /** Minimum I gain */
 export const I_GAIN_MIN = 30;
 
 /** Maximum I gain */
 export const I_GAIN_MAX = 120;
+
+// ---- Prop Wash Detection ----
+
+/** Minimum throttle derivative (normalized units/s) for throttle-down event detection */
+export const PROPWASH_THROTTLE_DROP_RATE = 0.3;
+
+/** Minimum sustained duration of throttle drop (ms) */
+export const PROPWASH_MIN_DROP_DURATION_MS = 50;
+
+/** Post-event analysis window (ms) — oscillation occurs right after throttle cut */
+export const PROPWASH_ANALYSIS_WINDOW_MS = 400;
+
+/** Prop wash frequency band lower bound (Hz) */
+export const PROPWASH_FREQ_MIN_HZ = 20;
+
+/** Prop wash frequency band upper bound (Hz) */
+export const PROPWASH_FREQ_MAX_HZ = 90;
+
+/** Severity ratio threshold: below this is minimal prop wash */
+export const PROPWASH_SEVERITY_MINIMAL = 2.0;
+
+/** Severity ratio threshold: above this is severe prop wash */
+export const PROPWASH_SEVERITY_SEVERE = 5.0;
+
+/** Minimum events needed for reliable analysis */
+export const PROPWASH_MIN_EVENTS = 3;

@@ -15,10 +15,18 @@ import type {
   StepResponse,
 } from '@shared/types/analysis.types';
 import { detectSteps } from './StepDetector';
-import { computeStepResponse, aggregateAxisMetrics, classifyFFContribution } from './StepMetrics';
+import {
+  computeStepResponse,
+  aggregateAxisMetrics,
+  classifyFFContribution,
+  computeAdaptiveWindowMs,
+} from './StepMetrics';
 import { recommendPID, generatePIDSummary, extractFeedforwardContext } from './PIDRecommender';
 import { scorePIDDataQuality, adjustPIDConfidenceByQuality } from './DataQualityScorer';
 import { estimateAllAxes, type TransferFunctionResult } from './TransferFunctionEstimator';
+import { STEP_RESPONSE_WINDOW_MAX_MS } from './constants';
+import { analyzeCrossAxisCoupling } from './CrossAxisDetector';
+import { analyzePropWash } from './PropWashDetector';
 
 /** Default PID configuration if none provided */
 const DEFAULT_PIDS: PIDConfiguration = {
@@ -50,13 +58,38 @@ export async function analyzePID(
 ): Promise<PIDAnalysisResult> {
   const startTime = performance.now();
 
-  // Step 1: Detect step inputs
-  onProgress?.({ step: 'detecting', percent: 10 });
-  const steps = detectSteps(flightData);
+  // Step 1: Detect step inputs with generous window for adaptive sizing
+  onProgress?.({ step: 'detecting', percent: 5 });
+  const firstPassSteps = detectSteps(flightData, STEP_RESPONSE_WINDOW_MAX_MS);
 
   await yieldToEventLoop();
 
-  // Step 2: Compute metrics for each step
+  // Step 1b: First-pass metrics to determine adaptive window
+  const firstPassResponses: StepResponse[] = [];
+  for (const step of firstPassSteps) {
+    firstPassResponses.push(
+      computeStepResponse(
+        flightData.setpoint[step.axis],
+        flightData.gyro[step.axis],
+        step,
+        flightData.sampleRateHz
+      )
+    );
+  }
+  const adaptiveWindowMs = computeAdaptiveWindowMs(firstPassResponses);
+
+  await yieldToEventLoop();
+
+  // Step 2: Re-detect with adaptive window (skip if same as first pass)
+  onProgress?.({ step: 'detecting', percent: 10 });
+  const steps =
+    adaptiveWindowMs === STEP_RESPONSE_WINDOW_MAX_MS
+      ? firstPassSteps
+      : detectSteps(flightData, adaptiveWindowMs);
+
+  await yieldToEventLoop();
+
+  // Step 3: Compute metrics for each step with adaptive window
   onProgress?.({ step: 'measuring', percent: 30 });
 
   const rollResponses: StepResponse[] = [];
@@ -114,8 +147,14 @@ export async function analyzePID(
     axisResponses: { roll: rollResponses, pitch: pitchResponses, yaw: yawResponses },
   });
 
+  // Detect cross-axis coupling
+  const crossAxisCoupling = analyzeCrossAxisCoupling(steps, flightData);
+
   // Extract feedforward context before recommendations (needed for FF-aware rules)
   const feedforwardContext = rawHeaders ? extractFeedforwardContext(rawHeaders) : undefined;
+
+  // Step 2b: Prop wash analysis (runs on any flight with throttle data)
+  const propWash = analyzePropWash(flightData);
 
   // Step 3: Generate recommendations
   onProgress?.({ step: 'scoring', percent: 80 });
@@ -160,6 +199,8 @@ export async function analyzePID(
     flightStyle,
     dataQuality: qualityResult.score,
     ...(warnings.length > 0 ? { warnings } : {}),
+    ...(crossAxisCoupling ? { crossAxisCoupling } : {}),
+    ...(propWash ? { propWash } : {}),
   };
 }
 
@@ -289,6 +330,7 @@ export async function analyzeTransferFunction(
     analysisMethod: 'wiener_deconvolution',
     ...(warnings.length > 0 ? { warnings } : {}),
     transferFunction: tfResult,
+    ...(propWash ? { propWash } : {}),
   };
 }
 

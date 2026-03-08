@@ -1,6 +1,6 @@
 # Architecture Overview
 
-**Last Updated:** March 7, 2026 | **Phase 4 Complete, Phase 6 Complete** | **1964 unit tests, 100 files + 23 Playwright E2E tests**
+**Last Updated:** March 8, 2026 | **Phase 4 Complete, Phase 6 Complete** | **2103 unit tests, 105 files + 23 Playwright E2E tests**
 
 ---
 
@@ -127,6 +127,7 @@ If tuning session exists AND phase is filter_flight_pending, pid_flight_pending,
 | `MSPClient.ts` | 969 | High-level API with retry logic |
 | `MSPConnection.ts` | 309 | Serial port handling, CLI mode |
 | `MSPProtocol.ts` | 229 | MSP v1 packet encoding/decoding |
+| `cliUtils.ts` | — | CLI command parsing utilities |
 | `commands.ts` | 16 | MSP command enum (21 commands) |
 | `types.ts` | 44 | MSP type definitions |
 

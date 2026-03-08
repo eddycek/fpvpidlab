@@ -57,8 +57,9 @@ export function TuningCompletionSummary({
   const score = useMemo(
     () =>
       computeTuneQualityScore({
-        filterMetrics: session.verificationMetrics ?? session.filterMetrics,
+        filterMetrics: session.filterMetrics,
         pidMetrics: session.pidMetrics,
+        verificationMetrics: session.verificationMetrics,
       }),
     [session.filterMetrics, session.verificationMetrics, session.pidMetrics]
   );

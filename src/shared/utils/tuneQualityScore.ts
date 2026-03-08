@@ -25,7 +25,8 @@ interface ComponentDef {
   label: string;
   getValue: (
     filter: FilterMetricsSummary | null | undefined,
-    pid: PIDMetricsSummary | null | undefined
+    pid: PIDMetricsSummary | null | undefined,
+    verification?: FilterMetricsSummary | null | undefined
   ) => number | undefined;
   /** Value that yields full score */
   best: number;
@@ -36,9 +37,11 @@ interface ComponentDef {
 const COMPONENTS: ComponentDef[] = [
   {
     label: 'Noise Floor',
-    getValue: (filter) => {
-      if (!filter) return undefined;
-      return (filter.roll.noiseFloorDb + filter.pitch.noiseFloorDb + filter.yaw.noiseFloorDb) / 3;
+    getValue: (filter, _pid, verification) => {
+      // Use verification noise floor (final state) when available
+      const source = verification ?? filter;
+      if (!source) return undefined;
+      return (source.roll.noiseFloorDb + source.pitch.noiseFloorDb + source.yaw.noiseFloorDb) / 3;
     },
     best: -60,
     worst: -20,
@@ -81,6 +84,25 @@ const COMPONENTS: ComponentDef[] = [
     best: 50,
     worst: 500,
   },
+  {
+    label: 'Noise Delta',
+    getValue: (filter, _pid, verification) => {
+      // Only available when both filter-flight and verification-flight data exist
+      if (!filter || !verification) return undefined;
+      const filterAvg =
+        (filter.roll.noiseFloorDb + filter.pitch.noiseFloorDb + filter.yaw.noiseFloorDb) / 3;
+      const verificationAvg =
+        (verification.roll.noiseFloorDb +
+          verification.pitch.noiseFloorDb +
+          verification.yaw.noiseFloorDb) /
+        3;
+      // Negative delta = improvement (verification cleaner), positive = regression
+      return verificationAvg - filterAvg;
+    },
+    // -10 dB improvement → full score, +5 dB regression → zero
+    best: -10,
+    worst: 5,
+  },
 ];
 
 function linearScore(value: number, best: number, worst: number, maxPoints: number): number {
@@ -100,15 +122,16 @@ function tierFromScore(score: number): TuneQualityScore['tier'] {
 export function computeTuneQualityScore(metrics: {
   filterMetrics: FilterMetricsSummary | null | undefined;
   pidMetrics?: PIDMetricsSummary | null | undefined;
+  verificationMetrics?: FilterMetricsSummary | null | undefined;
 }): TuneQualityScore | null {
-  const { filterMetrics, pidMetrics } = metrics;
+  const { filterMetrics, pidMetrics, verificationMetrics } = metrics;
 
   if (!filterMetrics && !pidMetrics) return null;
 
   // Determine which components have data
   const available: { def: ComponentDef; rawValue: number }[] = [];
   for (const def of COMPONENTS) {
-    const val = def.getValue(filterMetrics, pidMetrics);
+    const val = def.getValue(filterMetrics, pidMetrics, verificationMetrics);
     if (val !== undefined) {
       available.push({ def, rawValue: val });
     }

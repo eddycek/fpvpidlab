@@ -163,7 +163,7 @@ npm run test:ui           # Visual interface with DOM snapshots
 
 ## Test Inventory
 
-**Total: 1964 unit tests across 100 files + 23 Playwright E2E tests** (last verified: March 7, 2026)
+**Total: 2103 unit tests across 105 files + 23 Playwright E2E tests** (last verified: March 8, 2026)
 
 ### UI Components
 
@@ -252,9 +252,10 @@ npm run test:ui           # Visual interface with DOM snapshots
 
 | File | Tests | Description |
 |------|-------|-------------|
-| `msp/MSPProtocol.test.ts` | 30 | MSPv1 encode/decode, jumbo frames, round-trip, parseBuffer, checksum validation, garbage recovery |
+| `msp/MSPProtocol.test.ts` | 40 | MSPv1 encode/decode, jumbo frames, round-trip, parseBuffer, checksum validation, garbage recovery |
 | `msp/MSPConnection.test.ts` | 48 | Connection lifecycle, sendCommand, sendCommandNoResponse, timeouts, error/partial responses, CLI mode (prompt debounce, chunk-boundary, trailing CR), event forwarding |
 | `msp/MSPClient.test.ts` | 62 | FC info queries, PID/filter/FF config, board info, UID, blackbox info (flash+SD card), SD card summary, MSC reboot (fire-and-forget), set PID, CLI diff, save & reboot, connect/disconnect, version gate, listPorts |
+| `msp/cliUtils.test.ts` | 21 | CLI command parsing, setting extraction, diff utilities |
 
 ### MSC (Mass Storage Class)
 
@@ -296,18 +297,22 @@ npm run test:ui           # Visual interface with DOM snapshots
 | `analysis/FFTCompute.test.ts` | 20 | Hanning window, Welch's method, sine detection |
 | `analysis/SegmentSelector.test.ts` | 27 | Hover detection, throttle normalization |
 | `analysis/NoiseAnalyzer.test.ts` | 25 | Peak detection, classification, noise floor |
-| `analysis/FilterRecommender.test.ts` | 41 | Noise-based targets, convergence, safety bounds, RPM-aware bounds, dynamic notch, motor diagnostic |
+| `analysis/FilterRecommender.test.ts` | 48 | Noise-based targets, convergence, safety bounds, RPM-aware bounds, dynamic notch, motor diagnostic, propwash floor |
 | `analysis/DataQualityScorer.test.ts` | 36 | Filter/PID data quality scoring, tier mapping, warnings, confidence adjustment, TF data quality |
-| `analysis/FilterAnalyzer.test.ts` | 16 | End-to-end pipeline, progress reporting, segment fallback warnings, RPM context propagation, data quality scoring |
+| `analysis/FilterAnalyzer.test.ts` | 19 | End-to-end pipeline, progress reporting, segment fallback warnings, RPM context propagation, data quality scoring, throttle spectrogram, group delay |
+| `analysis/ThrottleSpectrogramAnalyzer.test.ts` | 19 | Throttle-dependent spectrogram analysis, frequency-throttle mapping, noise source tracking |
+| `analysis/GroupDelayEstimator.test.ts` | 23 | Group delay estimation, filter phase response, latency measurement |
 
 ### Step Response Analysis
 
 | File | Tests | Description |
 |------|-------|-------------|
 | `analysis/StepDetector.test.ts` | 16 | Derivative-based step detection, hold/cooldown |
-| `analysis/StepMetrics.test.ts` | 27 | Rise time, overshoot, settling, latency, ringing, FF contribution classification, trackingErrorRMS computation and aggregation |
-| `analysis/PIDRecommender.test.ts` | 54 | Flight PID anchoring, convergence, safety bounds, FF context, FF-aware recommendations, flight style thresholds, proportional severity scaling, TF-based recommendations |
-| `analysis/PIDAnalyzer.test.ts` | 19 | End-to-end pipeline, progress reporting, FF context wiring, flight style propagation, data quality scoring |
+| `analysis/StepMetrics.test.ts` | 38 | Rise time, overshoot, settling, latency, ringing, FF contribution classification, trackingErrorRMS computation and aggregation, adaptive window |
+| `analysis/PIDRecommender.test.ts` | 69 | Flight PID anchoring, convergence, safety bounds, FF context, FF-aware recommendations, flight style thresholds, proportional severity scaling, TF-based recommendations, damping ratio, I-term |
+| `analysis/PIDAnalyzer.test.ts` | 21 | End-to-end pipeline, progress reporting, FF context wiring, flight style propagation, data quality scoring, cross-axis, propwash integration |
+| `analysis/CrossAxisDetector.test.ts` | 20 | Cross-axis coupling detection, axis interaction analysis |
+| `analysis/PropWashDetector.test.ts` | 16 | Propwash detection, wash-out frequency analysis |
 | `analysis/TransferFunctionEstimator.test.ts` | 21 | Wiener deconvolution, frequency response estimation, Bode plot data, PID recommendations from transfer function |
 | `analysis/AnalysisPipeline.realdata.test.ts` | 20 | End-to-end filter+PID analysis with bf45-reference fixture and real_flight.bbl, safety bounds, determinism, performance |
 
@@ -328,7 +333,7 @@ npm run test:ui           # Visual interface with DOM snapshots
 | File | Tests | Description |
 |------|-------|-------------|
 | `shared/utils/metricsExtract.test.ts` | 17 | Spectrum downsampling, filter/PID/TF metrics extraction, boundary handling, trackingErrorRMS extraction |
-| `shared/utils/tuneQualityScore.test.ts` | 15 | Quality score computation, tier boundaries, partial metrics, backward compat, clamping, TIER_LABELS |
+| `shared/utils/tuneQualityScore.test.ts` | 25 | Quality score computation, tier boundaries, partial metrics, backward compat, clamping, TIER_LABELS, verification quality |
 | `shared/constants.test.ts` | 7 | Preset profile flight style mapping validation |
 | `shared/types/profile.types.test.ts` | 5 | FlightStyle type compilation, DroneProfileOptional inheritance |
 

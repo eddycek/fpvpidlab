@@ -24,13 +24,16 @@ import {
  * 3. Group consecutive high-derivative samples into step edges
  * 4. Validate: magnitude, hold time, cooldown between steps
  * 5. Return sorted by magnitude (largest first)
+ *
+ * @param windowMs - Override response window (ms). Default: STEP_RESPONSE_WINDOW_MS (300ms).
  */
-export function detectSteps(flightData: BlackboxFlightData): StepEvent[] {
+export function detectSteps(flightData: BlackboxFlightData, windowMs?: number): StepEvent[] {
   const steps: StepEvent[] = [];
   const sampleRate = flightData.sampleRateHz;
   const cooldownSamples = Math.ceil((STEP_COOLDOWN_MS / 1000) * sampleRate);
   const holdSamples = Math.ceil((STEP_MIN_HOLD_MS / 1000) * sampleRate);
-  const windowSamples = Math.ceil((STEP_RESPONSE_WINDOW_MS / 1000) * sampleRate);
+  const effectiveWindowMs = windowMs ?? STEP_RESPONSE_WINDOW_MS;
+  const windowSamples = Math.ceil((effectiveWindowMs / 1000) * sampleRate);
 
   for (let axis = 0; axis < 3; axis++) {
     const setpoint = flightData.setpoint[axis].values;
@@ -88,8 +91,10 @@ function detectAxisSteps(
     while (edgeEnd < numSamples - 1) {
       const d = (setpoint[edgeEnd + 1] - setpoint[edgeEnd]) * sampleRate;
       // Continue while derivative is in same direction and above a relaxed threshold
-      if ((direction === 'positive' && d > STEP_DERIVATIVE_THRESHOLD * 0.3) ||
-          (direction === 'negative' && d < -STEP_DERIVATIVE_THRESHOLD * 0.3)) {
+      if (
+        (direction === 'positive' && d > STEP_DERIVATIVE_THRESHOLD * 0.3) ||
+        (direction === 'negative' && d < -STEP_DERIVATIVE_THRESHOLD * 0.3)
+      ) {
         edgeEnd++;
       } else {
         break;
@@ -111,7 +116,10 @@ function detectAxisSteps(
     if (edgeStart - lastStepEnd < cooldownSamples) continue;
 
     // Validate hold time: setpoint should stay near the new value
-    if (!validateHoldTime(setpoint, edgeEnd + 1, numSamples, afterEdgeValue, holdSamples, magnitude)) continue;
+    if (
+      !validateHoldTime(setpoint, edgeEnd + 1, numSamples, afterEdgeValue, holdSamples, magnitude)
+    )
+      continue;
 
     // Define response window end
     const responseEnd = Math.min(edgeStart + windowSamples, numSamples);

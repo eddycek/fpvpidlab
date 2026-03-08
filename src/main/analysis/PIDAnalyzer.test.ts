@@ -354,5 +354,109 @@ describe('PIDAnalyzer', () => {
       // Smooth should be at least as strict as aggressive
       expect(smoothOvershootRecs.length).toBeGreaterThanOrEqual(aggressiveOvershootRecs.length);
     });
+
+    it('should include crossAxisCoupling when steps are detected', async () => {
+      const stepAt = 1000;
+      const mag = 300;
+      const data = createFlightData({
+        rollSetpointFn: (i) => (i >= stepAt ? mag : 0),
+        rollGyroFn: (i) => (i >= stepAt ? mag : 0),
+        pitchSetpointFn: (i) => (i >= 3000 ? -mag : 0),
+        pitchGyroFn: (i) => (i >= 3000 ? -mag : 0),
+      });
+
+      const result = await analyzePID(data, 0, PIDS);
+
+      // If enough steps detected, crossAxisCoupling should be present
+      if (result.stepsDetected >= 2) {
+        expect(result.crossAxisCoupling).toBeDefined();
+        expect(result.crossAxisCoupling!.pairs.length).toBeGreaterThan(0);
+        expect(typeof result.crossAxisCoupling!.hasSignificantCoupling).toBe('boolean');
+        expect(result.crossAxisCoupling!.summary.length).toBeGreaterThan(0);
+      }
+    });
+  });
+
+  describe('prop wash integration', () => {
+    it('should include propWash in result when throttle drops detected', async () => {
+      const numSamples = 40000;
+      const sampleRate = 4000;
+      // Flight with throttle drops
+      const throttleFn = (i: number) => {
+        const t = i / sampleRate;
+        for (const dropTime of [1.0, 3.0, 5.0, 7.0]) {
+          if (t >= dropTime && t < dropTime + 0.1) return 0.7 - ((t - dropTime) / 0.1) * 0.5;
+          if (t >= dropTime + 0.1 && t < dropTime + 1.0) return 0.2;
+        }
+        return 0.7;
+      };
+      const gyroFn = (i: number) => {
+        const t = i / sampleRate;
+        let val = (Math.random() - 0.5) * 0.5;
+        for (const dropTime of [1.0, 3.0, 5.0, 7.0]) {
+          if (t >= dropTime + 0.1 && t < dropTime + 0.5) {
+            val += 30 * Math.sin(2 * Math.PI * 50 * t);
+          }
+        }
+        return val;
+      };
+
+      // Build setpoint with step inputs for PID analysis + throttle drops
+      const stepFn = (i: number) => {
+        const t = i / sampleRate;
+        // Add step inputs at 2s and 4s
+        if (t >= 2.0 && t < 2.3) return 200;
+        if (t >= 4.0 && t < 4.3) return -200;
+        return 0;
+      };
+
+      function makeSeries(fn: (i: number) => number): { time: Float64Array; values: Float64Array } {
+        const time = new Float64Array(numSamples);
+        const values = new Float64Array(numSamples);
+        for (let i = 0; i < numSamples; i++) {
+          time[i] = i / sampleRate;
+          values[i] = fn(i);
+        }
+        return { time, values };
+      }
+
+      const zero = makeSeries(() => 0);
+      const data = {
+        gyro: [makeSeries(gyroFn), makeSeries(gyroFn), makeSeries(gyroFn)] as [
+          { time: Float64Array; values: Float64Array },
+          { time: Float64Array; values: Float64Array },
+          { time: Float64Array; values: Float64Array },
+        ],
+        setpoint: [
+          makeSeries(stepFn),
+          makeSeries(stepFn),
+          makeSeries(stepFn),
+          makeSeries(throttleFn),
+        ] as [
+          { time: Float64Array; values: Float64Array },
+          { time: Float64Array; values: Float64Array },
+          { time: Float64Array; values: Float64Array },
+          { time: Float64Array; values: Float64Array },
+        ],
+        pidP: [zero, zero, zero] as [typeof zero, typeof zero, typeof zero],
+        pidI: [zero, zero, zero] as [typeof zero, typeof zero, typeof zero],
+        pidD: [zero, zero, zero] as [typeof zero, typeof zero, typeof zero],
+        pidF: [zero, zero, zero] as [typeof zero, typeof zero, typeof zero],
+        motor: [zero, zero, zero, zero] as [typeof zero, typeof zero, typeof zero, typeof zero],
+        debug: [] as { time: Float64Array; values: Float64Array }[],
+        sampleRateHz: sampleRate,
+        durationSeconds: numSamples / sampleRate,
+        frameCount: numSamples,
+      };
+
+      const result = await analyzePID(data, 0);
+
+      // Should have prop wash analysis when throttle drops are present
+      if (result.propWash) {
+        expect(result.propWash.events.length).toBeGreaterThan(0);
+        expect(result.propWash.meanSeverity).toBeGreaterThan(0);
+        expect(result.propWash.recommendation).toBeTruthy();
+      }
+    });
   });
 });

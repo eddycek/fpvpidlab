@@ -510,6 +510,17 @@ describe('IPC Handlers', () => {
       expect(res.success).toBe(false);
       expect(res.error).toContain('not connected');
     });
+
+    it('returns error when CLI command is rejected', async () => {
+      mockMSP.connection.sendCLICommand.mockResolvedValue(
+        'set debug_mode = INVALID\r\nInvalid value\r\n# '
+      );
+      const res = await invoke(IPCChannel.FC_FIX_BLACKBOX_SETTINGS, {
+        commands: ['set debug_mode = INVALID'],
+      });
+      expect(res.success).toBe(false);
+      expect(res.error).toContain('CLI command rejected');
+    });
   });
 
   // ─── Snapshot Handlers ──────────────────────────────────────────────────
@@ -1387,6 +1398,36 @@ describe('IPC Handlers', () => {
       expect(res.success).toBe(false);
       expect(res.error).toContain('not connected');
     });
+
+    it('returns error when CLI command is rejected (Invalid name)', async () => {
+      mockMSP.connection.sendCLICommand.mockResolvedValue(
+        'set bad_setting = 200\r\nInvalid name\r\n# '
+      );
+      const { event } = createMockEvent();
+      const res = await invokeWithEvent(IPCChannel.TUNING_APPLY_RECOMMENDATIONS, event, baseInput);
+      expect(res.success).toBe(false);
+      expect(res.error).toContain('CLI command rejected');
+    });
+
+    it('returns error when FF CLI command is rejected', async () => {
+      // Filter commands succeed, FF command fails
+      let callCount = 0;
+      mockMSP.connection.sendCLICommand.mockImplementation(async () => {
+        callCount++;
+        if (callCount === 2) return 'set bad_ff = 10\r\nInvalid name\r\n# ';
+        return '# ';
+      });
+      const input = {
+        ...baseInput,
+        feedforwardRecommendations: [
+          { setting: 'feedforward_boost', currentValue: 15, recommendedValue: 10 },
+        ],
+      };
+      const { event } = createMockEvent();
+      const res = await invokeWithEvent(IPCChannel.TUNING_APPLY_RECOMMENDATIONS, event, input);
+      expect(res.success).toBe(false);
+      expect(res.error).toContain('CLI command rejected');
+    });
   });
 
   // ─── Snapshot Restore ──────────────────────────────────────────────────
@@ -1474,6 +1515,16 @@ describe('IPC Handlers', () => {
       expect(stages).toContain('backup');
       expect(stages).toContain('cli');
       expect(stages).toContain('save');
+    });
+
+    it('returns error when CLI command is rejected during restore', async () => {
+      mockMSP.connection.sendCLICommand.mockResolvedValue(
+        'set bad_setting = 200\r\nInvalid name\r\n# '
+      );
+      const { event } = createMockEvent();
+      const res = await invokeWithEvent(IPCChannel.SNAPSHOT_RESTORE, event, 'snap-1', false);
+      expect(res.success).toBe(false);
+      expect(res.error).toContain('CLI command rejected');
     });
   });
 

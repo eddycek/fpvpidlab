@@ -14,7 +14,14 @@ import type {
   StepEvent,
 } from '@shared/types/analysis.types';
 import type { TransferFunctionMetrics } from './TransferFunctionEstimator';
-import { P_GAIN_MIN, P_GAIN_MAX, D_GAIN_MIN, D_GAIN_MAX } from './constants';
+import {
+  P_GAIN_MIN,
+  P_GAIN_MAX,
+  D_GAIN_MIN,
+  D_GAIN_MAX,
+  DAMPING_RATIO_MIN,
+  DAMPING_RATIO_MAX,
+} from './constants';
 
 function makeStep(): StepEvent {
   return { axis: 0, startIndex: 0, endIndex: 1200, magnitude: 300, direction: 'positive' };
@@ -45,6 +52,7 @@ function makeProfile(
     meanSettlingTimeMs: overrides.meanSettlingTimeMs ?? responses[0].settlingTimeMs,
     meanLatencyMs: overrides.meanLatencyMs ?? responses[0].latencyMs,
     meanTrackingErrorRMS: 0,
+    meanSteadyStateError: overrides.meanSteadyStateError ?? 0,
   };
 }
 
@@ -56,6 +64,7 @@ function emptyProfile(): AxisStepProfile {
     meanSettlingTimeMs: 0,
     meanLatencyMs: 0,
     meanTrackingErrorRMS: 0,
+    meanSteadyStateError: 0,
   };
 }
 
@@ -544,6 +553,113 @@ describe('PIDRecommender', () => {
       const ffRecs = recs.filter((r) => r.setting === 'feedforward_boost');
       expect(ffRecs.length).toBe(1);
     });
+
+    // ---- I-term recommendation tests ----
+
+    it('should recommend I increase when steady-state error is high', () => {
+      // balanced: steadyStateErrorMax = 5
+      const profile = makeProfile({ meanOvershoot: 5, meanSteadyStateError: 8 });
+
+      const recs = recommendPID(profile, emptyProfile(), emptyProfile(), DEFAULT_PIDS);
+
+      const iRecs = recs.filter((r) => r.setting === 'pid_roll_i');
+      expect(iRecs.length).toBe(1);
+      expect(iRecs[0].recommendedValue).toBeGreaterThan(DEFAULT_PIDS.roll.I);
+      expect(iRecs[0].reason).toContain('drifts');
+      expect(iRecs[0].confidence).toBe('medium');
+    });
+
+    it('should recommend larger I increase for very high steady-state error', () => {
+      // balanced: steadyStateErrorMax = 5, 2× = 10
+      const profile = makeProfile({ meanOvershoot: 5, meanSteadyStateError: 12 });
+
+      const recs = recommendPID(profile, emptyProfile(), emptyProfile(), DEFAULT_PIDS);
+
+      const iRecs = recs.filter((r) => r.setting === 'pid_roll_i');
+      expect(iRecs.length).toBe(1);
+      // Should step by 10 instead of 5
+      expect(iRecs[0].recommendedValue).toBe(DEFAULT_PIDS.roll.I + 10);
+      expect(iRecs[0].confidence).toBe('high');
+    });
+
+    it('should not recommend I change when steady-state error is normal', () => {
+      const profile = makeProfile({ meanOvershoot: 5, meanSteadyStateError: 3 });
+
+      const recs = recommendPID(profile, emptyProfile(), emptyProfile(), DEFAULT_PIDS);
+
+      const iRecs = recs.filter((r) => r.setting === 'pid_roll_i');
+      expect(iRecs.length).toBe(0);
+    });
+
+    it('should recommend I decrease when low error + slow settling + overshoot', () => {
+      // balanced: steadyStateErrorLow = 1, settlingMax = 200, moderateOvershoot = 15
+      const profile = makeProfile({
+        meanOvershoot: 20,
+        meanSteadyStateError: 0.5,
+        meanSettlingTimeMs: 250,
+      });
+
+      const recs = recommendPID(profile, emptyProfile(), emptyProfile(), DEFAULT_PIDS);
+
+      const iRecs = recs.filter((r) => r.setting === 'pid_roll_i');
+      expect(iRecs.length).toBe(1);
+      expect(iRecs[0].recommendedValue).toBeLessThan(DEFAULT_PIDS.roll.I);
+      expect(iRecs[0].reason).toContain('settle');
+    });
+
+    it('should clamp I recommendations within safety bounds', () => {
+      // I already at max → no recommendation
+      const highIPIDs: PIDConfiguration = {
+        roll: { P: 45, I: 120, D: 30 },
+        pitch: { P: 47, I: 84, D: 32 },
+        yaw: { P: 45, I: 80, D: 0 },
+      };
+      const profile = makeProfile({ meanOvershoot: 5, meanSteadyStateError: 8 });
+
+      const recs = recommendPID(profile, emptyProfile(), emptyProfile(), highIPIDs);
+
+      const iRecs = recs.filter((r) => r.setting === 'pid_roll_i');
+      expect(iRecs.length).toBe(0); // already at max, clamped = same
+    });
+
+    it('should use style-specific I-term thresholds', () => {
+      // smooth: steadyStateErrorMax = 8 — error of 6 is below threshold
+      // balanced: steadyStateErrorMax = 5 — error of 6 exceeds threshold
+      const profile = makeProfile({ meanOvershoot: 5, meanSteadyStateError: 6 });
+
+      const smoothRecs = recommendPID(
+        profile,
+        emptyProfile(),
+        emptyProfile(),
+        DEFAULT_PIDS,
+        undefined,
+        undefined,
+        'smooth'
+      );
+      const balancedRecs = recommendPID(
+        profile,
+        emptyProfile(),
+        emptyProfile(),
+        DEFAULT_PIDS,
+        undefined,
+        undefined,
+        'balanced'
+      );
+
+      const smoothI = smoothRecs.filter((r) => r.setting === 'pid_roll_i');
+      const balancedI = balancedRecs.filter((r) => r.setting === 'pid_roll_i');
+
+      expect(smoothI.length).toBe(0); // 6 < 8, within tolerance
+      expect(balancedI.length).toBe(1); // 6 > 5, above threshold
+    });
+
+    it('summary should mention tracking drift for I-term recommendations', () => {
+      const profile = makeProfile({ meanOvershoot: 5, meanSteadyStateError: 8 });
+      const recs = recommendPID(profile, emptyProfile(), emptyProfile(), DEFAULT_PIDS);
+      const summary = generatePIDSummary(profile, emptyProfile(), emptyProfile(), recs);
+
+      expect(summary).toContain('tracking drift');
+    });
   });
 
   describe('frequency-domain recommendations (tfMetrics)', () => {
@@ -919,6 +1035,138 @@ describe('PIDRecommender', () => {
       const summary = generatePIDSummary(good, good, emptyProfile(), [], 'balanced');
       expect(summary).not.toContain('smooth');
       expect(summary).not.toContain('racing');
+    });
+  });
+
+  describe('D/P damping ratio validation', () => {
+    it('should add D recommendation when D/P ratio is too low (underdamped)', () => {
+      // P=60, D=20 → ratio = 0.33 (< 0.45)
+      const lowDPids: PIDConfiguration = {
+        roll: { P: 60, I: 80, D: 20 },
+        pitch: { P: 60, I: 80, D: 20 },
+        yaw: { P: 45, I: 80, D: 0 },
+      };
+      const good = makeProfile({ meanOvershoot: 5, meanRiseTimeMs: 30 });
+
+      const recs = recommendPID(good, good, emptyProfile(), lowDPids);
+
+      const rollD = recs.find((r) => r.setting === 'pid_roll_d');
+      expect(rollD).toBeDefined();
+      expect(rollD!.recommendedValue).toBeGreaterThan(20);
+      expect(rollD!.reason).toContain('D/P ratio');
+      expect(rollD!.reason).toContain('low');
+    });
+
+    it('should reduce D when D/P ratio is too high (overdamped) with no other recommendations', () => {
+      // P=35, D=40 → ratio = 1.14 (> 0.85)
+      const highDPids: PIDConfiguration = {
+        roll: { P: 35, I: 80, D: 40 },
+        pitch: { P: 35, I: 80, D: 40 },
+        yaw: { P: 45, I: 80, D: 0 },
+      };
+      const good = makeProfile({ meanOvershoot: 5, meanRiseTimeMs: 30 });
+
+      const recs = recommendPID(good, good, emptyProfile(), highDPids);
+
+      const rollD = recs.find((r) => r.setting === 'pid_roll_d');
+      expect(rollD).toBeDefined();
+      expect(rollD!.recommendedValue).toBeLessThan(40);
+      expect(rollD!.reason).toContain('D/P ratio');
+      expect(rollD!.reason).toContain('high');
+    });
+
+    it('should add compensating P increase when D increase pushes ratio above max', () => {
+      // P=30, D=25 → ratio = 0.83 (healthy)
+      // After overshoot D+5 → D=30 → ratio = 1.0 (> 0.85)
+      // Damping check should add P increase to compensate
+      const borderPids: PIDConfiguration = {
+        roll: { P: 30, I: 80, D: 25 },
+        pitch: { P: 47, I: 84, D: 32 },
+        yaw: { P: 45, I: 80, D: 0 },
+      };
+      const overshoot = makeProfile({ meanOvershoot: 20 }); // moderate → D+5
+
+      const recs = recommendPID(overshoot, emptyProfile(), emptyProfile(), borderPids);
+
+      const dRec = recs.find((r) => r.setting === 'pid_roll_d');
+      const pRec = recs.find((r) => r.setting === 'pid_roll_p');
+      expect(dRec).toBeDefined();
+      expect(pRec).toBeDefined();
+      expect(pRec!.reason).toContain('D/P balance');
+      expect(pRec!.confidence).toBe('low');
+    });
+
+    it('should skip damping ratio check for yaw', () => {
+      // Yaw D=0 is common and should not trigger damping ratio recommendations
+      const yawProfile = makeProfile({ meanOvershoot: 5 });
+
+      const recs = recommendPID(emptyProfile(), emptyProfile(), yawProfile, DEFAULT_PIDS);
+
+      const yawD = recs.find((r) => r.setting === 'pid_yaw_d');
+      expect(yawD).toBeUndefined();
+    });
+
+    it('should not add damping recommendation when ratio is already healthy', () => {
+      // P=45, D=30 → ratio = 0.67 (healthy)
+      const good = makeProfile({ meanOvershoot: 5, meanRiseTimeMs: 30 });
+
+      const recs = recommendPID(good, good, emptyProfile(), DEFAULT_PIDS);
+
+      const dampingRecs = recs.filter((r) => r.reason.includes('D/P ratio'));
+      expect(dampingRecs.length).toBe(0);
+    });
+
+    it('should not override existing D recommendation from overshoot rule', () => {
+      // P=45, D=20 → ratio = 0.44 (< 0.45, underdamped)
+      // But overshoot rule already recommends D increase
+      const lowDPids: PIDConfiguration = {
+        roll: { P: 45, I: 80, D: 20 },
+        pitch: { P: 47, I: 84, D: 32 },
+        yaw: { P: 45, I: 80, D: 0 },
+      };
+      const overshoot = makeProfile({ meanOvershoot: 20 }); // moderate → D+5
+
+      const recs = recommendPID(overshoot, emptyProfile(), emptyProfile(), lowDPids);
+
+      // Should have exactly one D recommendation (from overshoot), not a second from damping
+      const rollDRecs = recs.filter((r) => r.setting === 'pid_roll_d');
+      expect(rollDRecs.length).toBe(1);
+      expect(rollDRecs[0].reason).toContain('overshoot'); // From overshoot rule, not damping
+    });
+
+    it('should check both roll and pitch independently', () => {
+      // Roll: ratio low, Pitch: ratio healthy
+      const mixedPids: PIDConfiguration = {
+        roll: { P: 60, I: 80, D: 20 }, // ratio 0.33
+        pitch: { P: 45, I: 84, D: 30 }, // ratio 0.67
+        yaw: { P: 45, I: 80, D: 0 },
+      };
+      const good = makeProfile({ meanOvershoot: 5, meanRiseTimeMs: 30 });
+
+      const recs = recommendPID(good, good, emptyProfile(), mixedPids);
+
+      const rollD = recs.find((r) => r.setting === 'pid_roll_d');
+      const pitchD = recs.find((r) => r.setting === 'pid_pitch_d');
+      expect(rollD).toBeDefined(); // Roll needs damping fix
+      expect(pitchD).toBeUndefined(); // Pitch is fine
+    });
+
+    it('resulting D/P ratio should be within healthy bounds after damping correction', () => {
+      // P=60, D=20 → ratio = 0.33 → should recommend D increase
+      const lowDPids: PIDConfiguration = {
+        roll: { P: 60, I: 80, D: 20 },
+        pitch: { P: 60, I: 80, D: 20 },
+        yaw: { P: 45, I: 80, D: 0 },
+      };
+      const good = makeProfile({ meanOvershoot: 5, meanRiseTimeMs: 30 });
+
+      const recs = recommendPID(good, good, emptyProfile(), lowDPids);
+
+      const rollD = recs.find((r) => r.setting === 'pid_roll_d');
+      expect(rollD).toBeDefined();
+      const resultRatio = rollD!.recommendedValue / 60;
+      expect(resultRatio).toBeGreaterThanOrEqual(DAMPING_RATIO_MIN);
+      expect(resultRatio).toBeLessThanOrEqual(DAMPING_RATIO_MAX);
     });
   });
 });

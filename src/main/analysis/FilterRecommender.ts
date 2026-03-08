@@ -27,6 +27,8 @@ import {
   NOISE_TARGET_DEADZONE_HZ,
   RESONANCE_ACTION_THRESHOLD_DB,
   RESONANCE_CUTOFF_MARGIN_HZ,
+  PROPWASH_GYRO_LPF1_FLOOR_HZ,
+  PROPWASH_FLOOR_BYPASS_DB,
 } from './constants';
 
 /** Detect whether RPM filter is active from settings */
@@ -116,8 +118,17 @@ function recommendNoiseFloorAdjustments(
   const worstFloor = Math.max(noise.roll.noiseFloorDb, noise.pitch.noiseFloorDb);
 
   // Compute absolute targets from noise data (independent of current settings)
-  const targetGyroLpf1 = computeNoiseBasedTarget(worstFloor, GYRO_LPF1_MIN_HZ, gyroMaxHz);
+  let targetGyroLpf1 = computeNoiseBasedTarget(worstFloor, GYRO_LPF1_MIN_HZ, gyroMaxHz);
   const targetDtermLpf1 = computeNoiseBasedTarget(worstFloor, DTERM_LPF1_MIN_HZ, dtermMaxHz);
+
+  // Propwash-aware floor: prevent gyro LPF1 from going so low that phase delay
+  // degrades propwash recovery. Only bypass when noise is extreme.
+  let propwashNote = '';
+  if (targetGyroLpf1 < PROPWASH_GYRO_LPF1_FLOOR_HZ && worstFloor <= PROPWASH_FLOOR_BYPASS_DB) {
+    targetGyroLpf1 = PROPWASH_GYRO_LPF1_FLOOR_HZ;
+    propwashNote =
+      ' (Raised to propwash safety floor — lowering further would add phase delay that hurts propwash handling during flips and rolls.)';
+  }
 
   const rpmNote = rpmActive
     ? ' With RPM filter active, motor noise is already handled, allowing higher filter cutoffs for better response.'
@@ -136,7 +147,8 @@ function recommendNoiseFloorAdjustments(
         reason:
           'Your gyro data has a lot of noise. Adjusting the gyro lowpass filter will clean up the signal, ' +
           'which helps your flight controller respond to real movement instead of vibrations.' +
-          rpmNote,
+          rpmNote +
+          propwashNote,
         impact: 'both',
         confidence: 'high',
       });
@@ -168,7 +180,8 @@ function recommendNoiseFloorAdjustments(
         reason:
           'Your quad is very clean with minimal vibrations. Adjusting the gyro filter cutoff will give you ' +
           'faster response and sharper control with almost no downside.' +
-          rpmNote,
+          rpmNote +
+          propwashNote,
         impact: 'latency',
         confidence: 'medium',
       });

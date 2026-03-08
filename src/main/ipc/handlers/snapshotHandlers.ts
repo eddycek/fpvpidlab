@@ -9,6 +9,7 @@ import type { ConfigurationSnapshot, SnapshotMetadata } from '@shared/types/comm
 import { HandlerDependencies, createResponse } from './types';
 import { logger } from '../../utils/logger';
 import { getErrorMessage } from '../../utils/errors';
+import { validateCLIResponse } from '../../msp/cliUtils';
 
 export function registerSnapshotHandlers(deps: HandlerDependencies): void {
   // SNAPSHOT_CREATE
@@ -181,7 +182,8 @@ export function registerSnapshotHandlers(deps: HandlerDependencies): void {
             message: `Applying: ${cmd}`,
             percent: 25 + Math.round((i / restorableCommands.length) * 55),
           });
-          await deps.mspClient.connection.sendCLICommand(cmd);
+          const response = await deps.mspClient.connection.sendCLICommand(cmd);
+          validateCLIResponse(cmd, response);
         }
 
         logger.info(`Applied ${restorableCommands.length} CLI commands from snapshot`);

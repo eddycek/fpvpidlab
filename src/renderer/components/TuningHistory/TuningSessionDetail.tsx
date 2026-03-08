@@ -30,8 +30,9 @@ export function TuningSessionDetail({ record, onReanalyzeVerification }: TuningS
   const score = useMemo(
     () =>
       computeTuneQualityScore({
-        filterMetrics: record.verificationMetrics ?? record.filterMetrics,
+        filterMetrics: record.filterMetrics,
         pidMetrics: record.pidMetrics,
+        verificationMetrics: record.verificationMetrics,
       }),
     [record.filterMetrics, record.verificationMetrics, record.pidMetrics]
   );

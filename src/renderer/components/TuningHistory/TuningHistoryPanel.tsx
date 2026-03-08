@@ -48,8 +48,9 @@ export function TuningHistoryPanel({
       map.set(
         record.id,
         computeTuneQualityScore({
-          filterMetrics: record.verificationMetrics ?? record.filterMetrics,
+          filterMetrics: record.filterMetrics,
           pidMetrics: record.pidMetrics,
+          verificationMetrics: record.verificationMetrics,
         })
       );
     }

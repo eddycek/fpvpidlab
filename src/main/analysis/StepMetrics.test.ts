@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { computeStepResponse, aggregateAxisMetrics, classifyFFContribution } from './StepMetrics';
+import {
+  computeStepResponse,
+  aggregateAxisMetrics,
+  classifyFFContribution,
+  computeAdaptiveWindowMs,
+} from './StepMetrics';
 import type { TimeSeries } from '@shared/types/blackbox.types';
 import type { StepEvent, StepResponse } from '@shared/types/analysis.types';
 
@@ -348,6 +353,46 @@ describe('StepMetrics', () => {
       expect(result.trackingErrorRMS!).toBeLessThan(0.15);
     });
 
+    it('should compute near-zero steadyStateErrorPercent for perfect hold', () => {
+      const numSamples = 2000;
+      const stepAt = 200;
+      const stepMag = 300;
+
+      // Perfect step: gyro matches setpoint during hold
+      const setpoint = makeSeries((i) => (i >= stepAt ? stepMag : 0), numSamples);
+      const gyro = makeSeries((i) => (i >= stepAt ? stepMag : 0), numSamples);
+      const step = makeStep(stepAt, stepAt + 1200, stepMag);
+
+      const result = computeStepResponse(setpoint, gyro, step, SAMPLE_RATE);
+
+      expect(result.steadyStateErrorPercent).toBeDefined();
+      expect(result.steadyStateErrorPercent!).toBeCloseTo(0, 1);
+    });
+
+    it('should compute non-zero steadyStateErrorPercent for drifting hold', () => {
+      const numSamples = 2000;
+      const stepAt = 200;
+      const stepEnd = stepAt + 1200;
+      const stepMag = 300;
+      const drift = 15; // 15 deg/s constant drift during hold = 5% of magnitude
+
+      const setpoint = makeSeries((i) => (i >= stepAt ? stepMag : 0), numSamples);
+      // Gyro matches during rise, but drifts during hold phase (last 20%)
+      const holdStart = stepAt + Math.floor((stepEnd - stepAt) * 0.8);
+      const gyro = makeSeries((i) => {
+        if (i < stepAt) return 0;
+        if (i >= holdStart) return stepMag - drift;
+        return stepMag;
+      }, numSamples);
+      const step = makeStep(stepAt, stepEnd, stepMag);
+
+      const result = computeStepResponse(setpoint, gyro, step, SAMPLE_RATE);
+
+      expect(result.steadyStateErrorPercent).toBeDefined();
+      // Error ≈ drift / magnitude * 100 = 15/300*100 = 5%
+      expect(result.steadyStateErrorPercent!).toBeCloseTo(5, 0);
+    });
+
     it('should return trackingErrorRMS=1.0 for near-zero magnitude', () => {
       const numSamples = 2000;
       const stepAt = 200;
@@ -469,6 +514,30 @@ describe('StepMetrics', () => {
       // (0 + 0.4) / 2 = 0.2
       expect(profile.meanTrackingErrorRMS).toBeCloseTo(0.2, 2);
     });
+
+    it('should aggregate meanSteadyStateError from responses', () => {
+      const responses = [
+        { ...makeResponse(10, 20, 50, 5), steadyStateErrorPercent: 2.0 },
+        { ...makeResponse(20, 40, 100, 10), steadyStateErrorPercent: 4.0 },
+        { ...makeResponse(15, 30, 75, 7), steadyStateErrorPercent: 6.0 },
+      ];
+
+      const profile = aggregateAxisMetrics(responses);
+
+      expect(profile.meanSteadyStateError).toBeCloseTo(4.0, 1);
+    });
+
+    it('should handle missing steadyStateErrorPercent (treat as 0)', () => {
+      const responses = [
+        makeResponse(10, 20, 50, 5), // no steadyStateErrorPercent
+        { ...makeResponse(20, 40, 100, 10), steadyStateErrorPercent: 6.0 },
+      ];
+
+      const profile = aggregateAxisMetrics(responses);
+
+      // (0 + 6) / 2 = 3
+      expect(profile.meanSteadyStateError).toBeCloseTo(3.0, 1);
+    });
   });
 
   describe('classifyFFContribution', () => {
@@ -539,6 +608,103 @@ describe('StepMetrics', () => {
 
       const result = classifyFFContribution(response, pidP, pidF, gyro);
       expect(result).toBeUndefined();
+    });
+  });
+
+  describe('computeAdaptiveWindowMs', () => {
+    function makeResponse(settlingTimeMs: number): StepResponse {
+      return {
+        step: makeStep(0, 1000, 300),
+        riseTimeMs: 20,
+        overshootPercent: 10,
+        settlingTimeMs,
+        latencyMs: 5,
+        ringingCount: 1,
+        peakValue: 330,
+        steadyStateValue: 300,
+        trackingErrorRMS: 0.1,
+      };
+    }
+
+    it('returns 2× median settling time for normal data', () => {
+      // Median of [80, 100, 120] = 100 → adaptive = 200ms
+      const responses = [makeResponse(80), makeResponse(100), makeResponse(120)];
+      expect(computeAdaptiveWindowMs(responses)).toBe(200);
+    });
+
+    it('clamps to minimum 150ms for fast-settling quads', () => {
+      // Median of [40, 50, 60] = 50 → 2×50 = 100 → clamped to 150
+      const responses = [makeResponse(40), makeResponse(50), makeResponse(60)];
+      expect(computeAdaptiveWindowMs(responses)).toBe(150);
+    });
+
+    it('clamps to maximum 500ms for slow-settling quads', () => {
+      // Median of [300, 350, 400] = 350 → 2×350 = 700 → clamped to 500
+      const responses = [makeResponse(300), makeResponse(350), makeResponse(400)];
+      expect(computeAdaptiveWindowMs(responses)).toBe(500);
+    });
+
+    it('falls back to 300ms when too few responses', () => {
+      const responses = [makeResponse(100), makeResponse(120)];
+      expect(computeAdaptiveWindowMs(responses)).toBe(300);
+    });
+
+    it('falls back to 300ms for empty input', () => {
+      expect(computeAdaptiveWindowMs([])).toBe(300);
+    });
+
+    it('handles even number of responses (average of middle two)', () => {
+      // Median of [80, 100, 120, 140] = (100+120)/2 = 110 → 220ms
+      const responses = [makeResponse(80), makeResponse(100), makeResponse(120), makeResponse(140)];
+      expect(computeAdaptiveWindowMs(responses)).toBe(220);
+    });
+
+    it('filters out zero settling time (degenerate steps)', () => {
+      // Only 2 valid settling times → falls back to 300ms
+      const responses = [makeResponse(0), makeResponse(100), makeResponse(120)];
+      expect(computeAdaptiveWindowMs(responses)).toBe(300);
+    });
+
+    it('uses custom minResponses threshold', () => {
+      const responses = [makeResponse(100), makeResponse(120)];
+      // With minResponses=2, should compute adaptive: median=110 → 220ms
+      expect(computeAdaptiveWindowMs(responses, 2)).toBe(220);
+    });
+
+    it('produces correct value for tiny whoop settling times', () => {
+      // Tiny whoops: ~60-80ms settling → 2×70 = 140 → clamped to 150
+      const responses = [
+        makeResponse(60),
+        makeResponse(70),
+        makeResponse(80),
+        makeResponse(65),
+        makeResponse(75),
+      ];
+      expect(computeAdaptiveWindowMs(responses)).toBe(150);
+    });
+
+    it('produces correct value for 5-inch freestyle settling times', () => {
+      // 5" freestyle: ~100-160ms settling → median ~130 → 260ms
+      const responses = [
+        makeResponse(100),
+        makeResponse(120),
+        makeResponse(130),
+        makeResponse(150),
+        makeResponse(160),
+      ];
+      expect(computeAdaptiveWindowMs(responses)).toBe(260);
+    });
+
+    it('produces correct value for 7-inch longrange settling times', () => {
+      // 7" longrange: ~200-300ms settling → median ~250 → 500ms (capped)
+      const responses = [
+        makeResponse(200),
+        makeResponse(230),
+        makeResponse(250),
+        makeResponse(280),
+        makeResponse(300),
+      ];
+      expect(computeAdaptiveWindowMs(responses)).toBe(500);
     });
   });
 });

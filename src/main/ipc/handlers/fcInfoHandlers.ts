@@ -8,6 +8,7 @@ import type { HandlerDependencies } from './types';
 import { createResponse, parseDiffSetting } from './types';
 import { logger } from '../../utils/logger';
 import { getErrorMessage } from '../../utils/errors';
+import { validateCLIResponse } from '../../msp/cliUtils';
 import type { IPCResponse } from '@shared/types/ipc.types';
 
 /**
@@ -146,7 +147,8 @@ export function registerFCInfoHandlers(deps: HandlerDependencies): void {
         await deps.mspClient.connection.enterCLI();
 
         for (const cmd of input.commands) {
-          await deps.mspClient.connection.sendCLICommand(cmd);
+          const response = await deps.mspClient.connection.sendCLICommand(cmd);
+          validateCLIResponse(cmd, response);
         }
 
         // Flag for clean snapshot creation on reconnect (after FC reboots).

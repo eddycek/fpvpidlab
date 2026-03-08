@@ -116,6 +116,64 @@ export interface FilterAnalysisResult {
   warnings?: AnalysisWarning[];
   /** Data quality score for the input flight data */
   dataQuality?: DataQualityScore;
+  /** Throttle-indexed spectrogram (noise vs throttle level) */
+  throttleSpectrogram?: ThrottleSpectrogramResult;
+  /** Estimated group delay of the current filter chain */
+  groupDelay?: FilterGroupDelay;
+}
+
+// ---- Throttle Spectrogram Types ----
+
+/** A single throttle band with its per-axis noise spectra */
+export interface ThrottleBand {
+  /** Lower bound of this throttle band (0-1 range) */
+  throttleMin: number;
+  /** Upper bound of this throttle band (0-1 range) */
+  throttleMax: number;
+  /** Number of gyro samples that fell into this band */
+  sampleCount: number;
+  /** Per-axis power spectra [roll, pitch, yaw] (undefined if too few samples) */
+  spectra?: [PowerSpectrum, PowerSpectrum, PowerSpectrum];
+  /** Per-axis noise floor in dB [roll, pitch, yaw] */
+  noiseFloorDb?: [number, number, number];
+}
+
+/** Complete throttle spectrogram result */
+export interface ThrottleSpectrogramResult {
+  /** Throttle bands from low to high */
+  bands: ThrottleBand[];
+  /** Number of bands requested */
+  numBands: number;
+  /** Minimum samples required per band for FFT */
+  minSamplesPerBand: number;
+  /** Number of bands with sufficient data for spectra */
+  bandsWithData: number;
+}
+
+// ---- Filter Group Delay Types ----
+
+/** Group delay estimate for a single filter */
+export interface SingleFilterDelay {
+  /** Filter type identifier */
+  type: 'gyro_lpf1' | 'gyro_lpf2' | 'dterm_lpf1' | 'dterm_lpf2' | 'dyn_notch';
+  /** Cutoff frequency in Hz */
+  cutoffHz: number;
+  /** Estimated group delay at a reference frequency in ms */
+  delayMs: number;
+}
+
+/** Combined group delay estimate for the full filter chain */
+export interface FilterGroupDelay {
+  /** Individual filter delays */
+  filters: SingleFilterDelay[];
+  /** Total estimated delay of the gyro filter chain in ms */
+  gyroTotalMs: number;
+  /** Total estimated delay of the D-term filter chain in ms */
+  dtermTotalMs: number;
+  /** Reference frequency used for delay computation (Hz) */
+  referenceFreqHz: number;
+  /** Warning if total delay exceeds a safe threshold */
+  warning?: string;
 }
 
 /** A steady flight segment identified from throttle/gyro data */
@@ -239,6 +297,8 @@ export interface StepResponse {
   ffDominated?: boolean;
   /** RMS of (setpoint−gyro)/|magnitude| over the response window (dimensionless) */
   trackingErrorRMS?: number;
+  /** Mean |setpoint−gyro|/|magnitude| during hold phase (last 20% of window), as percentage */
+  steadyStateErrorPercent?: number;
 }
 
 /** Aggregated step response metrics for one axis */
@@ -255,6 +315,8 @@ export interface AxisStepProfile {
   meanLatencyMs: number;
   /** Mean tracking error RMS across all steps (dimensionless) */
   meanTrackingErrorRMS: number;
+  /** Mean steady-state error during hold phase across all steps (percentage) */
+  meanSteadyStateError: number;
 }
 
 /** A single PID recommendation */
@@ -303,4 +365,64 @@ export interface PIDAnalysisResult {
   dataQuality?: DataQualityScore;
   /** Which analysis method was used to produce PID recommendations */
   analysisMethod?: 'step_response' | 'wiener_deconvolution';
+  /** Cross-axis coupling analysis */
+  crossAxisCoupling?: CrossAxisCoupling;
+  /** Prop wash analysis results */
+  propWash?: PropWashAnalysis;
+}
+
+// ---- Cross-Axis Coupling Types ----
+
+/** Coupling between a specific pair of axes */
+export interface AxisPairCoupling {
+  /** Source axis (where the step input occurs) */
+  sourceAxis: 'roll' | 'pitch' | 'yaw';
+  /** Affected axis (where coupling oscillation appears) */
+  affectedAxis: 'roll' | 'pitch' | 'yaw';
+  /** Normalized correlation coefficient (0-1, where 0 = no coupling) */
+  correlation: number;
+  /** Rating based on correlation magnitude */
+  rating: 'none' | 'mild' | 'significant';
+}
+
+/** Complete cross-axis coupling analysis */
+export interface CrossAxisCoupling {
+  /** All axis pair couplings */
+  pairs: AxisPairCoupling[];
+  /** Whether any significant coupling was detected */
+  hasSignificantCoupling: boolean;
+  /** Human-readable summary */
+  summary: string;
+}
+
+// ---- Prop Wash Detection Types ----
+
+/** A single detected prop wash event */
+export interface PropWashEvent {
+  /** Timestamp of throttle-down event in milliseconds from flight start */
+  timestampMs: number;
+  /** Rate of throttle decrease (units/s, negative) */
+  throttleDropRate: number;
+  /** Duration of prop wash oscillation in ms */
+  durationMs: number;
+  /** Dominant oscillation frequency in Hz */
+  peakFrequencyHz: number;
+  /** Ratio of prop wash band energy to baseline noise */
+  severityRatio: number;
+  /** Per-axis energy in the prop wash band */
+  axisEnergy: { roll: number; pitch: number; yaw: number };
+}
+
+/** Complete prop wash analysis result */
+export interface PropWashAnalysis {
+  /** Detected prop wash events */
+  events: PropWashEvent[];
+  /** Average severity ratio across all events */
+  meanSeverity: number;
+  /** Axis with highest prop wash energy */
+  worstAxis: 'roll' | 'pitch' | 'yaw';
+  /** Most common peak frequency across events */
+  dominantFrequencyHz: number;
+  /** Human-readable recommendation */
+  recommendation: string;
 }
