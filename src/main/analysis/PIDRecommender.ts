@@ -20,6 +20,9 @@ import {
   D_GAIN_MAX,
   I_GAIN_MIN,
   I_GAIN_MAX,
+  DAMPING_RATIO_MIN,
+  DAMPING_RATIO_MAX,
+  DAMPING_RATIO_DEADZONE,
 } from './constants';
 
 /** Per-axis transfer function metrics for frequency-domain PID recommendations */
@@ -244,7 +247,81 @@ export function recommendPID(
     }
   }
 
+  // Post-process: validate D/P damping ratio for coordinated P/D recommendations.
+  // Only applies to roll and pitch (yaw often has D=0).
+  validateDampingRatio(recommendations, currentPIDs);
+
   return recommendations;
+}
+
+/**
+ * Post-process recommendations to ensure P/D changes maintain a healthy damping
+ * ratio (D/P). Catches three cases:
+ *
+ * 1. Underdamped (D/P too low) with no D recommendation → add D increase
+ * 2. Overdamped (D/P too high) after D increase without P adjustment → add P
+ * 3. Overdamped (D/P too high) with no recommendations → reduce D
+ */
+function validateDampingRatio(
+  recommendations: PIDRecommendation[],
+  currentPIDs: PIDConfiguration
+): void {
+  for (const axisName of ['roll', 'pitch'] as const) {
+    const pids = currentPIDs[axisName];
+
+    const pRec = recommendations.find((r) => r.setting === `pid_${axisName}_p`);
+    const dRec = recommendations.find((r) => r.setting === `pid_${axisName}_d`);
+
+    // Compute resulting P and D after applying any recommendations
+    const resultP = pRec ? pRec.recommendedValue : pids.P;
+    const resultD = dRec ? dRec.recommendedValue : pids.D;
+
+    // Skip if P or D is zero (some setups run D=0)
+    if (resultP <= 0 || resultD <= 0) continue;
+
+    const ratio = resultD / resultP;
+
+    if (ratio < DAMPING_RATIO_MIN && !dRec) {
+      // Underdamped — need more D relative to P
+      const targetD = clamp(Math.round(resultP * DAMPING_RATIO_MIN), D_GAIN_MIN, D_GAIN_MAX);
+      if (Math.abs(targetD - pids.D) >= DAMPING_RATIO_DEADZONE) {
+        recommendations.push({
+          setting: `pid_${axisName}_d`,
+          currentValue: pids.D,
+          recommendedValue: targetD,
+          reason: `D/P ratio on ${axisName} is low (${ratio.toFixed(2)}). Increasing D improves dampening and reduces bounce-back without sacrificing response.`,
+          impact: 'stability',
+          confidence: 'medium',
+        });
+      }
+    } else if (ratio > DAMPING_RATIO_MAX && dRec && !pRec) {
+      // D was increased by a rule but P wasn't adjusted — ratio pushed too high
+      const targetP = clamp(Math.round(resultD / DAMPING_RATIO_MAX), P_GAIN_MIN, P_GAIN_MAX);
+      if (targetP > pids.P && Math.abs(targetP - pids.P) >= DAMPING_RATIO_DEADZONE) {
+        recommendations.push({
+          setting: `pid_${axisName}_p`,
+          currentValue: pids.P,
+          recommendedValue: targetP,
+          reason: `Adding a small P increase on ${axisName} to maintain healthy D/P balance (${ratio.toFixed(2)}) after the D-term adjustment.`,
+          impact: 'response',
+          confidence: 'low',
+        });
+      }
+    } else if (ratio > DAMPING_RATIO_MAX && !dRec && !pRec) {
+      // No existing recommendations but ratio is already too high — reduce D
+      const targetD = clamp(Math.round(resultP * DAMPING_RATIO_MAX), D_GAIN_MIN, D_GAIN_MAX);
+      if (Math.abs(targetD - pids.D) >= DAMPING_RATIO_DEADZONE) {
+        recommendations.push({
+          setting: `pid_${axisName}_d`,
+          currentValue: pids.D,
+          recommendedValue: targetD,
+          reason: `D/P ratio on ${axisName} is high (${ratio.toFixed(2)}). Reducing D helps with motor temperature and noise without losing stability.`,
+          impact: 'both',
+          confidence: 'medium',
+        });
+      }
+    }
+  }
 }
 
 /**
