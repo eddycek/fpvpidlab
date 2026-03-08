@@ -122,7 +122,7 @@ async function runGuidedCycle(cycleNum: number): Promise<void> {
     .getByRole('button', { name: 'Skip & Complete' })
     .waitFor({ state: 'visible', timeout: WAIT });
   await demo.clickButton('Skip & Complete');
-  await demo.waitForText(/Tuning Complete/i, 15_000);
+  await demo.waitForText(/Deep Tune Complete/i, 15_000);
 
   await demo.screenshot(`history-cycle-${cycleNum}-guided-complete`);
 
@@ -190,7 +190,7 @@ async function runQuickCycle(cycleNum: number): Promise<void> {
     .getByRole('button', { name: 'Skip & Complete' })
     .waitFor({ state: 'visible', timeout: WAIT });
   await demo.clickButton('Skip & Complete');
-  await demo.waitForText(/Tune Complete/i, 15_000);
+  await demo.waitForText(/Flash Tune Complete/i, 15_000);
 
   await demo.screenshot(`history-cycle-${cycleNum}-quick-complete`);
 

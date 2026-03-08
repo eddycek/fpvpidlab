@@ -172,8 +172,8 @@ test.describe.serial('single tuning cycle', () => {
 
     await demo.clickButton('Skip & Complete');
 
-    // Session should be completed — TuningCompletionSummary shows "Tuning Complete"
-    await demo.waitForText(/Tuning Complete/i, 15_000);
+    // Session should be completed — TuningCompletionSummary shows "Deep Tune Complete"
+    await demo.waitForText(/Deep Tune Complete/i, 15_000);
     await demo.screenshot('12-tuning-complete');
   });
 
