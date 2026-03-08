@@ -1,6 +1,6 @@
 # Tuning Precision Improvements
 
-> **Status**: Active (PRs #119–#120, #137, #146–#152)
+> **Status**: Active (PRs #119–#120, #137, #146–#152, #156–#160 — 10/15 implemented)
 
 Research-based analysis of techniques to improve tuning recommendation accuracy. Prioritized by impact and implementation effort.
 
@@ -54,7 +54,7 @@ This produces a Bode plot (magnitude + phase vs frequency) from which bandwidth,
 
 ---
 
-### 2. Throttle-Indexed Spectrogram
+### 2. ✅ Throttle-Indexed Spectrogram — `ThrottleSpectrogramAnalyzer.ts`
 
 **Problem**: Current FFT analysis produces a single averaged spectrum across hover segments. Noise characteristics change significantly with throttle level (motor RPM scaling), but this information is lost in the average.
 
@@ -125,7 +125,7 @@ P reduction now triggers at severity > 2× OR when D ≥ 60% of max (was D-only 
 
 ---
 
-### 5. Propwash-Aware Filter Targeting
+### 5. ✅ Propwash-Aware Filter Targeting — `FilterRecommender.ts`, `constants.ts`
 
 **Problem**: Current `FilterRecommender` uses a linear noise-floor-to-cutoff mapping. This can push gyro LPF1 below 100 Hz, killing propwash handling — the frequency range (50-100 Hz) where D-term must be responsive for flip/roll recovery.
 
@@ -184,7 +184,7 @@ Also consider flight style: aggressive/race needs higher propwash floor (~120 Hz
 
 ---
 
-### 8. Filter Group Delay Estimation
+### 8. ✅ Filter Group Delay Estimation — `GroupDelayEstimator.ts`
 
 **Problem**: Users don't see the latency cost of their filter configuration. More filtering = less noise but more delay, worse propwash handling.
 
@@ -194,7 +194,7 @@ Also consider flight style: aggressive/race needs higher propwash floor (~120 Hz
 
 ---
 
-### 9. Cross-Axis Coupling Detection
+### 9. ✅ Cross-Axis Coupling Detection — `CrossAxisDetector.ts`
 
 **Problem**: Tuning axes independently assumes they're decoupled. In practice, roll inputs can produce pitch responses (and vice versa) due to asymmetric mass distribution, flex, or gyro mounting angle.
 
@@ -202,7 +202,7 @@ Also consider flight style: aggressive/race needs higher propwash floor (~120 Hz
 
 ---
 
-### 10. Flight Quality Score
+### 10. ✅ Flight Quality Score — `tuneQualityScore.ts`
 
 **Problem**: No holistic metric to track tuning progress across sessions.
 
@@ -216,7 +216,7 @@ Display as trend chart in TuningHistoryPanel across tuning sessions.
 
 ---
 
-### 11. Multi-Flight Bayesian Optimization
+### 11. ✅ Multi-Flight Bayesian Optimization (Framework) — `BayesianPIDOptimizer.ts`
 
 **Problem**: Single-flight heuristic recommendations may not converge to optimal gains. Each flight gives one data point, but the optimization landscape is complex.
 
