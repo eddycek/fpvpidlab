@@ -1,6 +1,6 @@
 # Quick Tune: Single-Flight Tuning via Wiener Deconvolution
 
-> **Status**: Active (PRs #146–#152, Phases A-G complete)
+> **Status**: Complete (PRs #146–#152, Phases A-H)
 > **Date**: 2026-03-07
 > **Scope**: Analysis Engine, Tuning Session State Machine, UI Components, History, E2E Tests
 > **Prerequisite**: TUNING_PRECISION_IMPROVEMENTS.md #1 (Wiener Deconvolution)
@@ -691,7 +691,7 @@ After snapshot, transition `quick_applied → verification_pending` (reuses exis
 | C3 | ✅ TuningHistoryManager quick archive | `src/main/storage/TuningHistoryManager.ts` | Unit test: archive with tuningType + transferFunctionMetrics |
 | C4 | ✅ TUNING_START_SESSION tuningType param | `src/main/ipc/handlers/tuningHandlers.ts` | Unit test: guided vs quick session creation |
 | C5 | ✅ Smart reconnect quick_flight_pending | `src/main/index.ts` | Covered by smart reconnect logic |
-| C6 | ANALYSIS_RUN_QUICK handler | `src/main/ipc/handlers/analysisHandlers.ts` | Unit test: parallel filter + Wiener execution |
+| C6 | ~~ANALYSIS_RUN_QUICK handler~~ (deferred — QuickAnalysisStep calls filter + Wiener separately) | — | — |
 | C7 | ✅ metricsExtract for TransferFunction | `src/shared/utils/metricsExtract.ts` | Unit test: extractTransferFunctionMetrics |
 
 ### Phase D: UI — Start Flow

@@ -1,6 +1,6 @@
 # Tuning Workflow Revision: Stateful Two-Flight Iterative Approach
 
-> **Status**: Implemented (19/20 steps done)
+> **Status**: Complete (PRs #23–#50, all 20 steps done)
 > **Date**: 2026-02-10
 > **Scope**: Tuning Wizard, Flight Guide, Analysis Engine, IPC, Storage, UX Flow
 
@@ -1030,22 +1030,9 @@ warnings: AnalysisWarning[];
 
 ---
 
-### Step 17: Apply Handler — Auto-Erase Flash After Apply ⏳ TODO (last remaining)
+### Step 17: Apply Handler — Auto-Erase Flash After Apply ✅ (resolved by design)
 
-**Files to modify**:
-- `src/main/ipc/handlers.ts`
-
-**Changes**:
-
-17.1. After a successful apply + reboot in the `TUNING_APPLY_RECOMMENDATIONS` handler,
-the FC reboots and the connection is lost. The app cannot erase flash at that point.
-
-17.2. Instead, the `TuningStatusBanner` for the next phase (`pid_flight_pending` or
-`verification_pending`) will prompt the user to erase flash as the first action. The
-primary button for these phases is "Erase Flash & Prepare".
-
-17.3. No changes to the apply handler are needed. The existing handler already supports
-selective application (empty arrays are skipped).
+**Resolution**: Auto-erase after apply is unnecessary — the FC reboots after apply, so flash cannot be erased at that point. Instead, `TuningStatusBanner` prompts the user to erase flash as the first action in the next phase (`pid_flight_pending` or `verification_pending`). The primary button for these phases is "Erase Flash & Prepare". No code changes required — the existing handler already supports selective application.
 
 ---
 

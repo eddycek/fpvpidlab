@@ -1,8 +1,8 @@
 # Prop Wash Detection & D-Term Effectiveness Diagnostics
 
-> **Status**: Proposed
+> **Status**: Active (PRs #155, #160 — backend analysis complete, UI + history pending)
 
-Future diagnostic features inspired by FPVtune's AI-based analysis pipeline. Both features add new analytical capabilities to the existing blackbox analysis without replacing current rule-based recommendations.
+Diagnostic features inspired by FPVtune's AI-based analysis pipeline. Both analysis modules are implemented and integrated into PIDAnalyzer. UI visualization and tuning history integration remain as future work.
 
 ---
 
