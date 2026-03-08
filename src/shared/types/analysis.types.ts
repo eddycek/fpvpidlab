@@ -124,6 +124,8 @@ export interface FilterAnalysisResult {
   windDisturbance?: WindDisturbanceResult;
   /** Mechanical health diagnostic result */
   mechanicalHealth?: MechanicalHealthResult;
+  /** Dynamic lowpass analysis (throttle-dependent noise) */
+  dynamicLowpass?: DynamicLowpassAnalysis;
 }
 
 // ---- Throttle Spectrogram Types ----
@@ -447,6 +449,22 @@ export interface PropWashEvent {
   severityRatio: number;
   /** Per-axis energy in the prop wash band */
   axisEnergy: { roll: number; pitch: number; yaw: number };
+}
+
+// ---- Dynamic Lowpass Analysis Types ----
+
+/** Dynamic lowpass analysis result */
+export interface DynamicLowpassAnalysis {
+  /** Whether dynamic lowpass is recommended */
+  recommended: boolean;
+  /** Noise floor increase from low to high throttle bands (dB) */
+  noiseIncreaseDeltaDb: number;
+  /** Correlation between throttle and noise floor (0-1) */
+  throttleNoiseCorrelation: number;
+  /** Number of throttle bands analyzed */
+  bandsAnalyzed: number;
+  /** Human-readable summary */
+  summary: string;
 }
 
 // ---- Mechanical Health Types ----

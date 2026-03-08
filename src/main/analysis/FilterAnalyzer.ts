@@ -24,6 +24,7 @@ import { computeThrottleSpectrogram } from './ThrottleSpectrogramAnalyzer';
 import { estimateGroupDelay } from './GroupDelayEstimator';
 import { analyzeWindDisturbance } from './WindDisturbanceDetector';
 import { checkMechanicalHealth } from './MechanicalHealthChecker';
+import { analyzeDynamicLowpass, recommendDynamicLowpass } from './DynamicLowpassRecommender';
 import { FFT_WINDOW_SIZE, FREQUENCY_MIN_HZ, FREQUENCY_MAX_HZ } from './constants';
 
 /** Maximum number of segments to use (more = slower but more accurate) */
@@ -151,6 +152,16 @@ export async function analyze(
   // Step 7: Mechanical health diagnostic
   const mechanicalHealth = checkMechanicalHealth(flightData, noiseProfile);
 
+  // Step 8: Dynamic lowpass analysis
+  const dynamicLowpass = analyzeDynamicLowpass(throttleSpectrogram);
+  const dynLowpassRecs = recommendDynamicLowpass(
+    dynamicLowpass,
+    currentSettings.gyro_lpf1_static_hz
+  );
+  if (dynLowpassRecs.length > 0) {
+    recommendations.push(...dynLowpassRecs);
+  }
+
   onProgress?.({ step: 'recommending', percent: 100 });
 
   return {
@@ -167,6 +178,7 @@ export async function analyze(
     groupDelay,
     windDisturbance,
     mechanicalHealth,
+    dynamicLowpass,
   };
 }
 
@@ -226,6 +238,16 @@ async function analyzeEntireFlight(
   // Mechanical health diagnostic
   const mechanicalHealth = checkMechanicalHealth(flightData, noiseProfile);
 
+  // Dynamic lowpass analysis
+  const dynamicLowpass = analyzeDynamicLowpass(throttleSpectrogram);
+  const dynLowpassRecs = recommendDynamicLowpass(
+    dynamicLowpass,
+    currentSettings.gyro_lpf1_static_hz
+  );
+  if (dynLowpassRecs.length > 0) {
+    recommendations.push(...dynLowpassRecs);
+  }
+
   return {
     noise: noiseProfile,
     recommendations,
@@ -240,6 +262,7 @@ async function analyzeEntireFlight(
     groupDelay,
     windDisturbance,
     mechanicalHealth,
+    dynamicLowpass,
   };
 }
 
