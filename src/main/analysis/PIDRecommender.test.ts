@@ -14,14 +14,7 @@ import type {
   StepEvent,
 } from '@shared/types/analysis.types';
 import type { TransferFunctionMetrics } from './TransferFunctionEstimator';
-import {
-  P_GAIN_MIN,
-  P_GAIN_MAX,
-  D_GAIN_MIN,
-  D_GAIN_MAX,
-  DAMPING_RATIO_MIN,
-  DAMPING_RATIO_MAX,
-} from './constants';
+import { P_GAIN_MAX, D_GAIN_MAX, DAMPING_RATIO_MIN, DAMPING_RATIO_MAX } from './constants';
 
 function makeStep(): StepEvent {
   return { axis: 0, startIndex: 0, endIndex: 1200, magnitude: 300, direction: 'positive' };

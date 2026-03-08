@@ -21,11 +21,9 @@ import {
   DTERM_LPF1_MAX_HZ_RPM,
   NOISE_FLOOR_VERY_NOISY_DB,
   NOISE_FLOOR_VERY_CLEAN_DB,
-  NOISE_TARGET_DEADZONE_HZ,
   DYN_NOTCH_COUNT_WITH_RPM,
   DYN_NOTCH_Q_WITH_RPM,
   PROPWASH_GYRO_LPF1_FLOOR_HZ,
-  PROPWASH_FLOOR_BYPASS_DB,
 } from './constants';
 
 function makeAxisProfile(noiseFloorDb: number, peaks: NoisePeak[] = []): AxisNoiseProfile {

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { analyze } from './FilterAnalyzer';
 import type { BlackboxFlightData, TimeSeries } from '@shared/types/blackbox.types';
 import type { AnalysisProgress, CurrentFilterSettings } from '@shared/types/analysis.types';

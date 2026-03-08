@@ -2,7 +2,6 @@ import { describe, it, expect } from 'vitest';
 import {
   normalizedCorrelation,
   analyzeCrossAxisCoupling,
-  COUPLING_NONE_THRESHOLD,
   COUPLING_SIGNIFICANT_THRESHOLD,
 } from './CrossAxisDetector';
 import type { BlackboxFlightData, TimeSeries } from '@shared/types/blackbox.types';

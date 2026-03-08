@@ -4,7 +4,12 @@
  * Takes power spectra (from FFTCompute) and produces noise profiles with peak
  * detection and source classification (frame resonance, motor harmonics, electrical).
  */
-import type { PowerSpectrum, NoisePeak, AxisNoiseProfile, NoiseProfile } from '@shared/types/analysis.types';
+import type {
+  PowerSpectrum,
+  NoisePeak,
+  AxisNoiseProfile,
+  NoiseProfile,
+} from '@shared/types/analysis.types';
 import {
   PEAK_PROMINENCE_DB,
   PEAK_LOCAL_WINDOW_BINS,
@@ -134,10 +139,7 @@ function harmonicTolerance(expectedHz: number): number {
   return Math.max(MOTOR_HARMONIC_TOLERANCE_MIN_HZ, expectedHz * MOTOR_HARMONIC_TOLERANCE_RATIO);
 }
 
-function isMotorHarmonic(
-  frequency: number,
-  allPeaks: Array<{ frequency: number }>
-): boolean {
+function isMotorHarmonic(frequency: number, allPeaks: Array<{ frequency: number }>): boolean {
   if (allPeaks.length < MOTOR_HARMONIC_MIN_PEAKS) return false;
 
   const peakFreqs = allPeaks.map((p) => p.frequency).sort((a, b) => a - b);
@@ -239,7 +241,7 @@ export function averageSpectra(spectra: PowerSpectrum[]): PowerSpectrum {
 export function categorizeNoiseLevel(
   roll: AxisNoiseProfile,
   pitch: AxisNoiseProfile,
-  yaw: AxisNoiseProfile
+  _yaw: AxisNoiseProfile
 ): NoiseProfile['overallLevel'] {
   // Use the worst (highest) noise floor across roll and pitch (yaw is typically noisier, less relevant)
   const worstFloor = Math.max(roll.noiseFloorDb, pitch.noiseFloorDb);
