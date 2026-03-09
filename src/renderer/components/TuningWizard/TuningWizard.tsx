@@ -87,13 +87,9 @@ export function TuningWizard({ logId, mode = 'full', onExit, onApplyComplete }: 
             ? extractFilterMetrics(wizard.filterResult)
             : undefined;
 
-        // For quick mode, PID-like metrics come from transfer function analysis
+        // Flash Tune uses transferFunctionMetrics for scoring (no step-based PID metrics)
         const pidMetricsSource =
-          mode === TUNING_MODE.FLASH
-            ? wizard.tfResult
-            : mode !== TUNING_MODE.FILTER
-              ? wizard.pidResult
-              : null;
+          mode === TUNING_MODE.FLASH ? null : mode !== TUNING_MODE.FILTER ? wizard.pidResult : null;
         const pidMetrics = pidMetricsSource ? extractPIDMetrics(pidMetricsSource) : undefined;
 
         const transferFunctionMetrics =
