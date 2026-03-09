@@ -25,7 +25,8 @@ const REGULARIZATION_FLOOR = 1e-10;
 const TF_MAX_FREQ_HZ = 500;
 
 /** Synthetic step response duration (seconds) */
-const STEP_RESPONSE_DURATION_S = 0.5;
+const STEP_RESPONSE_DURATION_S = 0.2;
+const IMPULSE_SMOOTH_WINDOW = 8;
 
 /** Bandwidth threshold: -3 dB below DC gain */
 const BANDWIDTH_THRESHOLD_DB = -3;
@@ -342,12 +343,25 @@ export function computeSyntheticStepResponse(
     return { timeMs: [0], response: [0] };
   }
 
+  // Smooth impulse response with moving average to reduce noise
+  const halfW = Math.floor(IMPULSE_SMOOTH_WINDOW / 2);
+  const smoothed = new Float64Array(maxSamples);
+  for (let i = 0; i < maxSamples; i++) {
+    let sum = 0;
+    let count = 0;
+    for (let j = Math.max(0, i - halfW); j <= Math.min(maxSamples - 1, i + halfW); j++) {
+      sum += impulseResponse[j];
+      count++;
+    }
+    smoothed[i] = sum / count;
+  }
+
   const timeMs: number[] = [];
   const response: number[] = [];
   let cumSum = 0;
 
   for (let i = 0; i < maxSamples; i++) {
-    cumSum += impulseResponse[i];
+    cumSum += smoothed[i];
     timeMs.push((i / sampleRateHz) * 1000);
     response.push(cumSum);
   }

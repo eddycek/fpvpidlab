@@ -30,27 +30,21 @@ describe('AppliedChangesTable', () => {
   });
 
   it('shows percent change', () => {
-    const changes: AppliedChange[] = [
-      { setting: 'test', previousValue: 100, newValue: 120 },
-    ];
+    const changes: AppliedChange[] = [{ setting: 'test', previousValue: 100, newValue: 120 }];
     render(<AppliedChangesTable title="Test" changes={changes} />);
     expect(screen.getByText('+20%')).toBeInTheDocument();
   });
 
   it('shows negative percent change', () => {
-    const changes: AppliedChange[] = [
-      { setting: 'test', previousValue: 500, newValue: 450 },
-    ];
+    const changes: AppliedChange[] = [{ setting: 'test', previousValue: 500, newValue: 450 }];
     render(<AppliedChangesTable title="Test" changes={changes} />);
     expect(screen.getByText('-10%')).toBeInTheDocument();
   });
 
   it('handles zero previousValue gracefully', () => {
-    const changes: AppliedChange[] = [
-      { setting: 'test', previousValue: 0, newValue: 50 },
-    ];
+    const changes: AppliedChange[] = [{ setting: 'test', previousValue: 0, newValue: 50 }];
     render(<AppliedChangesTable title="Test" changes={changes} />);
-    expect(screen.getByText('+\u221E')).toBeInTheDocument();
+    expect(screen.getByText('new')).toBeInTheDocument();
   });
 
   it('renders multiple changes', () => {
