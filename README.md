@@ -11,7 +11,7 @@ Most FPV pilots tune their quads by hand — tweaking PID numbers, test flying, 
 - **Safety-first** — every apply creates an automatic rollback snapshot, all values clamped to proven safe bounds
 - **Multi-quad profiles** — auto-detects each FC by serial number, stores configs and tuning history per quad
 - **Flight style adaptation** — Smooth (cinematic), Balanced (freestyle), Aggressive (racing) thresholds
-- **19 analysis modules** — FFT, step response, Wiener deconvolution, Bode plots, prop wash detection, D-term effectiveness, cross-axis coupling, throttle spectrograms, group delay estimation, Bayesian PID optimizer framework
+- **24 analysis modules** — FFT, step response, Wiener deconvolution, Bode plots, prop wash detection, D-term effectiveness, cross-axis coupling, throttle spectrograms, per-band transfer function, group delay estimation, feedforward analysis, slider mapping, dynamic lowpass, Bayesian PID optimizer, mechanical health, wind disturbance
 - **Works offline** — demo mode with simulated FC for testing without hardware
 
 **How it works:** Connect FC via USB → Erase flash → Fly → Download log → PIDlab analyzes and applies optimized settings → Done.
@@ -101,7 +101,9 @@ Inspired by [Plasmatree PID-Analyzer](https://github.com/Plasmatree/PID-Analyzer
 - Bode plot visualization (magnitude + phase vs frequency)
 - Classical stability metrics: bandwidth (-3 dB), phase margin (at 0 dB gain crossover), gain margin (at -180° phase crossover)
 - Frequency-domain PID rules: low phase margin → D increase, low bandwidth → P increase
-- Confidence capped at medium — Wiener deconvolution assumes a linear time-invariant system; real quads are nonlinear, so dedicated step response measurements remain more precise
+- Unified pipeline with Deep Tune — same recommendation rules (D-term gating, prop wash, I-term) applied to both modes; confidence determined by data quality and gating logic, not blanket caps
+- DC gain analysis for I-term: detects poor steady-state tracking from transfer function (< -1 dB → I increase)
+- Per-band transfer function analysis across throttle levels — detects TPA tuning problems
 
 ### Bayesian PID Optimizer (Framework)
 - Gaussian Process surrogate with RBF kernel
@@ -123,7 +125,7 @@ Inspired by [Plasmatree PID-Analyzer](https://github.com/Plasmatree/PID-Analyzer
 - Rates input flight data 0-100 (excellent/good/fair/poor)
 - Adjusts recommendation confidence based on data quality
 - Warns about insufficient hover time, missing axes, too few steps
-- Flight quality score: composite 0-100 metric with type-aware components (Deep Tune: step response metrics; Flash Tune: TF bandwidth + phase margin)
+- Flight quality score: composite 0-100 metric with type-aware components (Deep Tune: noise floor, tracking RMS, overshoot, settling time; Flash Tune: noise floor, overshoot, phase margin, bandwidth; both modes: 4 comparable components)
 
 ### Deep Tune (Two-Flight Workflow)
 
@@ -145,7 +147,7 @@ The fast approach — analyzes any single flight (freestyle, cruise, hover) usin
 
 **How it works:** Normal stick inputs contain broadband energy that excites the PID loop across all relevant frequencies. Wiener deconvolution recovers the closed-loop transfer function H(f) = S_xy / (S_xx + ε) from setpoint→gyro data, then synthesizes a step response via IFFT integration. Filter analysis runs the same FFT pipeline as Deep Tune. Both run in parallel from the same log.
 
-**Trade-off:** No dedicated maneuvers needed, but the LTI (linear time-invariant) assumption means recommendations are less precise than direct step measurements — PIDlab caps Flash Tune confidence at "medium" and recommends Deep Tune for initial setup or major changes.
+**Trade-off:** No dedicated maneuvers needed, but the LTI (linear time-invariant) assumption means frequency-domain estimates are inherently noisier than direct step measurements. Both modes now share the same unified recommendation pipeline — confidence is determined by data quality and D-term effectiveness gating, not blanket caps. Deep Tune remains more precise for initial setup or major changes.
 
 - Parallel filter + transfer function analysis with combined one-click apply
 - Bode plot (magnitude + phase) with bandwidth, gain margin, and phase margin markers
@@ -306,24 +308,30 @@ pidlab/
 │   │   │   ├── commands.ts      # MSP command definitions
 │   │   │   └── types.ts         # MSP type definitions
 │   │   ├── blackbox/            # BBL binary log parser (6 modules, 245 tests)
-│   │   ├── analysis/            # Signal processing & tuning engine (19 modules)
+│   │   ├── analysis/            # Signal processing & tuning engine (24 modules)
 │   │   │   ├── FFTCompute.ts              # Welch's method, Hanning window
 │   │   │   ├── SegmentSelector.ts         # Hover/sweep segment detection
 │   │   │   ├── NoiseAnalyzer.ts           # Peak detection, noise classification
 │   │   │   ├── FilterRecommender.ts       # Noise-based filter targets
+│   │   │   ├── DynamicLowpassRecommender.ts # Dynamic lowpass cutoff optimization
 │   │   │   ├── FilterAnalyzer.ts          # Filter analysis orchestrator
 │   │   │   ├── StepDetector.ts            # Step input detection in setpoint
 │   │   │   ├── StepMetrics.ts             # Rise time, overshoot, settling, FF classification
 │   │   │   ├── PIDRecommender.ts          # Rule-based P/I/D recommendations
-│   │   │   ├── PIDAnalyzer.ts             # PID analysis orchestrator
+│   │   │   ├── PIDAnalyzer.ts             # Unified PID analysis orchestrator (Deep + Flash)
 │   │   │   ├── TransferFunctionEstimator.ts # Wiener deconvolution engine
+│   │   │   ├── ThrottleTFAnalyzer.ts      # Per-band TF across throttle levels
 │   │   │   ├── DataQualityScorer.ts       # Flight data quality scoring (0-100)
 │   │   │   ├── PropWashDetector.ts        # Throttle-down event detection + severity
 │   │   │   ├── DTermAnalyzer.ts           # D-term effectiveness ratio analysis
 │   │   │   ├── CrossAxisDetector.ts       # Roll↔pitch coupling detection
+│   │   │   ├── FeedforwardAnalyzer.ts     # Extended FF analysis (leading-edge, jitter)
+│   │   │   ├── SliderMapper.ts            # BF Configurator slider mapping
 │   │   │   ├── ThrottleSpectrogramAnalyzer.ts # Per-throttle-bin FFT
 │   │   │   ├── GroupDelayEstimator.ts     # Filter chain latency estimation
 │   │   │   ├── BayesianPIDOptimizer.ts    # GP-based multi-session optimizer
+│   │   │   ├── MechanicalHealthChecker.ts # Frame/motor health diagnostics
+│   │   │   ├── WindDisturbanceDetector.ts # Wind/disturbance detection
 │   │   │   ├── headerValidation.ts        # BB header diagnostics
 │   │   │   └── constants.ts               # Tunable thresholds
 │   │   ├── storage/             # Data managers
@@ -339,7 +347,7 @@ pidlab/
 │   │   │   └── driveDetector.ts       # Cross-platform drive mount detection
 │   │   ├── demo/               # Demo mode (offline UX testing)
 │   │   │   ├── MockMSPClient.ts       # Simulated FC (47 tests)
-│   │   │   └── DemoDataGenerator.ts   # Realistic BBL generation (22 tests)
+│   │   │   └── DemoDataGenerator.ts   # Realistic BBL generation (26 tests)
 │   │   ├── ipc/                 # IPC handlers (50 handlers across 8 modules)
 │   │   │   ├── handlers/       # Domain-split handler modules
 │   │   │   │   ├── index.ts            # DI container, registerIPCHandlers
@@ -428,10 +436,10 @@ pidlab/
 │
 └── docs/                        # Design documents (see docs/README.md for index)
     ├── README.md                          # Document index
-    ├── PROPWASH_AND_DTERM_DIAGNOSTICS.md  # Active — backend done, UI pending
+    ├── FLASH_TUNE_RECOMMENDATION_PARITY.md # Active — unified pipeline, quality score parity
     ├── TUNING_PRECISION_IMPROVEMENTS.md   # Active — 4/15 improvements done
     ├── UX_IMPROVEMENT_IDEAS.md            # Active — 4/7 ideas done
-    └── complete/                          # Completed design docs (13 historical records)
+    └── complete/                          # Completed design docs (14 historical records)
 ```
 
 ## Usage
@@ -503,7 +511,7 @@ Click **Start Tuning Session** and select **Flash Tune**:
 
 This approach is based on the [Plasmatree PID-Analyzer](https://github.com/Plasmatree/PID-Analyzer) technique by Florian Melsheimer (2018) — the first tool to apply Wiener deconvolution to FPV PID tuning. The key insight is that normal stick inputs contain enough broadband energy to excite the PID loop across all relevant frequencies, so the transfer function can be recovered from *any* flight data without dedicated maneuvers.
 
-**Trade-off vs Deep Tune:** Wiener deconvolution assumes a linear time-invariant (LTI) system. Real quads are nonlinear (TPA, anti-gravity, motor saturation), so PIDlab caps Flash Tune confidence at "medium". Use Deep Tune for initial setup or significant changes; Flash Tune for fast iteration on an existing tune.
+**Trade-off vs Deep Tune:** Wiener deconvolution assumes a linear time-invariant (LTI) system. Real quads are nonlinear (TPA, anti-gravity, motor saturation). Both modes now share the same unified recommendation pipeline with identical gating logic. Deep Tune provides more precise step measurements; Flash Tune is faster for iterating on an existing tune.
 
 ### 5. Standalone Analysis (No Tuning Session)
 
@@ -781,8 +789,9 @@ The transfer function approach is based on [Plasmatree PID-Analyzer](https://git
 | **TF-1** | Phase margin < 45° (critical: < 30°) | D ↑ | +5 / +10 | Medium |
 | **TF-2** | Synthetic overshoot > threshold | Same as Rule 1a | varies | Medium |
 | **TF-3** | Bandwidth < 40 Hz (yaw: < 28 Hz), no overshoot | P ↑ | +5 | Medium |
+| **TF-4** | DC gain < -1 dB (poor steady-state tracking) | I ↑ | +5 / +10 | Low / Medium |
 
-All TF-derived recommendations are capped at "medium" confidence because Wiener deconvolution assumes a linear time-invariant (LTI) system, while real quads exhibit nonlinearities (TPA gain scheduling, anti-gravity, motor saturation, propeller aerodynamics). For this reason, Deep Tune's direct step response measurements (which observe the actual nonlinear system) produce higher-confidence recommendations.
+TF rules are integrated into the unified pipeline alongside step-response rules. Confidence is determined by the same data quality and D-term effectiveness gating as Deep Tune — no blanket caps. Flash Tune also benefits from prop wash integration, feedforward analysis, and Bayesian optimization.
 
 **Safety Bounds:**
 
@@ -842,10 +851,10 @@ The autotuning rules and thresholds are based on established FPV community pract
 - MSP v1 only (v2 support planned)
 - Requires test flights in a safe environment
 - Huffman-compressed Blackbox data not yet supported (rare, BF 4.1+ feature)
-- Feedforward: detection and FF-aware PID recommendations implemented; direct FF parameter tuning (writing `feedforward_boost` via MSP) not yet supported
-- Prop wash detection and D-term effectiveness: backend analysis complete, UI visualization pending
-- Bayesian PID optimizer: framework and tests complete, integration into recommendation pipeline pending
-- Throttle spectrogram: analysis module complete, UI visualization pending
+- Feedforward: detection, FF-aware PID recommendations, and CLI apply implemented; direct FF parameter write via MSP not yet supported
+- Bayesian PID optimizer: framework complete, full pipeline integration pending (currently returns suggestions, not auto-applied)
+- Throttle spectrogram and per-band TF: analysis modules complete, UI visualization pending
+- Mechanical health checker and wind disturbance detector: analysis modules complete, UI integration pending
 
 ## Development Roadmap
 

@@ -556,9 +556,17 @@ When user selects drone size, defaults auto-populate:
 
 **Key numbers to keep in sync across files:**
 - Total test count and test file count (ARCHITECTURE.md, README.md, SPEC.md, TESTING.md, docs/README.md)
+- Analysis module count (README.md project structure, feature bullet)
 - IPC handler counts per module (ARCHITECTURE.md, CLAUDE.md)
 - Hook count (ARCHITECTURE.md)
 - PR merge range (SPEC.md)
+
+**MANDATORY: Documentation subagent before merge.** After completing implementation and before merging the final PR, launch a background Agent (subagent_type=general-purpose) to review all changes in the PR branch (`git diff main...HEAD`) and update every affected MD file. The agent must:
+1. Run `npm run test:run` to get exact test counts
+2. Check `git log --oneline main..HEAD` for PR numbers
+3. Read and update: README.md (features, known limitations, project structure, test counts), TESTING.md (test inventory), ARCHITECTURE.md (test summary, module counts), SPEC.md (PR range, test counts), CLAUDE.md (architecture sections), docs/README.md (design doc index)
+4. Specifically audit README.md Known Limitations — remove items that are now implemented, add new ones
+5. Verify feature descriptions match current implementation (no stale "planned" or "pending" language for completed work)
 
 ## Code Style
 
