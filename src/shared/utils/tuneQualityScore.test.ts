@@ -385,6 +385,35 @@ describe('computeTuneQualityScore', () => {
     expect(result!.overall).toBeLessThanOrEqual(42);
   });
 
+  it('skips PID components when stepsDetected is 0 (Flash Tune / transfer function)', () => {
+    const tfPID: PIDMetricsSummary = {
+      ...perfectPID,
+      stepsDetected: 0,
+    };
+    const result = computeTuneQualityScore({
+      filterMetrics: perfectFilter,
+      pidMetrics: tfPID,
+    });
+    expect(result).not.toBeNull();
+    // Only Noise Floor — Tracking RMS, Overshoot, Settling Time all skipped
+    expect(result!.components).toHaveLength(1);
+    expect(result!.components[0].label).toBe('Noise Floor');
+    expect(result!.components[0].maxPoints).toBe(100);
+  });
+
+  it('returns null when stepsDetected is 0 and no filter metrics', () => {
+    const tfPID: PIDMetricsSummary = {
+      ...perfectPID,
+      stepsDetected: 0,
+    };
+    const result = computeTuneQualityScore({
+      filterMetrics: null,
+      pidMetrics: tfPID,
+    });
+    // No usable components → null
+    expect(result).toBeNull();
+  });
+
   describe('verification metrics integration', () => {
     const noisyFilter: FilterMetricsSummary = {
       ...perfectFilter,

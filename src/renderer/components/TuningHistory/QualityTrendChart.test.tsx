@@ -18,6 +18,7 @@ function makeRecord(id: string, date: string, noiseFloorDb = -50): CompletedTuni
   return {
     id,
     profileId: 'p1',
+    tuningType: 'guided',
     startedAt: '2026-01-01T00:00:00Z',
     completedAt: date,
     baselineSnapshotId: null,

@@ -20,3 +20,55 @@
 .quality-trend-container .recharts-tooltip-cursor {
   stroke: #555;
 }
+
+.quality-trend-tooltip {
+  background: #1a1a1a;
+  border: 1px solid #444;
+  border-radius: 4px;
+  padding: 8px 10px;
+  font-size: 12px;
+  color: #ddd;
+  line-height: 1.5;
+}
+
+.quality-trend-tooltip-score {
+  font-size: 16px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.quality-trend-tooltip-tier {
+  font-size: 11px;
+  font-weight: 500;
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 3px;
+  text-transform: uppercase;
+}
+
+.quality-trend-tooltip-tier.tier-Excellent {
+  color: #51cf66;
+  background: rgba(81, 207, 102, 0.12);
+}
+.quality-trend-tooltip-tier.tier-Good {
+  color: #ffd43b;
+  background: rgba(255, 212, 59, 0.12);
+}
+.quality-trend-tooltip-tier.tier-Fair {
+  color: #ff922b;
+  background: rgba(255, 146, 43, 0.12);
+}
+.quality-trend-tooltip-tier.tier-Poor {
+  color: #ff6b6b;
+  background: rgba(255, 107, 107, 0.12);
+}
+
+.quality-trend-tooltip-type {
+  color: #aaa;
+  margin-top: 2px;
+}
+
+.quality-trend-tooltip-detail {
+  color: #888;
+  font-size: 11px;
+}

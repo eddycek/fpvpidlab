@@ -49,7 +49,7 @@ const COMPONENTS: ComponentDef[] = [
   {
     label: 'Tracking RMS',
     getValue: (_filter, pid) => {
-      if (!pid) return undefined;
+      if (!pid || pid.stepsDetected === 0) return undefined;
       const vals = [
         pid.roll.meanTrackingErrorRMS,
         pid.pitch.meanTrackingErrorRMS,
@@ -66,7 +66,7 @@ const COMPONENTS: ComponentDef[] = [
   {
     label: 'Overshoot',
     getValue: (_filter, pid) => {
-      if (!pid) return undefined;
+      if (!pid || pid.stepsDetected === 0) return undefined;
       return (pid.roll.meanOvershoot + pid.pitch.meanOvershoot + pid.yaw.meanOvershoot) / 3;
     },
     best: 0,
@@ -75,7 +75,7 @@ const COMPONENTS: ComponentDef[] = [
   {
     label: 'Settling Time',
     getValue: (_filter, pid) => {
-      if (!pid) return undefined;
+      if (!pid || pid.stepsDetected === 0) return undefined;
       return (
         (pid.roll.meanSettlingTimeMs + pid.pitch.meanSettlingTimeMs + pid.yaw.meanSettlingTimeMs) /
         3

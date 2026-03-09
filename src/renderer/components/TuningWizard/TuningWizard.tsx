@@ -43,11 +43,13 @@ export function TuningWizard({ logId, mode = 'full', onExit, onApplyComplete }: 
       if (onApplyComplete) {
         const filterChanges =
           mode !== 'pid'
-            ? wizard.filterResult?.recommendations.map((r) => ({
-                setting: r.setting,
-                previousValue: r.currentValue,
-                newValue: r.recommendedValue,
-              }))
+            ? wizard.filterResult?.recommendations
+                .filter((r) => r.currentValue !== r.recommendedValue)
+                .map((r) => ({
+                  setting: r.setting,
+                  previousValue: r.currentValue,
+                  newValue: r.recommendedValue,
+                }))
             : undefined;
 
         // In quick mode, PID recs come from transfer function analysis
