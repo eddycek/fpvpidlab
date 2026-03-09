@@ -198,7 +198,7 @@ export const FLIGHT_TIPS: string[] = [
   'Make sure Blackbox logging is enabled before you fly',
 ];
 
-// ---- Tuning Workflow (updated for two-flight process) ----
+// ---- Tuning Workflow (Deep Tune step labels) ----
 
 export const TUNING_WORKFLOW: WorkflowStep[] = [
   { title: 'Connect your drone', description: 'Plug in via USB and wait for connection.' },

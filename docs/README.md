@@ -26,7 +26,7 @@ Overview of all design documents in this directory. Completed documents are arch
 | [SD_CARD_BLACKBOX_SUPPORT](./complete/SD_CARD_BLACKBOX_SUPPORT.md) | #105, #142 | SD card blackbox storage via MSC mode + tuning session fixes |
 | [TUNING_HISTORY_AND_COMPARISON](./complete/TUNING_HISTORY_AND_COMPARISON.md) | #96–#99 | Tuning session history + before/after comparison on completion |
 | [TUNING_WORKFLOW_FIXES](./complete/TUNING_WORKFLOW_FIXES.md) | #42–#45 | Fix for download/analyze blocking + phase transition issues |
-| [TUNING_WORKFLOW_REVISION](./complete/TUNING_WORKFLOW_REVISION.md) | #23–#50 | Stateful two-flight tuning workflow (10-phase state machine) |
+| [TUNING_WORKFLOW_REVISION](./complete/TUNING_WORKFLOW_REVISION.md) | #23–#50 | Stateful Deep Tune workflow (10-phase state machine) |
 
 ## Status Legend
 

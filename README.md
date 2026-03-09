@@ -44,7 +44,7 @@ Connecting with BF 4.2 or earlier will show an error and auto-disconnect. See [B
 - **Phase 2:** ✅ Complete - Blackbox analysis, automated tuning, rollback
 - **Phase 2.5:** ✅ Complete - Profile simplification, interactive analysis charts
 - **Phase 3:** ✅ Complete - Mode-aware wizard, read-only analysis, flight guides
-- **Phase 4:** ✅ Complete - Stateful two-flight tuning workflow
+- **Phase 4:** ✅ Complete - Stateful Deep Tune workflow
 - **Phase 6:** ✅ Complete - CI/CD with GitHub Actions (tests on PR, cross-platform releases on tag)
 
 See [SPEC.md](./SPEC.md) for detailed phase tracking and test counts.
@@ -366,7 +366,7 @@ pidlab/
 │   │   │   ├── FCInfo/                # FC details + BB diagnostics + FixSettingsConfirmModal
 │   │   │   ├── BlackboxStatus/        # Flash/SD card storage, download, erase
 │   │   │   ├── SnapshotManager/       # Snapshot CRUD, diff view, restore
-│   │   │   ├── TuningWizard/          # Multi-step guided wizard
+│   │   │   ├── TuningWizard/          # Multi-step tuning wizard
 │   │   │   │   ├── charts/            # SpectrumChart, StepResponseChart, BodePlot, AxisTabs
 │   │   │   │   ├── FilterAnalysisStep, PIDAnalysisStep  # Analysis result views
 │   │   │   │   ├── QuickAnalysisStep  # Combined filter+PID for Flash Tune
@@ -459,7 +459,7 @@ Before flying, check the **Flight Controller Information** panel:
 
 If settings are wrong, click **Fix Settings** in the FC info panel — the app sends the CLI commands and reboots the FC automatically. During an active tuning session, the **TuningStatusBanner** also shows an amber pre-flight warning with a one-click fix button.
 
-### 3. Guided Two-Flight Tuning
+### 3. Deep Tune
 
 Click **Start Tuning Session** and select **Deep Tune**. The status banner at the top tracks your progress through 10 phases:
 
@@ -848,7 +848,7 @@ The autotuning rules and thresholds are based on established FPV community pract
 - **Phase 2**: ✅ Blackbox analysis, automated tuning, rollback
 - **Phase 2.5**: ✅ UX polish — profile simplification, interactive analysis charts
 - **Phase 3**: ✅ Mode-aware wizard, read-only analysis overview, flight guides
-- **Phase 4**: ✅ Stateful two-flight tuning workflow with smart reconnect, verification flight, tuning history
+- **Phase 4**: ✅ Stateful Deep Tune workflow with smart reconnect, verification flight, tuning history
 - **Phase 5**: ⬜ Complete manual testing & UX polish (real hardware validation)
 - **Phase 6**: ✅ CI/CD & cross-platform releases (macOS/Windows/Linux installers)
 - **Phase 7a**: ✅ Playwright E2E tests (demo mode, 25 tests)

@@ -1,5 +1,5 @@
 /**
- * Types for the stateful two-flight iterative tuning workflow.
+ * Types for the stateful iterative tuning workflow (Deep Tune + Flash Tune).
  *
  * The tuning process is split into two flights:
  * 1. Filter flight (hover + throttle sweeps) → filter analysis → apply
