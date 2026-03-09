@@ -625,21 +625,28 @@ Subdirectories:
 
 ## How Autotuning Works
 
-PIDlab automates the two core aspects of FPV quad tuning: **filter tuning** (reducing noise) and **PID tuning** (improving flight response). Both use Blackbox log analysis to produce data-driven recommendations.
+PIDlab automates the two core aspects of FPV quad tuning: **filter tuning** (reducing noise) and **PID tuning** (improving flight response). Both use Blackbox log analysis to produce data-driven recommendations. Deep Tune runs filter analysis on the first flight and PID analysis (step response) on the second flight. Flash Tune runs both filter analysis and transfer function PID analysis **in parallel** from a single flight.
 
 ### Filter Tuning (FFT Analysis)
 
-The filter tuning pipeline analyzes gyro noise to determine optimal lowpass filter cutoff frequencies.
+The filter tuning pipeline analyzes gyro noise to determine optimal lowpass filter cutoff frequencies. It runs identically for both Deep Tune and Flash Tune — in Flash Tune mode, filter analysis runs **in parallel** with the transfer function PID analysis.
 
-**Pipeline:** `SegmentSelector` → `FFTCompute` → `NoiseAnalyzer` → `FilterRecommender`
+**Core pipeline:** `SegmentSelector` → `FFTCompute` → `NoiseAnalyzer` → `FilterRecommender`
+**Supplementary:** `DataQualityScorer`, `ThrottleSpectrogramAnalyzer`, `GroupDelayEstimator`, `WindDisturbanceDetector`, `MechanicalHealthChecker`, `DynamicLowpassRecommender`
 
-1. **Segment selection** — Identifies stable hover segments from throttle and gyro data, excluding takeoff, landing, and aggressive maneuvers. Detects both hover and throttle sweep segments.
-2. **FFT computation** — Applies Welch's method (Hanning window, 50% overlap, 4096-sample windows) to compute power spectral density for each axis
-3. **Noise analysis** — Estimates the noise floor (lower quartile), detects prominent peaks (>6 dB above local floor), and classifies noise sources:
+1. **Segment selection** — Identifies stable hover segments from throttle and gyro data, excluding takeoff, landing, and aggressive maneuvers. Prefers throttle sweep segments (higher quality noise data across RPM range), falls back to steady hovers. Uses up to 5 segments. When no segments found, analyzes the entire flight as fallback (with accuracy warning).
+2. **Data quality scoring** — Rates flight data quality 0–100 before generating recommendations. Sub-scores: segment count (0.20), hover time (0.35), throttle coverage (0.25), segment type (0.20). Tiers: excellent (80–100), good (60–79), fair (40–59), poor (0–39). Fair/poor quality downgrades recommendation confidence.
+3. **FFT computation** — Applies Welch's method (Hanning window, 50% overlap, 4096-sample windows) to compute power spectral density for each axis. Spectra trimmed to 20–1000 Hz range.
+4. **Noise analysis** — Estimates the noise floor (lower quartile), detects prominent peaks (>6 dB above local floor), and classifies noise sources:
    - Frame resonance (80–200 Hz)
    - Motor harmonics (equally-spaced peaks)
    - Electrical noise (>500 Hz)
-4. **Filter recommendation** — Maps the measured noise floor (dB) to a target cutoff frequency (Hz) via linear interpolation between safety bounds
+5. **Throttle spectrogram** — Bins gyro data by throttle level (10 bands), computes per-band FFT spectra and noise floors. Used downstream by the dynamic lowpass recommender to detect throttle-dependent noise.
+6. **Filter recommendation** — Maps the measured noise floor (dB) to a target cutoff frequency (Hz) via linear interpolation between safety bounds. Quality-adjusted confidence applied afterward.
+7. **Dynamic lowpass analysis** — When throttle spectrogram shows noise increasing ≥ 6 dB from low to high throttle (with Pearson correlation ≥ 0.6), recommends enabling dynamic lowpass for throttle-ramped filtering.
+8. **Group delay estimation** — Estimates total filter group delay (gyro + D-term chain) for the current settings. Warns when total delay exceeds 2 ms.
+9. **Wind/disturbance detection** — Analyzes gyro variance during hover to estimate environmental conditions (calm / moderate / windy). High variance reduces confidence in filter recommendations.
+10. **Mechanical health diagnostic** — Pre-tuning check: extreme noise floor (> -20 dB per axis), asymmetric roll/pitch noise (> 8 dB difference), motor output variance imbalance (> 3× ratio). Critical issues are flagged before filter tuning proceeds.
 
 #### Filter Safety Bounds
 
@@ -682,6 +689,7 @@ The -10 dB and -70 dB anchor points are calibrated from real Blackbox logs acros
 | **RPM → notch count** | RPM filter active AND dyn_notch_count > 1 | Reduce dyn_notch_count to 1 | High | Motor noise handled by RPM notches; fewer dynamic notches = less CPU + latency |
 | **RPM → notch Q** | RPM filter active AND dyn_notch_q < 500 | Raise dyn_notch_q to 500 | High | Only frame resonances remain; narrower notch = less signal distortion |
 | **RPM motor diagnostic** | RPM filter active AND motor harmonics still detected (≥ 12 dB) | Warning: check motor_poles / ESC telemetry | Medium | Motor harmonics should not exist with working RPM filter |
+| **Dynamic lowpass** | Throttle spectrogram noise increases ≥ 6 dB from low to high throttle AND Pearson correlation ≥ 0.6 | Enable `gyro_lpf1_dyn_min_hz` (current × 0.6) and `gyro_lpf1_dyn_max_hz` (current × 1.4) | Medium | Throttle-ramped cutoff: more filtering at high throttle, less latency at cruise |
 | **Deduplication** | Multiple rules target same setting | Keep more aggressive value, upgrade confidence | — | Ensures a single coherent recommendation per setting |
 
 **RPM filter awareness:** When the RPM filter is active (detected via MSP or BBL headers), the recommender widens safety bounds because motor noise is already handled by the 36 narrow notch filters tracking motor frequencies. It also recommends dynamic notch optimization (count 3→1, Q 300→500) since only frame resonances remain. If motor harmonics are still detected with RPM active, a diagnostic warns about possible `motor_poles` misconfiguration or ESC telemetry issues.
@@ -703,9 +711,9 @@ PID tuning uses a unified pipeline that supports two extraction methods feeding 
 
 **Unified Pipeline:** Mode-specific extraction → `PIDRecommender` → Post-processing (D-term gating, prop wash, FF energy, data quality, Bayesian, sliders)
 
-**Deep Tune extraction:** `StepDetector` → `StepMetrics` → profiles + `CrossAxisDetector` + `FeedforwardAnalyzer`
+**Deep Tune extraction:** `StepDetector` → `StepMetrics` → profiles + `CrossAxisDetector` + `FeedforwardAnalyzer` (energy-based)
 **Flash Tune extraction:** `TransferFunctionEstimator` (Wiener deconvolution) → synthetic metrics + `ThrottleTFAnalyzer`
-**Shared analyses (both modes):** `PropWashDetector`, `DTermAnalyzer`, `DataQualityScorer`, `SliderMapper`, `BayesianPIDOptimizer`
+**Shared analyses (both modes):** `PropWashDetector`, `DTermAnalyzer`, `DataQualityScorer`, `FeedforwardAnalyzer` (header-based), `SliderMapper`, `BayesianPIDOptimizer`
 
 #### Deep Tune: Step Detection
 
