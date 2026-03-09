@@ -43,7 +43,7 @@ interface ChartDataPoint {
 
 const MIN_HEIGHT = 260;
 const ASPECT_RATIO = 700 / 260;
-const BEFORE_OPACITY = 0.45;
+const BEFORE_OPACITY = 0.35;
 const MAX_CHART_POINTS = 500;
 
 /** Check if data is in compact format (shared timeMs array) */
@@ -126,6 +126,29 @@ export function TFStepResponseChart({
 
   const visibleAxes: Axis[] = selectedAxis === 'all' ? ['roll', 'pitch', 'yaw'] : [selectedAxis];
 
+  // Compute Y-axis domain from data — constrained to a sensible step response range
+  const yDomain = useMemo((): [number, number] => {
+    let dataMin = Infinity;
+    let dataMax = -Infinity;
+    for (const pt of data) {
+      for (const axis of ['roll', 'pitch', 'yaw'] as const) {
+        if (pt[axis] !== undefined) {
+          dataMin = Math.min(dataMin, pt[axis]!);
+          dataMax = Math.max(dataMax, pt[axis]!);
+        }
+        const beforeKey = `before${axis[0].toUpperCase()}${axis.slice(1)}` as keyof ChartDataPoint;
+        const bv = pt[beforeKey] as number | undefined;
+        if (bv !== undefined) {
+          dataMin = Math.min(dataMin, bv);
+          dataMax = Math.max(dataMax, bv);
+        }
+      }
+    }
+    if (!isFinite(dataMin)) dataMin = -0.1;
+    if (!isFinite(dataMax)) dataMax = 1.3;
+    return [Math.min(-0.1, dataMin - 0.05), Math.max(1.3, dataMax + 0.05)];
+  }, [data]);
+
   // Compute overshoot metrics
   const overshootAfter = useMemo(
     () => ({
@@ -190,6 +213,28 @@ export function TFStepResponseChart({
         ))}
       </div>
 
+      {/* Per-axis before → after overshoot comparison */}
+      {isComparison && overshootBefore && (
+        <div className="tf-step-axis-comparison">
+          {visibleAxes.map((axis) => {
+            const beforeVal = overshootBefore[axis];
+            const afterVal = overshootAfter[axis];
+            const change = afterVal - beforeVal;
+            const sign = change > 0 ? '+' : '';
+            return (
+              <span key={axis} className="tf-step-axis-delta">
+                {axis}: {beforeVal.toFixed(1)}%{' \u2192 '}
+                {afterVal.toFixed(1)}%{' '}
+                <span className={change < -1 ? 'improved' : change > 1 ? 'regressed' : 'neutral'}>
+                  ({sign}
+                  {change.toFixed(1)}%)
+                </span>
+              </span>
+            );
+          })}
+        </div>
+      )}
+
       <div className="tf-step-response-container">
         <ResponsiveContainer width="100%" aspect={ASPECT_RATIO} minHeight={MIN_HEIGHT}>
           <LineChart data={data} margin={{ top: 8, right: 16, left: 8, bottom: 4 }}>
@@ -206,6 +251,7 @@ export function TFStepResponseChart({
               }}
             />
             <YAxis
+              domain={yDomain}
               tick={{ fontSize: 11, fill: '#aaa' }}
               label={{
                 value: 'Response',
@@ -223,10 +269,10 @@ export function TFStepResponseChart({
               }}
               labelFormatter={(val) => `${val} ms`}
               formatter={
-                ((value: number | undefined, name: string) => [
-                  `${(value ?? 0).toFixed(4)}`,
-                  name,
-                ]) as any
+                ((value: number | undefined, name: string) => {
+                  const capitalized = name.replace(/^\w/, (c) => c.toUpperCase());
+                  return [`${(value ?? 0).toFixed(2)}`, capitalized];
+                }) as any
               }
             />
             {isComparison && <Legend wrapperStyle={{ fontSize: 11 }} />}
@@ -250,9 +296,9 @@ export function TFStepResponseChart({
                     key={`before-${axis}`}
                     dataKey={beforeKey}
                     stroke={AXIS_COLORS[axis]}
-                    strokeWidth={1.5}
+                    strokeWidth={1}
                     strokeOpacity={BEFORE_OPACITY}
-                    strokeDasharray="4 2"
+                    strokeDasharray="6 4"
                     dot={false}
                     isAnimationActive={false}
                     name={`${axis} (before)`}
@@ -266,7 +312,7 @@ export function TFStepResponseChart({
                 key={axis}
                 dataKey={axis}
                 stroke={AXIS_COLORS[axis]}
-                strokeWidth={2}
+                strokeWidth={isComparison ? 2.5 : 2}
                 dot={false}
                 isAnimationActive={false}
                 name={isComparison ? `${axis} (after)` : axis}

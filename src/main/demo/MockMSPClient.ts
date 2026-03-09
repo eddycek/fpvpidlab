@@ -15,6 +15,7 @@ import {
   generatePIDDemoBBL,
   generateFlashDemoBBL,
   generateVerificationDemoBBL,
+  generateFlashVerificationDemoBBL,
   generatePoorQualityBBL,
   generateMechanicalIssueBBL,
   generateWindyFlightBBL,
@@ -618,7 +619,12 @@ export class MockMSPClient extends EventEmitter {
           [DEMO_FLIGHT.FILTER]: generateFilterDemoBBL,
           [DEMO_FLIGHT.PID]: generatePIDDemoBBL,
           [DEMO_FLIGHT.FLASH]: generateFlashDemoBBL,
-          [DEMO_FLIGHT.VERIFICATION]: generateVerificationDemoBBL,
+          // Flash Tune verification needs broadband setpoint for Wiener deconvolution;
+          // Deep Tune verification uses hover-only (no setpoint needed)
+          [DEMO_FLIGHT.VERIFICATION]:
+            this._lastSessionType === TUNING_TYPE.FLASH
+              ? generateFlashVerificationDemoBBL
+              : generateVerificationDemoBBL,
         };
         this._demoBBLData = generators[this._nextFlightType](c);
       }

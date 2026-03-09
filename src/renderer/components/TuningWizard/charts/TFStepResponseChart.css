@@ -50,6 +50,33 @@
   color: var(--text-primary, #fff);
 }
 
+.tf-step-axis-comparison {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 8px;
+  font-size: 11px;
+  color: var(--text-secondary, #aaa);
+}
+
+.tf-step-axis-delta {
+  background: var(--bg-tertiary, #252525);
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.tf-step-axis-delta .improved {
+  color: #51cf66;
+}
+
+.tf-step-axis-delta .regressed {
+  color: #ff6b6b;
+}
+
+.tf-step-axis-delta .neutral {
+  color: #aaa;
+}
+
 .tf-overshoot-delta-pill {
   font-size: 12px;
   font-weight: 500;
