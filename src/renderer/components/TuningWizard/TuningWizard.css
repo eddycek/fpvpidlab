@@ -473,6 +473,22 @@
   color: #ff8787;
 }
 
+/* Prop wash severity pills */
+.analysis-meta-pill.propwash-minimal {
+  background: rgba(81, 207, 102, 0.12);
+  color: #51cf66;
+}
+
+.analysis-meta-pill.propwash-moderate {
+  background: rgba(255, 212, 59, 0.12);
+  color: #ffd43b;
+}
+
+.analysis-meta-pill.propwash-severe {
+  background: rgba(255, 107, 107, 0.12);
+  color: #ff6b6b;
+}
+
 /* Noise details toggle */
 .noise-details-toggle {
   background: none;

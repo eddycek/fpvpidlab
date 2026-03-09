@@ -130,4 +130,74 @@ describe('PIDAnalysisStep', () => {
 
     expect(screen.queryByText(/Data:/)).not.toBeInTheDocument();
   });
+
+  it('shows prop wash pill when prop wash data present with ≥3 events', () => {
+    const pidWithPW: PIDAnalysisResult = {
+      ...mockPIDResult,
+      propWash: {
+        events: [
+          {
+            timestampMs: 1000,
+            throttleDropRate: 0.5,
+            durationMs: 200,
+            peakFrequencyHz: 52,
+            severityRatio: 3.5,
+            axisEnergy: { roll: 30, pitch: 20, yaw: 5 },
+          },
+          {
+            timestampMs: 2000,
+            throttleDropRate: 0.4,
+            durationMs: 180,
+            peakFrequencyHz: 48,
+            severityRatio: 2.8,
+            axisEnergy: { roll: 25, pitch: 18, yaw: 4 },
+          },
+          {
+            timestampMs: 3000,
+            throttleDropRate: 0.6,
+            durationMs: 220,
+            peakFrequencyHz: 55,
+            severityRatio: 4.0,
+            axisEnergy: { roll: 35, pitch: 22, yaw: 6 },
+          },
+        ],
+        meanSeverity: 3.4,
+        worstAxis: 'roll',
+        dominantFrequencyHz: 52,
+        recommendation: 'Moderate prop wash on roll axis.',
+      },
+    };
+    render(<PIDAnalysisStep {...defaultProps} pidResult={pidWithPW} />);
+    expect(screen.getByText(/Prop wash: moderate/)).toBeInTheDocument();
+    expect(screen.getByText(/roll.*52 Hz/)).toBeInTheDocument();
+  });
+
+  it('does not show prop wash pill when fewer than 3 events', () => {
+    const pidWithFewPW: PIDAnalysisResult = {
+      ...mockPIDResult,
+      propWash: {
+        events: [
+          {
+            timestampMs: 1000,
+            throttleDropRate: 0.5,
+            durationMs: 200,
+            peakFrequencyHz: 52,
+            severityRatio: 6,
+            axisEnergy: { roll: 30, pitch: 20, yaw: 5 },
+          },
+        ],
+        meanSeverity: 6,
+        worstAxis: 'roll',
+        dominantFrequencyHz: 52,
+        recommendation: 'Severe prop wash.',
+      },
+    };
+    render(<PIDAnalysisStep {...defaultProps} pidResult={pidWithFewPW} />);
+    expect(screen.queryByText(/Prop wash/)).not.toBeInTheDocument();
+  });
+
+  it('does not show prop wash pill when propWash is absent', () => {
+    render(<PIDAnalysisStep {...defaultProps} pidResult={mockPIDResult} />);
+    expect(screen.queryByText(/Prop wash/)).not.toBeInTheDocument();
+  });
 });

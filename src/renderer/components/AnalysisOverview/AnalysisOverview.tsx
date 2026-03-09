@@ -434,6 +434,21 @@ export function AnalysisOverview({ logId, logName, onExit }: AnalysisOverviewPro
                     {overview.pidResult.dataQuality.overall}/100)
                   </span>
                 )}
+                {overview.pidResult.propWash && overview.pidResult.propWash.events.length >= 3 && (
+                  <span
+                    className={`analysis-meta-pill propwash-${overview.pidResult.propWash.meanSeverity >= 5 ? 'severe' : overview.pidResult.propWash.meanSeverity >= 2 ? 'moderate' : 'minimal'}`}
+                    title={overview.pidResult.propWash.recommendation}
+                  >
+                    Prop wash:{' '}
+                    {overview.pidResult.propWash.meanSeverity >= 5
+                      ? 'severe'
+                      : overview.pidResult.propWash.meanSeverity >= 2
+                        ? 'moderate'
+                        : 'minimal'}{' '}
+                    ({overview.pidResult.propWash.worstAxis}, ~
+                    {Math.round(overview.pidResult.propWash.dominantFrequencyHz)} Hz)
+                  </span>
+                )}
               </div>
 
               {overview.pidResult.warnings && overview.pidResult.warnings.length > 0 && (

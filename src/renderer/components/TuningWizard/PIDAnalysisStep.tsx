@@ -105,6 +105,21 @@ export function PIDAnalysisStep({
               Data: {pidResult.dataQuality.tier} ({pidResult.dataQuality.overall}/100)
             </span>
           )}
+          {pidResult.propWash && pidResult.propWash.events.length >= 3 && (
+            <span
+              className={`analysis-meta-pill propwash-${pidResult.propWash.meanSeverity >= 5 ? 'severe' : pidResult.propWash.meanSeverity >= 2 ? 'moderate' : 'minimal'}`}
+              title={pidResult.propWash.recommendation}
+            >
+              Prop wash:{' '}
+              {pidResult.propWash.meanSeverity >= 5
+                ? 'severe'
+                : pidResult.propWash.meanSeverity >= 2
+                  ? 'moderate'
+                  : 'minimal'}{' '}
+              ({pidResult.propWash.worstAxis}, ~{Math.round(pidResult.propWash.dominantFrequencyHz)}{' '}
+              Hz)
+            </span>
+          )}
         </div>
 
         {pidResult.warnings && pidResult.warnings.length > 0 && (

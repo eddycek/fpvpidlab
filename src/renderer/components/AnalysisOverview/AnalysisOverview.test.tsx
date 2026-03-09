@@ -940,6 +940,69 @@ describe('AnalysisOverview', () => {
     expect(screen.queryByText(/Asymmetric noise/)).not.toBeInTheDocument();
   });
 
+  it('shows prop wash pill when prop wash data present', async () => {
+    const pidWithPW: PIDAnalysisResult = {
+      ...mockPIDResult,
+      propWash: {
+        events: [
+          {
+            timestampMs: 1000,
+            throttleDropRate: 0.5,
+            durationMs: 200,
+            peakFrequencyHz: 52,
+            severityRatio: 6,
+            axisEnergy: { roll: 30, pitch: 20, yaw: 5 },
+          },
+          {
+            timestampMs: 2000,
+            throttleDropRate: 0.4,
+            durationMs: 180,
+            peakFrequencyHz: 48,
+            severityRatio: 5.5,
+            axisEnergy: { roll: 25, pitch: 18, yaw: 4 },
+          },
+          {
+            timestampMs: 3000,
+            throttleDropRate: 0.6,
+            durationMs: 220,
+            peakFrequencyHz: 55,
+            severityRatio: 7,
+            axisEnergy: { roll: 35, pitch: 22, yaw: 6 },
+          },
+        ],
+        meanSeverity: 6.2,
+        worstAxis: 'roll',
+        dominantFrequencyHz: 52,
+        recommendation: 'Severe prop wash on roll axis.',
+      },
+    };
+    vi.mocked(window.betaflight.parseBlackboxLog).mockResolvedValue(mockParseResult);
+    vi.mocked(window.betaflight.analyzeFilters).mockResolvedValue(mockFilterResult);
+    vi.mocked(window.betaflight.analyzePID).mockResolvedValue(pidWithPW);
+
+    render(<AnalysisOverview logId="log-1" logName="blackbox_2026-02-11.bbl" onExit={onExit} />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Prop wash: severe/)).toBeInTheDocument();
+    });
+
+    expect(screen.getByText(/roll.*52 Hz/)).toBeInTheDocument();
+  });
+
+  it('does not show prop wash pill when propWash is absent', async () => {
+    vi.mocked(window.betaflight.parseBlackboxLog).mockResolvedValue(mockParseResult);
+    vi.mocked(window.betaflight.analyzeFilters).mockResolvedValue(mockFilterResult);
+    vi.mocked(window.betaflight.analyzePID).mockResolvedValue(mockPIDResult);
+
+    render(<AnalysisOverview logId="log-1" logName="blackbox_2026-02-11.bbl" onExit={onExit} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('low')).toBeInTheDocument();
+    });
+
+    expect(screen.queryByText(/Prop wash/)).not.toBeInTheDocument();
+  });
+
   it('log name is not clickable for single-session logs', async () => {
     vi.mocked(window.betaflight.parseBlackboxLog).mockResolvedValue(mockParseResult);
     vi.mocked(window.betaflight.analyzeFilters).mockResolvedValue(mockFilterResult);
