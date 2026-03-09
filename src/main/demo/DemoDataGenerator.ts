@@ -49,6 +49,57 @@ function gaussianNoise(stddev: number): number {
   return stddev * Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
 }
 
+/**
+ * Generate deterministic broadband setpoint signal for Wiener deconvolution.
+ *
+ * Uses summed sinusoids at incommensurate frequencies (no common harmonics)
+ * to produce a quasi-random signal with energy across 0.5-40 Hz — the range
+ * that matters for transfer function estimation. Deterministic (no Math.random)
+ * for reproducible results.
+ *
+ * @param frameCount - Number of frames
+ * @param sampleRateHz - Sample rate in Hz
+ * @param amplitude - Peak amplitude in deg/s
+ * @returns 3 Float64Arrays [roll, pitch, yaw] of setpoint values
+ */
+function generateBroadbandSetpoint(
+  frameCount: number,
+  sampleRateHz: number,
+  amplitude: number
+): [Float64Array, Float64Array, Float64Array] {
+  // Frequencies chosen as primes / golden-ratio multiples → no common harmonics → broadband
+  const freqSets = [
+    [0.7, 1.3, 2.9, 5.3, 8.7, 13.1, 19.7, 29.3, 37.1], // roll
+    [0.5, 1.7, 3.7, 6.1, 9.7, 14.9, 22.1, 31.7, 39.7], // pitch
+    [0.9, 2.3, 4.3, 7.1, 11.3, 17.3, 26.3, 34.9, 41.3], // yaw (lower amplitude)
+  ];
+  // Per-frequency amplitudes: lower frequencies get more weight (realistic stick input)
+  const ampWeights = [0.3, 0.25, 0.2, 0.15, 0.12, 0.1, 0.08, 0.06, 0.04];
+  const yawScale = 0.5; // Yaw stick moves less than roll/pitch
+
+  const result: [Float64Array, Float64Array, Float64Array] = [
+    new Float64Array(frameCount),
+    new Float64Array(frameCount),
+    new Float64Array(frameCount),
+  ];
+
+  for (let f = 0; f < frameCount; f++) {
+    const t = f / sampleRateHz;
+    for (let axis = 0; axis < 3; axis++) {
+      let value = 0;
+      const axisScale = axis === 2 ? yawScale : 1.0;
+      for (let s = 0; s < freqSets[axis].length; s++) {
+        // Phase offset per axis+freq prevents correlation between axes
+        const phase = axis * 2.1 + s * 0.7;
+        value += ampWeights[s] * Math.sin(2 * Math.PI * freqSets[axis][s] * t + phase);
+      }
+      result[axis][f] = Math.round(value * amplitude * axisScale);
+    }
+  }
+
+  return result;
+}
+
 // ── Demo BBL Builder ───────────────────────────────────────────────
 
 interface DemoSessionConfig {
@@ -74,6 +125,11 @@ interface DemoSessionConfig {
   responseParams?: [AxisResponseParams, AxisResponseParams, AxisResponseParams];
   /** Roll noise multiplier relative to pitch/yaw (for axis asymmetry simulation) */
   axisAsymmetry?: number;
+  /** Enable continuous broadband setpoint movement (for Flash Tune / Wiener deconvolution).
+   *  Simulates normal pilot stick input instead of discrete step maneuvers. */
+  continuousSetpoint?: boolean;
+  /** Amplitude of continuous setpoint movement in deg/s (default 150) */
+  continuousSetpointAmplitude?: number;
 }
 
 /** Step event for gyro response simulation */
@@ -191,6 +247,8 @@ function buildDemoSession(config: DemoSessionConfig): Buffer {
     iInterval = 2,
     responseParams = DEFAULT_RESPONSE_PARAMS,
     axisAsymmetry = 1.0,
+    continuousSetpoint = false,
+    continuousSetpointAmplitude = 150,
   } = config;
 
   const parts: Buffer[] = [];
@@ -291,6 +349,46 @@ function buildDemoSession(config: DemoSessionConfig): Buffer {
     }
   }
 
+  // ── Pre-generate continuous setpoint + gyro response (Flash Tune) ──
+  // For continuous setpoint mode, pre-compute the entire setpoint and gyro
+  // response using discrete-time second-order simulation. This avoids per-frame
+  // convolution and produces accurate tracking response for Wiener deconvolution.
+  let broadbandSetpoint: [Float64Array, Float64Array, Float64Array] | undefined;
+  let broadbandGyroResponse: [Float64Array, Float64Array, Float64Array] | undefined;
+
+  if (continuousSetpoint) {
+    broadbandSetpoint = generateBroadbandSetpoint(
+      frameCount,
+      sampleRateHz,
+      continuousSetpointAmplitude
+    );
+
+    // Simulate second-order system response to continuous setpoint (per-axis)
+    broadbandGyroResponse = [
+      new Float64Array(frameCount),
+      new Float64Array(frameCount),
+      new Float64Array(frameCount),
+    ];
+    for (let axis = 0; axis < 3; axis++) {
+      const { zeta, wn, latencyS } = responseParams[axis];
+      const latencyFrames = Math.round(latencyS * sampleRateHz);
+      const dt = 1 / sampleRateHz;
+
+      // Discrete-time state-space: x1 = position, x2 = velocity
+      // dx1/dt = x2, dx2/dt = wn²·(u - x1) - 2·ζ·wn·x2
+      let x1 = 0;
+      let x2 = 0;
+      for (let f = 0; f < frameCount; f++) {
+        const u = f >= latencyFrames ? broadbandSetpoint[axis][f - latencyFrames] : 0;
+        const dx1 = x2;
+        const dx2 = wn * wn * (u - x1) - 2 * zeta * wn * x2;
+        x1 += dx1 * dt;
+        x2 += dx2 * dt;
+        broadbandGyroResponse[axis][f] = x1;
+      }
+    }
+  }
+
   // ── Frame generation ────────────────────────────────────────────
   for (let f = 0; f < frameCount; f++) {
     const frame: number[] = [0x49]; // I-frame marker
@@ -325,12 +423,17 @@ function buildDemoSession(config: DemoSessionConfig): Buffer {
       value +=
         electricalNoiseAmplitude * Math.sin(2 * Math.PI * electricalNoiseHz * timeSec + axis * 1.3);
 
+      // Continuous setpoint tracking response (Flash Tune)
+      if (broadbandGyroResponse) {
+        value += broadbandGyroResponse[axis][f];
+      }
+
       gyroValues.push(value);
     }
 
     // --- Simulated gyro response to step inputs ---
     // Second-order system model: y(t) = 1 - (e^(-ζωnt) / √(1-ζ²)) · sin(ωd·t + φ)
-    if (injectSteps) {
+    if (injectSteps && !continuousSetpoint) {
       for (const step of steps) {
         const framesIn = f - step.startFrame;
         if (framesIn < 0) continue;
@@ -364,16 +467,23 @@ function buildDemoSession(config: DemoSessionConfig): Buffer {
     frame.push(...encodeSVB(Math.round(gyroValues[1])));
     frame.push(...encodeSVB(Math.round(gyroValues[2])));
 
-    // --- Setpoint: hover + step inputs ---
-    const setpoints = [0, 0, 0]; // roll, pitch, yaw
-    const activeStep = steps.find((s) => f >= s.startFrame && f < s.endFrame);
-    if (activeStep) {
-      setpoints[activeStep.axis] = activeStep.magnitude;
+    // --- Setpoint ---
+    if (broadbandSetpoint) {
+      // Continuous broadband setpoint (Flash Tune — normal flying)
+      frame.push(...encodeSVB(Math.round(broadbandSetpoint[0][f])));
+      frame.push(...encodeSVB(Math.round(broadbandSetpoint[1][f])));
+      frame.push(...encodeSVB(Math.round(broadbandSetpoint[2][f])));
+    } else {
+      // Discrete step inputs (Deep Tune — specific maneuvers)
+      const setpoints = [0, 0, 0]; // roll, pitch, yaw
+      const activeStep = steps.find((s) => f >= s.startFrame && f < s.endFrame);
+      if (activeStep) {
+        setpoints[activeStep.axis] = activeStep.magnitude;
+      }
+      frame.push(...encodeSVB(setpoints[0]));
+      frame.push(...encodeSVB(setpoints[1]));
+      frame.push(...encodeSVB(setpoints[2]));
     }
-
-    frame.push(...encodeSVB(setpoints[0])); // roll setpoint
-    frame.push(...encodeSVB(setpoints[1])); // pitch setpoint
-    frame.push(...encodeSVB(setpoints[2])); // yaw setpoint
 
     // Throttle: multi-phase profile for realistic segment detection
     const durationSec = frameCount / sampleRateHz;
@@ -510,13 +620,17 @@ export function generateVerificationDemoBBL(cycle = 0): Buffer {
 }
 
 /**
- * Generate a demo BBL buffer for Quick Tune (single flight with hover + stick inputs).
+ * Generate a demo BBL buffer for Flash Tune (single flight with normal flying).
+ *
+ * Uses continuous broadband setpoint (deterministic summed sinusoids) simulating
+ * normal pilot stick movement. The gyro tracks this via a discrete-time second-order
+ * system model, providing rich broadband excitation for Wiener deconvolution.
  *
  * Contains one session with:
- * - ~15 seconds of flight data at 4000 Hz (I-frame only, iInterval=2)
- * - Moderate noise (for filter analysis from hover segments)
- * - 12 step inputs across all 3 axes (for transfer function / PID analysis)
- * - Cycle-dependent noise and step response quality
+ * - ~20 seconds of flight data at 4000 Hz (I-frame only, iInterval=2)
+ * - Cycle-dependent noise floor (for filter analysis from hover segments)
+ * - Continuous broadband setpoint (for transfer function estimation)
+ * - Cycle-dependent tracking quality (damping, bandwidth, latency)
  * - Multi-phase throttle profile for segment detection
  *
  * @param cycle - Tuning cycle number (0 = first, higher = progressively cleaner)
@@ -525,16 +639,18 @@ export function generateFlashDemoBBL(cycle = 0): Buffer {
   const f = progressiveFactor(cycle);
   logger.info(`[DEMO] Generating Flash Tune demo BBL (cycle ${cycle}, factor ${f.toFixed(2)})...`);
   return buildDemoSession({
-    frameCount: 80000, // 20s at 4000 Hz — enough for hover segments + 12 steps (700ms hold)
+    frameCount: 80000, // 20s at 4000 Hz
     gyroBase: [2, -1, 0],
     noiseAmplitude: 12 * f,
     motorHarmonicHz: 160,
     motorHarmonicAmplitude: 30 * f,
     electricalNoiseHz: 600,
     electricalNoiseAmplitude: 6 * f,
-    injectSteps: true,
+    injectSteps: false,
     iInterval: 2,
     responseParams: computeCycleResponseParams(cycle),
+    continuousSetpoint: true,
+    continuousSetpointAmplitude: 150,
   });
 }
 
