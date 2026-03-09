@@ -240,7 +240,11 @@ export function TuningStatusBanner({
   const renderActions = () => {
     // Flash erased state for flight pending / verification phases — show flight guide
     if (showErasedState && (ui?.guideTip || isVerification)) {
-      const guideMode: FlightGuideMode = isVerification ? 'verification' : ui!.guideTip!;
+      const guideMode: FlightGuideMode = isVerification
+        ? isFlashTune
+          ? 'flash_verification'
+          : 'verification'
+        : ui!.guideTip!;
       return (
         <>
           <button className="wizard-btn wizard-btn-primary" onClick={() => onViewGuide(guideMode)}>
@@ -407,6 +411,9 @@ export function TuningStatusBanner({
   return (
     <div className="tuning-status-banner">
       <div className="tuning-status-steps">
+        <span className={`tuning-type-badge ${isFlashTune ? 'flash' : 'deep'}`}>
+          {TUNING_TYPE_LABELS[session.tuningType ?? TUNING_TYPE.DEEP]}
+        </span>
         {stepLabels.map((label, i) => {
           const isDone = i < activeStepIndex;
           const isCurrent = i === activeStepIndex;

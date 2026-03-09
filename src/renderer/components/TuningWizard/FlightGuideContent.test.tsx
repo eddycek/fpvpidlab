@@ -66,4 +66,19 @@ describe('FlightGuideContent', () => {
 
     expect(screen.getByText(/GYRO_SCALED/)).toBeInTheDocument();
   });
+
+  it('renders verification mode phases (hover + throttle sweeps)', () => {
+    render(<FlightGuideContent mode="verification" />);
+
+    expect(screen.getByText('Throttle Sweep')).toBeInTheDocument();
+    expect(screen.getByText(/noise measurement/)).toBeInTheDocument();
+  });
+
+  it('renders flash_verification mode phases (normal flight)', () => {
+    render(<FlightGuideContent mode="flash_verification" />);
+
+    expect(screen.getByText('Rip a Pack')).toBeInTheDocument();
+    expect(screen.getByText(/compares noise and PID performance/)).toBeInTheDocument();
+    expect(screen.queryByText('Throttle Sweep')).not.toBeInTheDocument();
+  });
 });

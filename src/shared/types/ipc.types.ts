@@ -29,7 +29,11 @@ import type {
   PIDRecommendation,
 } from './analysis.types';
 import type { TuningSession, TuningPhase, TuningType } from './tuning.types';
-import type { CompletedTuningRecord, FilterMetricsSummary } from './tuning-history.types';
+import type {
+  CompletedTuningRecord,
+  FilterMetricsSummary,
+  TransferFunctionMetricsSummary,
+} from './tuning-history.types';
 
 /** Progress during snapshot restore */
 export interface SnapshotRestoreProgress {
@@ -270,7 +274,10 @@ export interface BetaflightAPI {
 
   // Tuning History
   getTuningHistory(): Promise<CompletedTuningRecord[]>;
-  updateVerificationMetrics(verificationMetrics: FilterMetricsSummary): Promise<TuningSession>;
+  updateVerificationMetrics(
+    verificationMetrics: FilterMetricsSummary,
+    verificationTransferFunctionMetrics?: TransferFunctionMetricsSummary
+  ): Promise<TuningSession>;
   updateHistoryVerification(
     recordId: string,
     verificationMetrics: FilterMetricsSummary

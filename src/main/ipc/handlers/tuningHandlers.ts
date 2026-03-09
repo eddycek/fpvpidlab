@@ -8,7 +8,11 @@ import {
 } from '@shared/types/ipc.types';
 import { TuningSession, TuningPhase, TuningType } from '@shared/types/tuning.types';
 import { TUNING_TYPE, TUNING_PHASE } from '@shared/constants';
-import { CompletedTuningRecord, FilterMetricsSummary } from '@shared/types/tuning-history.types';
+import {
+  CompletedTuningRecord,
+  FilterMetricsSummary,
+  TransferFunctionMetricsSummary,
+} from '@shared/types/tuning-history.types';
 import { PIDConfiguration } from '@shared/types/pid.types';
 import { HandlerDependencies, createResponse } from './types';
 import { sendTuningSessionChanged } from './events';
@@ -361,7 +365,8 @@ export function registerTuningHandlers(deps: HandlerDependencies): void {
     IPCChannel.TUNING_UPDATE_VERIFICATION,
     async (
       _event,
-      verificationMetrics: FilterMetricsSummary
+      verificationMetrics: FilterMetricsSummary,
+      verificationTransferFunctionMetrics?: TransferFunctionMetricsSummary
     ): Promise<IPCResponse<TuningSession>> => {
       try {
         if (!tuningSessionManager || !profileManager) {
@@ -373,13 +378,23 @@ export function registerTuningHandlers(deps: HandlerDependencies): void {
         }
 
         // Update the active session's verification metrics (keep phase as 'completed')
-        const updated = await tuningSessionManager.updatePhase(profileId, TUNING_PHASE.COMPLETED, {
-          verificationMetrics,
-        });
+        const updateData: Record<string, unknown> = { verificationMetrics };
+        if (verificationTransferFunctionMetrics) {
+          updateData.verificationTransferFunctionMetrics = verificationTransferFunctionMetrics;
+        }
+        const updated = await tuningSessionManager.updatePhase(
+          profileId,
+          TUNING_PHASE.COMPLETED,
+          updateData
+        );
 
         // Update the latest history record (no new archive entry)
         if (tuningHistoryManager) {
-          await tuningHistoryManager.updateLatestVerification(profileId, verificationMetrics);
+          await tuningHistoryManager.updateLatestVerification(
+            profileId,
+            verificationMetrics,
+            verificationTransferFunctionMetrics
+          );
         }
 
         sendTuningSessionChanged(updated);

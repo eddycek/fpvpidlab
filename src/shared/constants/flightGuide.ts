@@ -153,6 +153,31 @@ export const VERIFICATION_FLIGHT_TIPS: string[] = [
   'If noise improved, you are done. If not, consider another tuning cycle',
 ];
 
+// ---- Flash Tune Verification Guide (normal flight to compare filters + PIDs) ----
+
+export const FLASH_VERIFICATION_FLIGHT_PHASES: FlightPhase[] = [
+  {
+    title: 'Rip a Pack',
+    duration: '1 flight',
+    description:
+      'Fly normally — same style as your original Flash Tune flight. The app compares noise and PID performance before and after tuning.',
+  },
+  {
+    title: 'Land & Plug In',
+    duration: '',
+    description:
+      'Done! Connect via USB and download the log. The app shows before/after comparison.',
+  },
+];
+
+export const FLASH_VERIFICATION_FLIGHT_TIPS: string[] = [
+  'Fly the same style as your original Flash Tune flight for comparable data',
+  'Any flight works — freestyle, racing, cruising',
+  'Longer flights give more accurate comparison data',
+  'After downloading, the app compares noise and overshoot automatically',
+  'If performance improved, you are done. If not, consider another tuning cycle',
+];
+
 // ---- Legacy Combined Guide (backward compatibility for mode='full') ----
 
 export const FLIGHT_PHASES: FlightPhase[] = [

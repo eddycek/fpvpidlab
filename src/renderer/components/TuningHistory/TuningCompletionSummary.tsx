@@ -1,10 +1,65 @@
 import React, { useMemo } from 'react';
 import type { TuningSession } from '@shared/types/tuning.types';
+import type { TransferFunctionMetricsSummary } from '@shared/types/tuning-history.types';
 import { computeTuneQualityScore, TIER_LABELS } from '@shared/utils/tuneQualityScore';
 import { TUNING_TYPE, TUNING_TYPE_LABELS } from '@shared/constants';
 import { NoiseComparisonChart } from './NoiseComparisonChart';
 import { AppliedChangesTable } from './AppliedChangesTable';
 import './TuningCompletionSummary.css';
+
+export function OvershootComparison({
+  before,
+  after,
+}: {
+  before: TransferFunctionMetricsSummary;
+  after: TransferFunctionMetricsSummary;
+}) {
+  const axes = ['roll', 'pitch', 'yaw'] as const;
+  const beforeAvg =
+    (before.roll.overshootPercent + before.pitch.overshootPercent + before.yaw.overshootPercent) /
+    3;
+  const afterAvg =
+    (after.roll.overshootPercent + after.pitch.overshootPercent + after.yaw.overshootPercent) / 3;
+  const delta = afterAvg - beforeAvg;
+  const improved = delta < -1;
+  const regressed = delta > 1;
+
+  return (
+    <div className="completion-overshoot-comparison">
+      <h4>PID Performance Comparison</h4>
+      <div className="overshoot-delta-row">
+        <span className="overshoot-delta-label">Overshoot</span>
+        <span
+          className={`overshoot-delta-pill ${improved ? 'improved' : regressed ? 'regressed' : 'neutral'}`}
+        >
+          {improved ? '' : regressed ? '+' : ''}
+          {delta.toFixed(1)}%
+        </span>
+      </div>
+      <div className="overshoot-axis-grid">
+        {axes.map((axis) => {
+          const b = before[axis].overshootPercent;
+          const a = after[axis].overshootPercent;
+          const d = a - b;
+          return (
+            <div key={axis} className="overshoot-axis-item">
+              <span className="overshoot-axis-label">{axis}</span>
+              <span className="overshoot-axis-values">
+                {b.toFixed(1)}% → {a.toFixed(1)}%
+              </span>
+              <span
+                className={`overshoot-axis-delta ${d < -1 ? 'improved' : d > 1 ? 'regressed' : 'neutral'}`}
+              >
+                {d < 0 ? '' : '+'}
+                {d.toFixed(1)}%
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 interface TuningCompletionSummaryProps {
   session: TuningSession;
@@ -100,6 +155,12 @@ export function TuningCompletionSummary({
             before={session.filterMetrics}
             after={session.verificationMetrics}
           />
+          {session.transferFunctionMetrics && session.verificationTransferFunctionMetrics && (
+            <OvershootComparison
+              before={session.transferFunctionMetrics}
+              after={session.verificationTransferFunctionMetrics}
+            />
+          )}
           {onReanalyzeVerification && session.verificationLogId && (
             <button className="completion-reanalyze-link" onClick={onReanalyzeVerification}>
               Re-analyze with different session

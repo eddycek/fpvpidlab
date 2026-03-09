@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import type { CompletedTuningRecord } from '@shared/types/tuning-history.types';
 import { computeTuneQualityScore } from '@shared/utils/tuneQualityScore';
 import { NoiseComparisonChart } from './NoiseComparisonChart';
+import { OvershootComparison } from './TuningCompletionSummary';
 import { AppliedChangesTable } from './AppliedChangesTable';
 
 interface TuningSessionDetailProps {
@@ -76,6 +77,12 @@ export function TuningSessionDetail({ record, onReanalyzeVerification }: TuningS
       {hasComparison && record.filterMetrics && record.verificationMetrics && (
         <>
           <NoiseComparisonChart before={record.filterMetrics} after={record.verificationMetrics} />
+          {record.transferFunctionMetrics && record.verificationTransferFunctionMetrics && (
+            <OvershootComparison
+              before={record.transferFunctionMetrics}
+              after={record.verificationTransferFunctionMetrics}
+            />
+          )}
           {onReanalyzeVerification && (
             <button className="completion-reanalyze-link" onClick={onReanalyzeVerification}>
               Re-analyze with different session

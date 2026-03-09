@@ -1,7 +1,15 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import type { FilterAnalysisResult, PIDAnalysisResult } from '@shared/types/analysis.types';
 import type { AnalysisProgress } from '@shared/types/analysis.types';
 import { RecommendationCard } from './RecommendationCard';
+import { SpectrumChart } from './charts/SpectrumChart';
+
+const PEAK_TYPE_LABELS: Record<string, string> = {
+  motor_harmonic: 'Motor',
+  frame_resonance: 'Frame',
+  electrical: 'Electrical',
+  unknown: 'Unknown',
+};
 
 interface QuickAnalysisStepProps {
   filterResult: FilterAnalysisResult | null;
@@ -29,6 +37,7 @@ export function QuickAnalysisStep({
   onContinue,
 }: QuickAnalysisStepProps) {
   const autoRunRef = useRef(false);
+  const [noiseDetailsOpen, setNoiseDetailsOpen] = useState(false);
 
   // Auto-run on mount
   useEffect(() => {
@@ -80,6 +89,61 @@ export function QuickAnalysisStep({
             <div className="summary-section">
               <h4>Filter Recommendations</h4>
               <p className="summary-section-subtitle">{filterResult.summary}</p>
+
+              <button
+                className="noise-details-toggle"
+                onClick={() => setNoiseDetailsOpen(!noiseDetailsOpen)}
+              >
+                {noiseDetailsOpen ? 'Hide noise spectrum' : 'Show noise spectrum'}
+              </button>
+
+              {noiseDetailsOpen && (
+                <div className="noise-details">
+                  <p className="chart-legend">
+                    <span className="chart-legend-item">
+                      <span className="chart-legend-line" style={{ borderColor: '#ff6b6b' }} /> Roll
+                    </span>
+                    <span className="chart-legend-item">
+                      <span className="chart-legend-line" style={{ borderColor: '#51cf66' }} />{' '}
+                      Pitch
+                    </span>
+                    <span className="chart-legend-item">
+                      <span className="chart-legend-line" style={{ borderColor: '#4dabf7' }} /> Yaw
+                    </span>
+                    <span className="chart-legend-item">
+                      <span className="chart-legend-line chart-legend-line--dashed" /> Noise floor
+                    </span>
+                  </p>
+                  <SpectrumChart noise={filterResult.noise} />
+                  <div className="axis-summary">
+                    {(['roll', 'pitch', 'yaw'] as const).map((axis) => {
+                      const profile = filterResult.noise[axis];
+                      return (
+                        <div key={axis} className="axis-summary-card">
+                          <div className="axis-summary-card-title">{axis}</div>
+                          <div className="axis-summary-card-stat">
+                            <span>Noise floor: </span>
+                            {profile.noiseFloorDb.toFixed(0)} dB
+                          </div>
+                          <div className="axis-summary-card-stat">
+                            <span>Peaks: </span>
+                            {profile.peaks.length}
+                          </div>
+                          {profile.peaks.map((peak, i) => (
+                            <div key={i} className="axis-summary-card-stat">
+                              <span>{peak.frequency.toFixed(0)} Hz </span>
+                              <span className={`noise-peak-badge ${peak.type}`}>
+                                {PEAK_TYPE_LABELS[peak.type] || peak.type}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
               {filterRecs.length === 0 && (
                 <p className="analysis-no-recs">No filter changes recommended.</p>
               )}

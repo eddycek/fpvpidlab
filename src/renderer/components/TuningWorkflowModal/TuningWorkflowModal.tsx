@@ -34,6 +34,8 @@ function getSubtitle(mode?: FlightGuideMode): string {
   if (mode === TUNING_MODE.FLASH)
     return 'Rip a pack, land, tune. Any flight works — no special maneuvers needed.';
   if (mode === 'verification') return 'Fly a short hover to verify noise improvement after tuning.';
+  if (mode === 'flash_verification')
+    return 'Fly normally to verify noise and PID improvements after tuning.';
   return 'Follow this workflow each time you tune. Repeat until your quad feels dialed in.';
 }
 
@@ -46,7 +48,7 @@ function getWorkflowSteps(mode?: FlightGuideMode) {
     // Steps 6–8: Erase again → Analyze & apply PIDs
     return TUNING_WORKFLOW.slice(6, 9);
   }
-  if (mode === TUNING_MODE.FLASH || mode === 'verification') {
+  if (mode === TUNING_MODE.FLASH || mode === 'verification' || mode === 'flash_verification') {
     return [];
   }
   return TUNING_WORKFLOW;
@@ -117,15 +119,17 @@ export function TuningWorkflowModal({ onClose, mode }: TuningWorkflowModalProps)
   const showFilter = !isOverviewMode && !isQuickMode && mode === TUNING_MODE.FILTER;
   const showPid = !isOverviewMode && !isQuickMode && mode === TUNING_MODE.PID;
   const showQuick = !isOverviewMode && isQuickMode;
-  const isVerificationMode = mode === 'verification';
+  const isVerificationMode = mode === 'verification' || mode === 'flash_verification';
 
   const title = isOverviewMode
     ? 'How to Tune'
-    : isVerificationMode
-      ? 'Verification Hover'
-      : isQuickMode
-        ? `${TUNING_TYPE_LABELS[TUNING_TYPE.FLASH]} Flight Guide`
-        : 'How to Prepare Blackbox Data';
+    : mode === 'flash_verification'
+      ? 'Verification Flight'
+      : mode === 'verification'
+        ? 'Verification Hover'
+        : isQuickMode
+          ? `${TUNING_TYPE_LABELS[TUNING_TYPE.FLASH]} Flight Guide`
+          : 'How to Prepare Blackbox Data';
 
   return (
     <div className="profile-wizard-overlay" onClick={onClose}>
@@ -177,7 +181,12 @@ export function TuningWorkflowModal({ onClose, mode }: TuningWorkflowModalProps)
           </div>
         )}
 
-        {isVerificationMode && <FlightGuideContent mode="verification" fcVersion={fcVersion} />}
+        {isVerificationMode && (
+          <FlightGuideContent
+            mode={mode === 'flash_verification' ? 'flash_verification' : 'verification'}
+            fcVersion={fcVersion}
+          />
+        )}
 
         {showQuick && (
           <>

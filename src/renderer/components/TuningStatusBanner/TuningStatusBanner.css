@@ -14,6 +14,28 @@
   gap: 0;
 }
 
+.tuning-type-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 4px;
+  margin-right: 12px;
+  white-space: nowrap;
+  margin-bottom: 18px;
+}
+
+.tuning-type-badge.deep {
+  background: rgba(59, 130, 246, 0.15);
+  color: #60a5fa;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.tuning-type-badge.flash {
+  background: rgba(168, 85, 247, 0.15);
+  color: #c084fc;
+  border: 1px solid rgba(168, 85, 247, 0.3);
+}
+
 .tuning-status-step {
   display: flex;
   flex-direction: column;
@@ -117,7 +139,9 @@
 }
 
 @keyframes tuning-spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .tuning-bb-warning {

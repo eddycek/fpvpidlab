@@ -34,14 +34,14 @@ import type {
   FlightGuideMode,
   AppliedChange,
 } from '@shared/types/tuning.types';
-import { TUNING_MODE, TUNING_PHASE } from '@shared/constants';
+import { TUNING_MODE, TUNING_PHASE, TUNING_TYPE } from '@shared/constants';
 import type {
   CompletedTuningRecord,
   FilterMetricsSummary,
   PIDMetricsSummary,
   TransferFunctionMetricsSummary,
 } from '@shared/types/tuning-history.types';
-import { extractFilterMetrics } from '@shared/utils/metricsExtract';
+import { extractFilterMetrics, extractTransferFunctionMetrics } from '@shared/utils/metricsExtract';
 import type { TuningAction } from './components/TuningStatusBanner/TuningStatusBanner';
 import './App.css';
 
@@ -423,16 +423,38 @@ function AppContent() {
       const filterResult = await window.betaflight.analyzeFilters(verLogId, sessionIndex);
       const verificationMetrics = extractFilterMetrics(filterResult);
 
+      // For Flash Tune sessions, also run TF analysis on verification flight
+      const isFlashSession = tuning.session?.tuningType === TUNING_TYPE.FLASH;
+      let verificationTFMetrics: TransferFunctionMetricsSummary | undefined;
+      if (isFlashSession) {
+        try {
+          const tfResult = await window.betaflight.analyzeTransferFunction(verLogId, sessionIndex);
+          if (tfResult.transferFunctionMetrics) {
+            verificationTFMetrics = extractTransferFunctionMetrics(
+              tfResult.transferFunctionMetrics
+            );
+          }
+        } catch {
+          // TF analysis failure is non-fatal — noise comparison still works
+        }
+      }
+
       if (historyRecordId) {
         // Re-analyze a historical record
         await window.betaflight.updateHistoryVerification(historyRecordId, verificationMetrics);
         await tuningHistory.reload();
       } else if (isReanalyze) {
         // Re-analyze — update session + history without duplicate archive
-        await window.betaflight.updateVerificationMetrics(verificationMetrics);
+        await window.betaflight.updateVerificationMetrics(
+          verificationMetrics,
+          verificationTFMetrics
+        );
       } else {
         // First-time — transition to completed (archives session)
-        await tuning.updatePhase(TUNING_PHASE.COMPLETED, { verificationMetrics });
+        await tuning.updatePhase(TUNING_PHASE.COMPLETED, {
+          verificationMetrics,
+          verificationTransferFunctionMetrics: verificationTFMetrics,
+        });
       }
       setErasedForPhase(null);
     } catch (err) {

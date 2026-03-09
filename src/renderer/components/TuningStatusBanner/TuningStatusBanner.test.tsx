@@ -637,4 +637,59 @@ describe('TuningStatusBanner', () => {
     expect(screen.getByText(/Logs erased! Disconnect and fly a 30-60s hover/)).toBeInTheDocument();
     expect(screen.getByText('View Flight Guide')).toBeInTheDocument();
   });
+
+  it('shows Deep Tune badge for guided sessions', () => {
+    renderBanner({ ...baseSession, tuningType: 'guided' });
+
+    expect(screen.getByText('Deep Tune')).toBeInTheDocument();
+  });
+
+  it('shows Flash Tune badge for quick sessions', () => {
+    renderBanner({
+      ...baseSession,
+      tuningType: 'quick',
+      phase: TUNING_PHASE.QUICK_FLIGHT_PENDING,
+    });
+
+    expect(screen.getByText('Flash Tune')).toBeInTheDocument();
+  });
+
+  it('shows Deep Tune badge by default when tuningType is undefined', () => {
+    renderBanner(baseSession);
+
+    expect(screen.getByText('Deep Tune')).toBeInTheDocument();
+  });
+
+  it('passes flash_verification guide mode for Flash Tune verification', async () => {
+    const user = userEvent.setup();
+    renderBanner(
+      {
+        ...baseSession,
+        tuningType: 'quick',
+        phase: TUNING_PHASE.VERIFICATION_PENDING,
+        eraseCompleted: true,
+      },
+      false,
+      { flashUsedSize: 0 }
+    );
+
+    await user.click(screen.getByText('View Flight Guide'));
+    expect(onViewGuide).toHaveBeenCalledWith('flash_verification');
+  });
+
+  it('passes verification guide mode for Deep Tune verification', async () => {
+    const user = userEvent.setup();
+    renderBanner(
+      {
+        ...baseSession,
+        phase: TUNING_PHASE.VERIFICATION_PENDING,
+        eraseCompleted: true,
+      },
+      false,
+      { flashUsedSize: 0 }
+    );
+
+    await user.click(screen.getByText('View Flight Guide'));
+    expect(onViewGuide).toHaveBeenCalledWith('verification');
+  });
 });

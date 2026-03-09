@@ -143,4 +143,7 @@ export interface CompletedTuningRecord {
 
   /** Transfer function metrics from Wiener deconvolution (Quick Tune only) */
   transferFunctionMetrics: TransferFunctionMetricsSummary | null;
+
+  /** Verification TF metrics (Flash Tune only — for before/after PID comparison) */
+  verificationTransferFunctionMetrics?: TransferFunctionMetricsSummary | null;
 }

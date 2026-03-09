@@ -13,6 +13,7 @@ import { TUNING_PHASE } from '@shared/constants';
 import type {
   CompletedTuningRecord,
   FilterMetricsSummary,
+  TransferFunctionMetricsSummary,
 } from '@shared/types/tuning-history.types';
 import { logger } from '../utils/logger';
 
@@ -84,13 +85,18 @@ export class TuningHistoryManager {
    */
   async updateLatestVerification(
     profileId: string,
-    verificationMetrics: FilterMetricsSummary
+    verificationMetrics: FilterMetricsSummary,
+    verificationTransferFunctionMetrics?: TransferFunctionMetricsSummary
   ): Promise<boolean> {
     const records = await this.loadRecords(profileId);
     if (records.length === 0) return false;
 
     // Records stored oldest-first — last element is the most recent
-    records[records.length - 1].verificationMetrics = verificationMetrics;
+    const latest = records[records.length - 1];
+    latest.verificationMetrics = verificationMetrics;
+    if (verificationTransferFunctionMetrics) {
+      latest.verificationTransferFunctionMetrics = verificationTransferFunctionMetrics;
+    }
     await this.saveRecords(profileId, records);
     logger.info(`Updated verification metrics on latest history record for profile ${profileId}`);
     return true;

@@ -40,6 +40,7 @@ import type { TuningSession, TuningPhase, TuningType } from '@shared/types/tunin
 import type {
   CompletedTuningRecord,
   FilterMetricsSummary,
+  TransferFunctionMetricsSummary,
 } from '@shared/types/tuning-history.types';
 
 const betaflightAPI: BetaflightAPI = {
@@ -612,11 +613,13 @@ const betaflightAPI: BetaflightAPI = {
   },
 
   async updateVerificationMetrics(
-    verificationMetrics: FilterMetricsSummary
+    verificationMetrics: FilterMetricsSummary,
+    verificationTransferFunctionMetrics?: TransferFunctionMetricsSummary
   ): Promise<TuningSession> {
     const response = await ipcRenderer.invoke(
       IPCChannel.TUNING_UPDATE_VERIFICATION,
-      verificationMetrics
+      verificationMetrics,
+      verificationTransferFunctionMetrics
     );
     if (!response.success) {
       throw new Error(response.error || 'Failed to update verification metrics');

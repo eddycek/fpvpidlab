@@ -18,7 +18,7 @@ import type {
 export type TuningMode = 'filter' | 'pid' | 'full' | 'quick';
 
 /** Extended mode for flight guide (includes verification hover) */
-export type FlightGuideMode = TuningMode | 'verification';
+export type FlightGuideMode = TuningMode | 'verification' | 'flash_verification';
 
 /** Whether this is a guided (2-flight) or quick (1-flight) tuning session */
 export type TuningType = 'guided' | 'quick';
@@ -105,6 +105,9 @@ export interface TuningSession {
 
   /** Compact transfer function metrics from Wiener deconvolution (Quick Tune only) */
   transferFunctionMetrics?: TransferFunctionMetricsSummary;
+
+  /** Compact verification TF metrics (Flash Tune only — for before/after PID comparison) */
+  verificationTransferFunctionMetrics?: TransferFunctionMetricsSummary;
 
   /** True when user skipped erase (e.g. formatted SD card manually) — persists across restart */
   eraseSkipped?: boolean;
