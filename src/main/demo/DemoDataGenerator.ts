@@ -524,14 +524,17 @@ export function generateVerificationDemoBBL(cycle = 0): Buffer {
 export function generateFlashDemoBBL(cycle = 0): Buffer {
   const f = progressiveFactor(cycle);
   logger.info(`[DEMO] Generating Flash Tune demo BBL (cycle ${cycle}, factor ${f.toFixed(2)})...`);
+  // Minimum noise floor ensures Wiener deconvolution has sufficient excitation
+  // for reliable bandwidth/phase margin estimation at higher cycles
+  const noiseFloor = 3;
   return buildDemoSession({
     frameCount: 80000, // 20s at 4000 Hz — enough for hover segments + 12 steps (700ms hold)
     gyroBase: [2, -1, 0],
-    noiseAmplitude: 12 * f,
+    noiseAmplitude: Math.max(noiseFloor, 12 * f),
     motorHarmonicHz: 160,
-    motorHarmonicAmplitude: 30 * f,
+    motorHarmonicAmplitude: Math.max(noiseFloor, 30 * f),
     electricalNoiseHz: 600,
-    electricalNoiseAmplitude: 6 * f,
+    electricalNoiseAmplitude: Math.max(1, 6 * f),
     injectSteps: true,
     iInterval: 2,
     responseParams: computeCycleResponseParams(cycle),
