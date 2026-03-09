@@ -581,6 +581,48 @@ describe('useTuningWizard', () => {
     });
   });
 
+  it('confirmApply filters out diagnostic recommendations (currentValue === recommendedValue)', async () => {
+    const filterWithDiagnostic: FilterAnalysisResult = {
+      ...mockFilterResult,
+      recommendations: [
+        ...mockFilterResult.recommendations,
+        {
+          setting: 'rpm_filter_diagnostic',
+          currentValue: 0,
+          recommendedValue: 0,
+          reason: 'Motor harmonic noise detected despite RPM filter.',
+          impact: 'noise',
+          confidence: 'medium',
+        },
+      ],
+    };
+    vi.mocked(window.betaflight.analyzeFilters).mockResolvedValue(filterWithDiagnostic);
+    vi.mocked(window.betaflight.applyRecommendations).mockResolvedValue({
+      success: true,
+      appliedPIDs: 0,
+      appliedFilters: 1,
+      appliedFeedforward: 0,
+      rebooted: true,
+    });
+
+    const { result } = renderHook(() => useTuningWizard('log-1', 'filter'));
+
+    await act(async () => {
+      await result.current.runFilterAnalysis();
+    });
+    await act(async () => {
+      await result.current.confirmApply(false);
+    });
+
+    // Diagnostic (0 → 0) should be filtered out, only real change sent
+    expect(window.betaflight.applyRecommendations).toHaveBeenCalledWith({
+      filterRecommendations: mockFilterResult.recommendations,
+      pidRecommendations: [],
+      feedforwardRecommendations: [],
+      createSnapshot: false,
+    });
+  });
+
   it('mode=full confirmApply sends both recommendations', async () => {
     vi.mocked(window.betaflight.analyzeFilters).mockResolvedValue(mockFilterResult);
     vi.mocked(window.betaflight.analyzePID).mockResolvedValue(mockPIDResult);

@@ -235,7 +235,12 @@ export function useTuningWizard(logId: string, mode: TuningMode = 'full'): UseTu
 
       try {
         // In mode-specific modes, only send relevant recommendations
-        const filterRecs = mode === 'pid' ? [] : (filterResult?.recommendations ?? []);
+        const filterRecs =
+          mode === 'pid'
+            ? []
+            : (filterResult?.recommendations ?? []).filter(
+                (r) => r.currentValue !== r.recommendedValue
+              );
         // For quick mode, PID recs come from transfer function analysis
         const allPidRecs =
           mode === 'filter'
@@ -243,8 +248,12 @@ export function useTuningWizard(logId: string, mode: TuningMode = 'full'): UseTu
             : mode === 'quick'
               ? (tfResult?.recommendations ?? [])
               : (pidResult?.recommendations ?? []);
-        const pidRecs = allPidRecs.filter((r) => r.setting.startsWith('pid_'));
-        const ffRecs = allPidRecs.filter((r) => r.setting.startsWith('feedforward_'));
+        const pidRecs = allPidRecs.filter(
+          (r) => r.setting.startsWith('pid_') && r.currentValue !== r.recommendedValue
+        );
+        const ffRecs = allPidRecs.filter(
+          (r) => r.setting.startsWith('feedforward_') && r.currentValue !== r.recommendedValue
+        );
 
         const hasChanges = filterRecs.length + pidRecs.length + ffRecs.length > 0;
 
