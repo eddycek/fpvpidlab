@@ -7,6 +7,7 @@ Overview of all design documents in this directory. Completed documents are arch
 | Document | Status | PRs | Description |
 |----------|--------|-----|-------------|
 | [TUNING_PRECISION_IMPROVEMENTS](./TUNING_PRECISION_IMPROVEMENTS.md) | **Active** | #119–#120, #137, #146–#152 | Research-based tuning accuracy improvements: ~~Wiener deconvolution~~ (done), ~~proportional PID scaling~~ (done), ~~data quality scoring~~ (done), ~~flight quality score~~ (done), throttle spectrograms, chirp analysis |
+| [FLASH_TUNE_RECOMMENDATION_PARITY](./FLASH_TUNE_RECOMMENDATION_PARITY.md) | **Active** | #203–#206 | Unified PID pipeline, quality score parity, DC gain I-term rule, per-band TF analysis |
 | [UX_IMPROVEMENT_IDEAS](./UX_IMPROVEMENT_IDEAS.md) | **Active** | — | Backlog of UX improvement ideas (4/7 done, rest are future work) |
 
 ## Completed Documents (`complete/`)
