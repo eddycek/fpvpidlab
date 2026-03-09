@@ -110,3 +110,44 @@
 .analysis-overview .wizard-btn-primary:hover:not(:disabled) {
   background-color: #1d4ed8;
 }
+
+/* Method badge (shown next to subtitle when both methods present) */
+.analysis-method-badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-secondary, #aaa);
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  padding: 1px 6px;
+  margin-left: 8px;
+  vertical-align: middle;
+}
+
+/* Subtitle for analysis method (e.g. "Wiener deconvolution") */
+.analysis-method-subtitle {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--text-secondary, #aaa);
+  margin-left: 8px;
+}
+
+/* Collapsible Bode plot details */
+.bode-details {
+  margin-top: 16px;
+}
+
+.bode-details-summary {
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary, #aaa);
+  padding: 6px 0;
+  user-select: none;
+}
+
+.bode-details-summary:hover {
+  color: var(--text-primary, #fff);
+}

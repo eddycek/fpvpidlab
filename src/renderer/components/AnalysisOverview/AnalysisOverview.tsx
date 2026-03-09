@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useAnalysisOverview } from '../../hooks/useAnalysisOverview';
 import { SpectrumChart } from '../TuningWizard/charts/SpectrumChart';
 import { StepResponseChart } from '../TuningWizard/charts/StepResponseChart';
+import { TFStepResponseChart } from '../TuningWizard/charts/TFStepResponseChart';
 import { BodePlot } from '../TuningWizard/charts/BodePlot';
 import './AnalysisOverview.css';
 
@@ -44,12 +45,33 @@ const PEAK_TYPE_LABELS: Record<string, string> = {
 export function AnalysisOverview({ logId, logName, onExit }: AnalysisOverviewProps) {
   const overview = useAnalysisOverview(logId);
 
+  const [bodeOpen, setBodeOpen] = useState(false);
+
   // Check if any trace data exists for step response chart
   const hasTraces = overview.pidResult
     ? ['roll', 'pitch', 'yaw'].some((axis) =>
         overview.pidResult![axis as 'roll' | 'pitch' | 'yaw'].responses.some((r) => r.trace)
       )
     : false;
+
+  // Determine primary PID analysis method:
+  // - "step_response" if enough steps detected (quality >= 40 or >= 10 steps)
+  // - "frequency_response" if TF data available and step response is poor
+  // - "both" if both have good data
+  const stepQualityOk =
+    overview.pidResult &&
+    ((overview.pidResult.dataQuality && overview.pidResult.dataQuality.overall >= 40) ||
+      overview.pidResult.stepsDetected >= 10);
+  const hasTF =
+    overview.tfResult && (overview.tfResult as any).transferFunction?.syntheticStepResponse;
+  const pidMethod: 'step_response' | 'frequency_response' | 'both' =
+    stepQualityOk && hasTF
+      ? 'both'
+      : stepQualityOk
+        ? 'step_response'
+        : hasTF
+          ? 'frequency_response'
+          : 'step_response'; // fallback: show what we have
 
   const isMultiSession = overview.sessions !== null && overview.sessions.length > 1;
   const selectedSession =
@@ -340,33 +362,35 @@ export function AnalysisOverview({ logId, logName, onExit }: AnalysisOverviewPro
         </div>
       )}
 
-      {/* PID Analysis Section */}
-      {overview.pidAnalyzing && (
-        <div className="analysis-overview-section">
-          <h3 className="analysis-overview-section-title">PID Analysis</h3>
-          <p style={{ fontSize: 13, color: 'var(--text-secondary, #aaa)', margin: '0 0 16px 0' }}>
-            Analyzing step responses to evaluate PID gains...
-          </p>
-          {overview.pidProgress && (
-            <div className="analysis-progress">
-              <div className="analysis-progress-label">
-                <span>
-                  {PID_STEP_LABELS[overview.pidProgress.step] || overview.pidProgress.step}
-                </span>
-                <span>{overview.pidProgress.percent}%</span>
+      {/* Unified PID Analysis Section */}
+      {(overview.pidAnalyzing || overview.tfAnalyzing) &&
+        !overview.pidResult &&
+        !overview.tfResult && (
+          <div className="analysis-overview-section">
+            <h3 className="analysis-overview-section-title">PID Analysis</h3>
+            <p style={{ fontSize: 13, color: 'var(--text-secondary, #aaa)', margin: '0 0 16px 0' }}>
+              Analyzing flight data to evaluate PID performance...
+            </p>
+            {overview.pidProgress && (
+              <div className="analysis-progress">
+                <div className="analysis-progress-label">
+                  <span>
+                    {PID_STEP_LABELS[overview.pidProgress.step] || overview.pidProgress.step}
+                  </span>
+                  <span>{overview.pidProgress.percent}%</span>
+                </div>
+                <div className="analysis-progress-bar">
+                  <div
+                    className="analysis-progress-fill"
+                    style={{ width: `${overview.pidProgress.percent}%` }}
+                  />
+                </div>
               </div>
-              <div className="analysis-progress-bar">
-                <div
-                  className="analysis-progress-fill"
-                  style={{ width: `${overview.pidProgress.percent}%` }}
-                />
-              </div>
-            </div>
-          )}
-        </div>
-      )}
+            )}
+          </div>
+        )}
 
-      {overview.pidError && !overview.pidAnalyzing && (
+      {overview.pidError && !overview.pidAnalyzing && !overview.pidResult && (
         <div className="analysis-overview-section">
           <h3 className="analysis-overview-section-title">PID Analysis</h3>
           <div className="analysis-error">{overview.pidError}</div>
@@ -376,217 +400,232 @@ export function AnalysisOverview({ logId, logName, onExit }: AnalysisOverviewPro
         </div>
       )}
 
-      {overview.pidResult && (
+      {(overview.pidResult || (overview.tfResult && hasTF)) && (
         <div className="analysis-overview-section">
           <h3 className="analysis-overview-section-title">PID Analysis</h3>
-          <p style={{ fontSize: 13, color: 'var(--text-secondary, #aaa)', margin: '0 0 8px 0' }}>
-            {stripRecommendation(overview.pidResult.summary)}
-          </p>
-          <div className="analysis-meta">
-            <span className="analysis-meta-pill">
-              {overview.pidResult.stepsDetected} step
-              {overview.pidResult.stepsDetected !== 1 ? 's' : ''} detected
-            </span>
-            {overview.pidResult.dataQuality && (
-              <span
-                className={`analysis-meta-pill quality-${overview.pidResult.dataQuality.tier}`}
-                title={`Data quality: ${overview.pidResult.dataQuality.overall}/100`}
-              >
-                Data: {overview.pidResult.dataQuality.tier} (
-                {overview.pidResult.dataQuality.overall}/100)
-              </span>
-            )}
-          </div>
 
-          {overview.pidResult.warnings && overview.pidResult.warnings.length > 0 && (
-            <div className="analysis-warnings">
-              {overview.pidResult.warnings.map((w, i) => (
-                <div key={i} className={`analysis-warning analysis-warning--${w.severity}`}>
-                  <span className="analysis-warning-icon">
-                    {w.severity === 'error'
-                      ? '\u274C'
-                      : w.severity === 'info'
-                        ? '\u2139\uFE0F'
-                        : '\u26A0\uFE0F'}
-                  </span>
-                  <span>{w.message}</span>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {overview.pidResult.currentPIDs && (
+          {/* Step Response Method */}
+          {(pidMethod === 'step_response' || pidMethod === 'both') && overview.pidResult && (
             <>
-              <h4 className="current-pids-heading">Current PID Values</h4>
+              <h4 className="current-pids-heading">
+                Step Response Method
+                {pidMethod === 'both' && <span className="analysis-method-badge">primary</span>}
+              </h4>
+              <p
+                style={{
+                  fontSize: 13,
+                  color: 'var(--text-secondary, #aaa)',
+                  margin: '0 0 8px 0',
+                }}
+              >
+                {stripRecommendation(overview.pidResult.summary)}
+              </p>
+              <div className="analysis-meta">
+                <span className="analysis-meta-pill">
+                  {overview.pidResult.stepsDetected} step
+                  {overview.pidResult.stepsDetected !== 1 ? 's' : ''} detected
+                </span>
+                {overview.pidResult.dataQuality && (
+                  <span
+                    className={`analysis-meta-pill quality-${overview.pidResult.dataQuality.tier}`}
+                    title={`Data quality: ${overview.pidResult.dataQuality.overall}/100`}
+                  >
+                    Data: {overview.pidResult.dataQuality.tier} (
+                    {overview.pidResult.dataQuality.overall}/100)
+                  </span>
+                )}
+              </div>
+
+              {overview.pidResult.warnings && overview.pidResult.warnings.length > 0 && (
+                <div className="analysis-warnings">
+                  {overview.pidResult.warnings.map((w, i) => (
+                    <div key={i} className={`analysis-warning analysis-warning--${w.severity}`}>
+                      <span className="analysis-warning-icon">
+                        {w.severity === 'error'
+                          ? '\u274C'
+                          : w.severity === 'info'
+                            ? '\u2139\uFE0F'
+                            : '\u26A0\uFE0F'}
+                      </span>
+                      <span>{w.message}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {overview.pidResult.currentPIDs && (
+                <>
+                  <h4 className="current-pids-heading">Current PID Values</h4>
+                  <div className="axis-summary">
+                    {(['roll', 'pitch', 'yaw'] as const).map((axis) => {
+                      const pids = overview.pidResult!.currentPIDs[axis];
+                      return (
+                        <div key={`current-${axis}`} className="axis-summary-card">
+                          <div className="axis-summary-card-title">{axis}</div>
+                          <div className="axis-summary-card-stat">
+                            <span>P: </span>
+                            {pids.P}
+                          </div>
+                          <div className="axis-summary-card-stat">
+                            <span>I: </span>
+                            {pids.I}
+                          </div>
+                          <div className="axis-summary-card-stat">
+                            <span>D: </span>
+                            {pids.D}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
+
+              <h4 className="current-pids-heading">Step Response Metrics</h4>
               <div className="axis-summary">
                 {(['roll', 'pitch', 'yaw'] as const).map((axis) => {
-                  const pids = overview.pidResult!.currentPIDs[axis];
+                  const profile = overview.pidResult![axis];
                   return (
-                    <div key={`current-${axis}`} className="axis-summary-card">
+                    <div key={axis} className="axis-summary-card">
                       <div className="axis-summary-card-title">{axis}</div>
                       <div className="axis-summary-card-stat">
-                        <span>P: </span>
-                        {pids.P}
+                        <span>Overshoot: </span>
+                        {profile.meanOvershoot.toFixed(1)}%
                       </div>
                       <div className="axis-summary-card-stat">
-                        <span>I: </span>
-                        {pids.I}
+                        <span>Rise: </span>
+                        {profile.meanRiseTimeMs.toFixed(0)} ms
                       </div>
                       <div className="axis-summary-card-stat">
-                        <span>D: </span>
-                        {pids.D}
+                        <span>Settling: </span>
+                        {profile.meanSettlingTimeMs.toFixed(0)} ms
+                      </div>
+                      <div className="axis-summary-card-stat">
+                        <span>Latency: </span>
+                        {profile.meanLatencyMs.toFixed(0)} ms
                       </div>
                     </div>
                   );
                 })}
               </div>
+
+              {hasTraces && (
+                <>
+                  <p className="chart-description">
+                    How the quad responds to stick inputs (step response). The{' '}
+                    <strong>dashed white line</strong> is the commanded rate (setpoint) and the{' '}
+                    <strong>colored line</strong> is the actual gyro response. Ideally, the gyro
+                    should follow the setpoint quickly with minimal overshoot and no oscillation.
+                  </p>
+                  <p className="chart-legend">
+                    <span className="chart-legend-item">
+                      <span
+                        className="chart-legend-line chart-legend-line--dashed"
+                        style={{ borderColor: '#fff' }}
+                      />{' '}
+                      Setpoint
+                    </span>
+                    <span className="chart-legend-item">
+                      <span className="chart-legend-line" style={{ borderColor: '#ff6b6b' }} /> Roll
+                    </span>
+                    <span className="chart-legend-item">
+                      <span className="chart-legend-line" style={{ borderColor: '#51cf66' }} />{' '}
+                      Pitch
+                    </span>
+                    <span className="chart-legend-item">
+                      <span className="chart-legend-line" style={{ borderColor: '#4dabf7' }} /> Yaw
+                    </span>
+                  </p>
+                  <StepResponseChart
+                    roll={overview.pidResult!.roll}
+                    pitch={overview.pidResult!.pitch}
+                    yaw={overview.pidResult!.yaw}
+                  />
+                </>
+              )}
             </>
           )}
 
-          <h4 className="current-pids-heading">Step Response Metrics</h4>
-          <div className="axis-summary">
-            {(['roll', 'pitch', 'yaw'] as const).map((axis) => {
-              const profile = overview.pidResult![axis];
-              return (
-                <div key={axis} className="axis-summary-card">
-                  <div className="axis-summary-card-title">{axis}</div>
-                  <div className="axis-summary-card-stat">
-                    <span>Overshoot: </span>
-                    {profile.meanOvershoot.toFixed(1)}%
-                  </div>
-                  <div className="axis-summary-card-stat">
-                    <span>Rise: </span>
-                    {profile.meanRiseTimeMs.toFixed(0)} ms
-                  </div>
-                  <div className="axis-summary-card-stat">
-                    <span>Settling: </span>
-                    {profile.meanSettlingTimeMs.toFixed(0)} ms
-                  </div>
-                  <div className="axis-summary-card-stat">
-                    <span>Latency: </span>
-                    {profile.meanLatencyMs.toFixed(0)} ms
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          {hasTraces && (
+          {/* Frequency Response Method */}
+          {(pidMethod === 'frequency_response' || pidMethod === 'both') && hasTF && (
             <>
-              <p className="chart-description">
-                How the quad responds to stick inputs (step response). The{' '}
-                <strong>dashed white line</strong> is the commanded rate (setpoint) and the{' '}
-                <strong>colored line</strong> is the actual gyro response. Ideally, the gyro should
-                follow the setpoint quickly with minimal overshoot and no oscillation.
-              </p>
-              <p className="chart-legend">
-                <span className="chart-legend-item">
-                  <span
-                    className="chart-legend-line chart-legend-line--dashed"
-                    style={{ borderColor: '#fff' }}
-                  />{' '}
-                  Setpoint
-                </span>
-                <span className="chart-legend-item">
-                  <span className="chart-legend-line" style={{ borderColor: '#ff6b6b' }} /> Roll
-                </span>
-                <span className="chart-legend-item">
-                  <span className="chart-legend-line" style={{ borderColor: '#51cf66' }} /> Pitch
-                </span>
-                <span className="chart-legend-item">
-                  <span className="chart-legend-line" style={{ borderColor: '#4dabf7' }} /> Yaw
-                </span>
-              </p>
-              <StepResponseChart
-                roll={overview.pidResult!.roll}
-                pitch={overview.pidResult!.pitch}
-                yaw={overview.pidResult!.yaw}
+              <h4 className="current-pids-heading">
+                Frequency Response Method
+                <span className="analysis-method-subtitle">Wiener deconvolution</span>
+              </h4>
+
+              <TFStepResponseChart
+                stepResponse={(overview.tfResult as any).transferFunction.syntheticStepResponse}
               />
+
+              <h4 className="current-pids-heading">Transfer Function Metrics</h4>
+              <div className="axis-summary">
+                {(['roll', 'pitch', 'yaw'] as const).map((axis) => {
+                  const metrics = (overview.tfResult as any).transferFunction.metrics[axis];
+                  return (
+                    <div key={`tf-${axis}`} className="axis-summary-card">
+                      <div className="axis-summary-card-title">{axis}</div>
+                      <div className="axis-summary-card-stat">
+                        <span>Bandwidth: </span>
+                        {metrics.bandwidthHz.toFixed(0)} Hz
+                      </div>
+                      <div className="axis-summary-card-stat">
+                        <span>Phase margin: </span>
+                        {metrics.phaseMarginDeg.toFixed(0)}&deg;
+                      </div>
+                      <div className="axis-summary-card-stat">
+                        <span>Overshoot: </span>
+                        {metrics.overshootPercent.toFixed(1)}%
+                      </div>
+                      <div className="axis-summary-card-stat">
+                        <span>Rise: </span>
+                        {metrics.riseTimeMs.toFixed(0)} ms
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <details
+                className="bode-details"
+                open={bodeOpen}
+                onToggle={(e) => setBodeOpen((e.target as HTMLDetailsElement).open)}
+              >
+                <summary className="bode-details-summary">Bode Plot (Advanced)</summary>
+                <p className="chart-description">
+                  The <strong>Bode plot</strong> shows how the quad&apos;s response changes with
+                  frequency. The <strong>magnitude</strong> plot shows how well it tracks (0 dB =
+                  perfect). The <strong>phase</strong> plot shows delay &mdash; more negative means
+                  more lag. The dashed line at -3 dB marks the bandwidth limit.
+                </p>
+                <p className="chart-legend">
+                  <span className="chart-legend-item">
+                    <span className="chart-legend-line" style={{ borderColor: '#ff6b6b' }} /> Roll
+                  </span>
+                  <span className="chart-legend-item">
+                    <span className="chart-legend-line" style={{ borderColor: '#51cf66' }} /> Pitch
+                  </span>
+                  <span className="chart-legend-item">
+                    <span className="chart-legend-line" style={{ borderColor: '#4dabf7' }} /> Yaw
+                  </span>
+                  <span className="chart-legend-item">
+                    <span
+                      className="chart-legend-line chart-legend-line--dashed"
+                      style={{ borderColor: '#ff8787' }}
+                    />{' '}
+                    -3 dB / -180&deg;
+                  </span>
+                </p>
+                <BodePlot
+                  bode={{
+                    roll: (overview.tfResult as any).transferFunction.roll,
+                    pitch: (overview.tfResult as any).transferFunction.pitch,
+                    yaw: (overview.tfResult as any).transferFunction.yaw,
+                  }}
+                />
+              </details>
             </>
           )}
-        </div>
-      )}
-
-      {/* Transfer Function (Wiener) Section */}
-      {overview.tfAnalyzing && (
-        <div className="analysis-overview-section">
-          <h3 className="analysis-overview-section-title">Frequency Response Analysis</h3>
-          <p style={{ fontSize: 13, color: 'var(--text-secondary, #aaa)', margin: '0 0 16px 0' }}>
-            Estimating transfer function from flight data...
-          </p>
-        </div>
-      )}
-
-      {overview.tfResult && (overview.tfResult as any).transferFunction && (
-        <div className="analysis-overview-section">
-          <h3 className="analysis-overview-section-title">Frequency Response Analysis</h3>
-          <p style={{ fontSize: 13, color: 'var(--text-secondary, #aaa)', margin: '0 0 8px 0' }}>
-            Transfer function estimated via Wiener deconvolution. The Bode plot shows how the quad
-            tracks stick inputs at different frequencies.
-          </p>
-          <div className="analysis-meta">
-            <span className="analysis-meta-pill">Wiener deconvolution</span>
-          </div>
-
-          <h4 className="current-pids-heading">Transfer Function Metrics</h4>
-          <div className="axis-summary">
-            {(['roll', 'pitch', 'yaw'] as const).map((axis) => {
-              const metrics = (overview.tfResult as any).transferFunction.metrics[axis];
-              return (
-                <div key={`tf-${axis}`} className="axis-summary-card">
-                  <div className="axis-summary-card-title">{axis}</div>
-                  <div className="axis-summary-card-stat">
-                    <span>Bandwidth: </span>
-                    {metrics.bandwidthHz.toFixed(0)} Hz
-                  </div>
-                  <div className="axis-summary-card-stat">
-                    <span>Phase margin: </span>
-                    {metrics.phaseMarginDeg.toFixed(0)}&deg;
-                  </div>
-                  <div className="axis-summary-card-stat">
-                    <span>Overshoot: </span>
-                    {metrics.overshootPercent.toFixed(1)}%
-                  </div>
-                  <div className="axis-summary-card-stat">
-                    <span>Rise: </span>
-                    {metrics.riseTimeMs.toFixed(0)} ms
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          <p className="chart-description">
-            The <strong>Bode plot</strong> shows how the quad&apos;s response changes with
-            frequency. The <strong>magnitude</strong> plot shows how well it tracks (0 dB =
-            perfect). The <strong>phase</strong> plot shows delay &mdash; more negative means more
-            lag. The dashed line at -3 dB marks the bandwidth limit.
-          </p>
-          <p className="chart-legend">
-            <span className="chart-legend-item">
-              <span className="chart-legend-line" style={{ borderColor: '#ff6b6b' }} /> Roll
-            </span>
-            <span className="chart-legend-item">
-              <span className="chart-legend-line" style={{ borderColor: '#51cf66' }} /> Pitch
-            </span>
-            <span className="chart-legend-item">
-              <span className="chart-legend-line" style={{ borderColor: '#4dabf7' }} /> Yaw
-            </span>
-            <span className="chart-legend-item">
-              <span
-                className="chart-legend-line chart-legend-line--dashed"
-                style={{ borderColor: '#ff8787' }}
-              />{' '}
-              -3 dB / -180&deg;
-            </span>
-          </p>
-          <BodePlot
-            bode={{
-              roll: (overview.tfResult as any).transferFunction.roll,
-              pitch: (overview.tfResult as any).transferFunction.pitch,
-              yaw: (overview.tfResult as any).transferFunction.yaw,
-            }}
-          />
         </div>
       )}
     </div>
