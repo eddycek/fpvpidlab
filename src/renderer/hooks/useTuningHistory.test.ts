@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
 import { useTuningHistory } from './useTuningHistory';
+import { TUNING_PHASE } from '@shared/constants';
 
 describe('useTuningHistory', () => {
   beforeEach(() => {
@@ -107,7 +108,7 @@ describe('useTuningHistory', () => {
     expect(window.betaflight.getTuningHistory).toHaveBeenCalledTimes(1);
 
     // Session updated (not null) — should NOT reload
-    sessionCallback?.({ phase: 'filter_flight_pending' });
+    sessionCallback?.({ phase: TUNING_PHASE.FILTER_FLIGHT_PENDING });
 
     // Wait a tick and verify no extra call
     await new Promise((r) => setTimeout(r, 50));

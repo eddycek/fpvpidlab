@@ -4,6 +4,7 @@ import { join } from 'path';
 import { tmpdir } from 'os';
 import { TuningHistoryManager } from './TuningHistoryManager';
 import type { TuningSession } from '@shared/types/tuning.types';
+import { TUNING_TYPE, TUNING_PHASE } from '@shared/constants';
 
 function makeCompletedSession(
   profileId: string,
@@ -11,7 +12,7 @@ function makeCompletedSession(
 ): TuningSession {
   return {
     profileId,
-    phase: 'completed',
+    phase: TUNING_PHASE.COMPLETED,
     startedAt: '2026-01-15T10:00:00.000Z',
     updatedAt: '2026-01-15T12:00:00.000Z',
     baselineSnapshotId: 'snap-baseline',
@@ -120,7 +121,7 @@ describe('TuningHistoryManager', () => {
     it('rejects non-completed sessions', async () => {
       const session: TuningSession = {
         profileId: 'profile-1',
-        phase: 'filter_analysis',
+        phase: TUNING_PHASE.FILTER_ANALYSIS,
         startedAt: '2026-01-15T10:00:00.000Z',
         updatedAt: '2026-01-15T11:00:00.000Z',
       };
@@ -308,15 +309,15 @@ describe('TuningHistoryManager', () => {
   describe('quick tuning archive', () => {
     it('archives tuningType from session', async () => {
       const session = makeCompletedSession('profile-1', {
-        tuningType: 'quick',
+        tuningType: TUNING_TYPE.FLASH,
       });
       const record = await manager.archiveSession(session);
-      expect(record.tuningType).toBe('quick');
+      expect(record.tuningType).toBe(TUNING_TYPE.FLASH);
     });
 
     it('archives quickLogId from session', async () => {
       const session = makeCompletedSession('profile-1', {
-        tuningType: 'quick',
+        tuningType: TUNING_TYPE.FLASH,
         quickLogId: 'quick-log-abc',
       });
       const record = await manager.archiveSession(session);
@@ -351,7 +352,7 @@ describe('TuningHistoryManager', () => {
         },
       };
       const session = makeCompletedSession('profile-1', {
-        tuningType: 'quick',
+        tuningType: TUNING_TYPE.FLASH,
         transferFunctionMetrics: tfMetrics,
       });
       const record = await manager.archiveSession(session);

@@ -11,6 +11,7 @@ import type {
   ApplyRecommendationsResult,
 } from '@shared/types/ipc.types';
 import type { TuningMode } from '@shared/types/tuning.types';
+import { TUNING_MODE } from '@shared/constants';
 import type { ApplyState } from '../../hooks/useTuningWizard';
 
 interface TuningSummaryStepProps {
@@ -125,11 +126,11 @@ export function TuningSummaryStep({
   applyResult,
   applyError,
 }: TuningSummaryStepProps) {
-  const showFilter = mode !== 'pid';
-  const showPid = mode !== 'filter';
+  const showFilter = mode !== TUNING_MODE.PID;
+  const showPid = mode !== TUNING_MODE.FILTER;
   const filterRecs = showFilter ? (filterResult?.recommendations ?? []) : [];
   // In quick mode, PID recs come from transfer function analysis
-  const pidSource = mode === 'quick' ? tfResult : pidResult;
+  const pidSource = mode === TUNING_MODE.FLASH ? tfResult : pidResult;
   const pidRecs = showPid ? (pidSource?.recommendations ?? []) : [];
   const allRecs: (FilterRecommendation | PIDRecommendation)[] = [...filterRecs, ...pidRecs];
   const totalRecs = allRecs.length;

@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import type { CompletedTuningRecord, TuneQualityScore } from '@shared/types/tuning-history.types';
 import { computeTuneQualityScore, TIER_LABELS } from '@shared/utils/tuneQualityScore';
-import { TUNING_TYPE_LABELS } from '@shared/constants';
+import { TUNING_TYPE, TUNING_TYPE_LABELS } from '@shared/constants';
 import { TuningSessionDetail } from './TuningSessionDetail';
 import { QualityTrendChart } from './QualityTrendChart';
 import './TuningHistoryPanel.css';
@@ -83,9 +83,9 @@ export function TuningHistoryPanel({
                 </div>
                 <div className="tuning-history-card-right">
                   <span
-                    className={`tuning-type-badge tuning-type-${record.tuningType === 'quick' ? 'flash' : 'deep'}`}
+                    className={`tuning-type-badge tuning-type-${record.tuningType === TUNING_TYPE.FLASH ? 'flash' : 'deep'}`}
                   >
-                    {TUNING_TYPE_LABELS[record.tuningType ?? 'guided']}
+                    {TUNING_TYPE_LABELS[record.tuningType ?? TUNING_TYPE.DEEP]}
                   </span>
                   {score && (
                     <span className={`quality-score-badge quality-score-${score.tier}`}>

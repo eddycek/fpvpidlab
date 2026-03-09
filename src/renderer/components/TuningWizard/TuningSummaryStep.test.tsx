@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { TuningSummaryStep } from './TuningSummaryStep';
+import { TUNING_MODE } from '@shared/constants';
 import type { FilterAnalysisResult, PIDAnalysisResult } from '@shared/types/analysis.types';
 import type {
   ApplyRecommendationsProgress,
@@ -116,7 +117,7 @@ describe('TuningSummaryStep', () => {
       <TuningSummaryStep
         filterResult={emptyFilterResult}
         pidResult={emptyPidResult}
-        mode="full"
+        mode={TUNING_MODE.FULL}
         onExit={vi.fn()}
         onApply={vi.fn()}
         applyState="idle"
@@ -134,7 +135,7 @@ describe('TuningSummaryStep', () => {
       <TuningSummaryStep
         filterResult={mockFilterResult}
         pidResult={mockPidResult}
-        mode="full"
+        mode={TUNING_MODE.FULL}
         onExit={vi.fn()}
         onApply={vi.fn()}
         applyState="idle"
@@ -155,7 +156,7 @@ describe('TuningSummaryStep', () => {
       <TuningSummaryStep
         filterResult={mockFilterResult}
         pidResult={mockPidResult}
-        mode="full"
+        mode={TUNING_MODE.FULL}
         onExit={vi.fn()}
         onApply={vi.fn()}
         applyState="idle"
@@ -177,7 +178,7 @@ describe('TuningSummaryStep', () => {
       <TuningSummaryStep
         filterResult={mockFilterResult}
         pidResult={null}
-        mode="filter"
+        mode={TUNING_MODE.FILTER}
         onExit={vi.fn()}
         onApply={vi.fn()}
         applyState="idle"
@@ -195,7 +196,7 @@ describe('TuningSummaryStep', () => {
       <TuningSummaryStep
         filterResult={null}
         pidResult={mockPidResult}
-        mode="pid"
+        mode={TUNING_MODE.PID}
         onExit={vi.fn()}
         onApply={vi.fn()}
         applyState="idle"
@@ -213,7 +214,7 @@ describe('TuningSummaryStep', () => {
       <TuningSummaryStep
         filterResult={mockFilterResult}
         pidResult={mockPidResult}
-        mode="full"
+        mode={TUNING_MODE.FULL}
         onExit={vi.fn()}
         onApply={vi.fn()}
         applyState="applying"
@@ -232,7 +233,7 @@ describe('TuningSummaryStep', () => {
       <TuningSummaryStep
         filterResult={mockFilterResult}
         pidResult={mockPidResult}
-        mode="full"
+        mode={TUNING_MODE.FULL}
         onExit={vi.fn()}
         onApply={vi.fn()}
         applyState="applying"
@@ -251,7 +252,7 @@ describe('TuningSummaryStep', () => {
       <TuningSummaryStep
         filterResult={mockFilterResult}
         pidResult={mockPidResult}
-        mode="full"
+        mode={TUNING_MODE.FULL}
         onExit={vi.fn()}
         onApply={vi.fn()}
         applyState="done"
@@ -270,7 +271,7 @@ describe('TuningSummaryStep', () => {
       <TuningSummaryStep
         filterResult={mockFilterResult}
         pidResult={mockPidResult}
-        mode="full"
+        mode={TUNING_MODE.FULL}
         onExit={vi.fn()}
         onApply={vi.fn()}
         applyState="error"
@@ -291,7 +292,7 @@ describe('TuningSummaryStep', () => {
       <TuningSummaryStep
         filterResult={mockFilterResult}
         pidResult={mockPidResult}
-        mode="full"
+        mode={TUNING_MODE.FULL}
         onExit={mockOnExit}
         onApply={vi.fn()}
         applyState="idle"
@@ -315,7 +316,7 @@ describe('TuningSummaryStep', () => {
       <TuningSummaryStep
         filterResult={mockFilterResult}
         pidResult={mockPidResult}
-        mode="full"
+        mode={TUNING_MODE.FULL}
         onExit={vi.fn()}
         onApply={mockOnApply}
         applyState="idle"
@@ -336,7 +337,7 @@ describe('TuningSummaryStep', () => {
       <TuningSummaryStep
         filterResult={mockFilterResult}
         pidResult={null}
-        mode="filter"
+        mode={TUNING_MODE.FILTER}
         onExit={vi.fn()}
         onApply={vi.fn()}
         applyState="done"
@@ -355,7 +356,7 @@ describe('TuningSummaryStep', () => {
       <TuningSummaryStep
         filterResult={null}
         pidResult={mockPidResult}
-        mode="pid"
+        mode={TUNING_MODE.PID}
         onExit={vi.fn()}
         onApply={vi.fn()}
         applyState="done"
@@ -375,7 +376,7 @@ describe('TuningSummaryStep', () => {
         filterResult={mockFilterResult}
         pidResult={null}
         tfResult={mockPidResult}
-        mode="quick"
+        mode={TUNING_MODE.FLASH}
         onExit={vi.fn()}
         onApply={vi.fn()}
         applyState="idle"
@@ -409,7 +410,7 @@ describe('TuningSummaryStep', () => {
         filterResult={mockFilterResult}
         pidResult={null}
         tfResult={tfResult}
-        mode="quick"
+        mode={TUNING_MODE.FLASH}
         onExit={vi.fn()}
         onApply={vi.fn()}
         applyState="idle"
@@ -430,7 +431,7 @@ describe('TuningSummaryStep', () => {
         filterResult={mockFilterResult}
         pidResult={null}
         tfResult={mockPidResult}
-        mode="quick"
+        mode={TUNING_MODE.FLASH}
         onExit={vi.fn()}
         onApply={vi.fn()}
         applyState="done"
@@ -458,7 +459,7 @@ describe('TuningSummaryStep', () => {
       <TuningSummaryStep
         filterResult={emptyFilterResult}
         pidResult={emptyPidResult}
-        mode="full"
+        mode={TUNING_MODE.FULL}
         onExit={vi.fn()}
         onApply={vi.fn()}
         applyState="idle"

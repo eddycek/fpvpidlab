@@ -1,6 +1,6 @@
 import React from 'react';
 import type { TuningType } from '@shared/types/tuning.types';
-import { TUNING_TYPE_LABELS } from '@shared/constants';
+import { TUNING_TYPE, TUNING_TYPE_LABELS } from '@shared/constants';
 import './StartTuningModal.css';
 
 interface StartTuningModalProps {
@@ -16,9 +16,11 @@ export function StartTuningModal({ onStart, onCancel }: StartTuningModalProps) {
         <p className="start-tuning-subtitle">Select how you want to tune your drone.</p>
 
         <div className="start-tuning-options">
-          <button className="start-tuning-option" onClick={() => onStart('guided')}>
+          <button className="start-tuning-option" onClick={() => onStart(TUNING_TYPE.DEEP)}>
             <div className="start-tuning-option-header">
-              <span className="start-tuning-option-title">{TUNING_TYPE_LABELS.guided}</span>
+              <span className="start-tuning-option-title">
+                {TUNING_TYPE_LABELS[TUNING_TYPE.DEEP]}
+              </span>
               <span className="start-tuning-option-badge">2 flights</span>
             </div>
             <p className="start-tuning-option-desc">
@@ -29,10 +31,12 @@ export function StartTuningModal({ onStart, onCancel }: StartTuningModalProps) {
 
           <button
             className="start-tuning-option start-tuning-option-quick"
-            onClick={() => onStart('quick')}
+            onClick={() => onStart(TUNING_TYPE.FLASH)}
           >
             <div className="start-tuning-option-header">
-              <span className="start-tuning-option-title">{TUNING_TYPE_LABELS.quick}</span>
+              <span className="start-tuning-option-title">
+                {TUNING_TYPE_LABELS[TUNING_TYPE.FLASH]}
+              </span>
               <span className="start-tuning-option-badge start-tuning-badge-quick">1 flight</span>
             </div>
             <p className="start-tuning-option-desc">

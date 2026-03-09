@@ -1,6 +1,6 @@
 import React from 'react';
 import type { TuningMode } from '@shared/types/tuning.types';
-import { TUNING_TYPE_LABELS } from '@shared/constants';
+import { TUNING_TYPE, TUNING_MODE, TUNING_TYPE_LABELS } from '@shared/constants';
 import { useConnection } from '../../hooks/useConnection';
 import { FlightGuideContent } from './FlightGuideContent';
 
@@ -10,13 +10,18 @@ interface TestFlightGuideStepProps {
 }
 
 const INTRO_TEXT: Record<TuningMode, string> = {
-  filter: 'Follow this flight plan to collect noise data for filter tuning.',
-  pid: 'Follow this flight plan to collect step response data for PID tuning. Your filters have been tuned — this flight will produce cleaner data.',
-  full: "Your Blackbox log has been downloaded. Here's what the analysis needs from your flight data — if you haven't flown yet, follow these steps for the best results.",
-  quick: `Rip a pack — freestyle, race, cruise, whatever you normally fly. ${TUNING_TYPE_LABELS.quick} analyzes both filters and PIDs from any single flight.`,
+  [TUNING_MODE.FILTER]: 'Follow this flight plan to collect noise data for filter tuning.',
+  [TUNING_MODE.PID]:
+    'Follow this flight plan to collect step response data for PID tuning. Your filters have been tuned — this flight will produce cleaner data.',
+  [TUNING_MODE.FULL]:
+    "Your Blackbox log has been downloaded. Here's what the analysis needs from your flight data — if you haven't flown yet, follow these steps for the best results.",
+  [TUNING_MODE.FLASH]: `Rip a pack — freestyle, race, cruise, whatever you normally fly. ${TUNING_TYPE_LABELS[TUNING_TYPE.FLASH]} analyzes both filters and PIDs from any single flight.`,
 };
 
-export function TestFlightGuideStep({ onContinue, mode = 'full' }: TestFlightGuideStepProps) {
+export function TestFlightGuideStep({
+  onContinue,
+  mode = TUNING_MODE.FULL,
+}: TestFlightGuideStepProps) {
   const { status } = useConnection();
   const fcVersion = status.fcInfo?.version;
 

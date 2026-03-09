@@ -8,6 +8,7 @@
 import { promises as fs } from 'fs';
 import { join } from 'path';
 import type { TuningSession, TuningPhase, TuningType } from '@shared/types/tuning.types';
+import { TUNING_TYPE, TUNING_PHASE } from '@shared/constants';
 import { logger } from '../utils/logger';
 
 export class TuningSessionManager {
@@ -43,12 +44,15 @@ export class TuningSessionManager {
 
   async createSession(
     profileId: string,
-    tuningType: TuningType = 'guided'
+    tuningType: TuningType = TUNING_TYPE.DEEP
   ): Promise<TuningSession> {
     const now = new Date().toISOString();
     const session: TuningSession = {
       profileId,
-      phase: tuningType === 'quick' ? 'quick_flight_pending' : 'filter_flight_pending',
+      phase:
+        tuningType === TUNING_TYPE.FLASH
+          ? TUNING_PHASE.QUICK_FLIGHT_PENDING
+          : TUNING_PHASE.FILTER_FLIGHT_PENDING,
       tuningType,
       startedAt: now,
       updatedAt: now,

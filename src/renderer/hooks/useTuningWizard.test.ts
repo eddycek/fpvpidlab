@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { useTuningWizard } from './useTuningWizard';
+import { TUNING_MODE } from '@shared/constants';
 import type { BlackboxParseResult, BlackboxLogSession } from '@shared/types/blackbox.types';
 import type { FilterAnalysisResult, PIDAnalysisResult } from '@shared/types/analysis.types';
 
@@ -445,19 +446,19 @@ describe('useTuningWizard', () => {
   // ---- Mode-specific tests ----
 
   it('exposes mode from parameter', () => {
-    const { result } = renderHook(() => useTuningWizard('log-1', 'filter'));
-    expect(result.current.mode).toBe('filter');
+    const { result } = renderHook(() => useTuningWizard('log-1', TUNING_MODE.FILTER));
+    expect(result.current.mode).toBe(TUNING_MODE.FILTER);
   });
 
   it('defaults mode to full', () => {
     const { result } = renderHook(() => useTuningWizard('log-1'));
-    expect(result.current.mode).toBe('full');
+    expect(result.current.mode).toBe(TUNING_MODE.FULL);
   });
 
   it('mode=pid auto-advances to pid step for single session', async () => {
     vi.mocked(window.betaflight.parseBlackboxLog).mockResolvedValue(mockParseResult);
 
-    const { result } = renderHook(() => useTuningWizard('log-1', 'pid'));
+    const { result } = renderHook(() => useTuningWizard('log-1', TUNING_MODE.PID));
 
     await act(async () => {
       await result.current.parseLog();
@@ -469,7 +470,7 @@ describe('useTuningWizard', () => {
   it('mode=filter auto-advances to filter step for single session', async () => {
     vi.mocked(window.betaflight.parseBlackboxLog).mockResolvedValue(mockParseResult);
 
-    const { result } = renderHook(() => useTuningWizard('log-1', 'filter'));
+    const { result } = renderHook(() => useTuningWizard('log-1', TUNING_MODE.FILTER));
 
     await act(async () => {
       await result.current.parseLog();
@@ -489,7 +490,7 @@ describe('useTuningWizard', () => {
       rebooted: true,
     });
 
-    const { result } = renderHook(() => useTuningWizard('log-1', 'filter'));
+    const { result } = renderHook(() => useTuningWizard('log-1', TUNING_MODE.FILTER));
 
     await act(async () => {
       await result.current.runFilterAnalysis();
@@ -520,7 +521,7 @@ describe('useTuningWizard', () => {
       rebooted: true,
     });
 
-    const { result } = renderHook(() => useTuningWizard('log-1', 'pid'));
+    const { result } = renderHook(() => useTuningWizard('log-1', TUNING_MODE.PID));
 
     await act(async () => {
       await result.current.runFilterAnalysis();
@@ -564,7 +565,7 @@ describe('useTuningWizard', () => {
       rebooted: true,
     });
 
-    const { result } = renderHook(() => useTuningWizard('log-1', 'pid'));
+    const { result } = renderHook(() => useTuningWizard('log-1', TUNING_MODE.PID));
 
     await act(async () => {
       await result.current.runPIDAnalysis();
@@ -605,7 +606,7 @@ describe('useTuningWizard', () => {
       rebooted: true,
     });
 
-    const { result } = renderHook(() => useTuningWizard('log-1', 'filter'));
+    const { result } = renderHook(() => useTuningWizard('log-1', TUNING_MODE.FILTER));
 
     await act(async () => {
       await result.current.runFilterAnalysis();
@@ -634,7 +635,7 @@ describe('useTuningWizard', () => {
       rebooted: true,
     });
 
-    const { result } = renderHook(() => useTuningWizard('log-1', 'full'));
+    const { result } = renderHook(() => useTuningWizard('log-1', TUNING_MODE.FULL));
 
     await act(async () => {
       await result.current.runFilterAnalysis();

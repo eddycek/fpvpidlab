@@ -4,10 +4,11 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { TuningStatusBanner } from './TuningStatusBanner';
 import type { TuningSession } from '@shared/types/tuning.types';
+import { TUNING_MODE, TUNING_PHASE } from '@shared/constants';
 
 const baseSession: TuningSession = {
   profileId: 'profile-1',
-  phase: 'filter_flight_pending',
+  phase: TUNING_PHASE.FILTER_FLIGHT_PENDING,
   startedAt: '2026-02-10T10:00:00Z',
   updatedAt: '2026-02-10T10:00:00Z',
 };
@@ -69,14 +70,14 @@ describe('TuningStatusBanner', () => {
   });
 
   it('shows filter_analysis UI', () => {
-    renderBanner({ ...baseSession, phase: 'filter_analysis' });
+    renderBanner({ ...baseSession, phase: TUNING_PHASE.FILTER_ANALYSIS });
 
     expect(screen.getByText(/Run the Filter Wizard/)).toBeInTheDocument();
     expect(screen.getByText('Open Filter Wizard')).toBeInTheDocument();
   });
 
   it('shows pid_flight_pending UI', () => {
-    renderBanner({ ...baseSession, phase: 'pid_flight_pending' });
+    renderBanner({ ...baseSession, phase: TUNING_PHASE.PID_FLIGHT_PENDING });
 
     expect(
       screen.getByText(/Erase Blackbox data from flash, then fly the PID test flight/)
@@ -86,14 +87,14 @@ describe('TuningStatusBanner', () => {
   });
 
   it('shows pid_analysis UI', () => {
-    renderBanner({ ...baseSession, phase: 'pid_analysis' });
+    renderBanner({ ...baseSession, phase: TUNING_PHASE.PID_ANALYSIS });
 
     expect(screen.getByText(/Run the PID Wizard/)).toBeInTheDocument();
     expect(screen.getByText('Open PID Wizard')).toBeInTheDocument();
   });
 
   it('shows completed UI', () => {
-    renderBanner({ ...baseSession, phase: 'completed' });
+    renderBanner({ ...baseSession, phase: TUNING_PHASE.COMPLETED });
 
     expect(screen.getByText(/Tuning complete/)).toBeInTheDocument();
     expect(screen.getByText('Dismiss')).toBeInTheDocument();
@@ -101,7 +102,7 @@ describe('TuningStatusBanner', () => {
 
   it('calls onAction with correct action when primary button clicked', async () => {
     const user = userEvent.setup();
-    renderBanner({ ...baseSession, phase: 'filter_analysis' });
+    renderBanner({ ...baseSession, phase: TUNING_PHASE.FILTER_ANALYSIS });
 
     await user.click(screen.getByText('Open Filter Wizard'));
     expect(onAction).toHaveBeenCalledWith('open_filter_wizard');
@@ -112,15 +113,15 @@ describe('TuningStatusBanner', () => {
     renderBanner();
 
     await user.click(screen.getByText('View Flight Guide'));
-    expect(onViewGuide).toHaveBeenCalledWith('filter');
+    expect(onViewGuide).toHaveBeenCalledWith(TUNING_MODE.FILTER);
   });
 
   it('calls onViewGuide with pid mode for pid phases', async () => {
     const user = userEvent.setup();
-    renderBanner({ ...baseSession, phase: 'pid_flight_pending' });
+    renderBanner({ ...baseSession, phase: TUNING_PHASE.PID_FLIGHT_PENDING });
 
     await user.click(screen.getByText('View Flight Guide'));
-    expect(onViewGuide).toHaveBeenCalledWith('pid');
+    expect(onViewGuide).toHaveBeenCalledWith(TUNING_MODE.PID);
   });
 
   it('calls onReset when Reset Session clicked', async () => {
@@ -132,14 +133,14 @@ describe('TuningStatusBanner', () => {
   });
 
   it('does not show View Flight Guide for phases without guideTip', () => {
-    renderBanner({ ...baseSession, phase: 'filter_analysis' });
+    renderBanner({ ...baseSession, phase: TUNING_PHASE.FILTER_ANALYSIS });
 
     expect(screen.queryByText('View Flight Guide')).not.toBeInTheDocument();
   });
 
   it('shows download log button for filter_log_ready', async () => {
     const user = userEvent.setup();
-    renderBanner({ ...baseSession, phase: 'filter_log_ready' });
+    renderBanner({ ...baseSession, phase: TUNING_PHASE.FILTER_LOG_READY });
 
     expect(screen.getByText(/Download the Blackbox log/)).toBeInTheDocument();
     await user.click(screen.getByText('Download Log'));
@@ -148,7 +149,7 @@ describe('TuningStatusBanner', () => {
 
   it('shows download log button for pid_log_ready', async () => {
     const user = userEvent.setup();
-    renderBanner({ ...baseSession, phase: 'pid_log_ready' });
+    renderBanner({ ...baseSession, phase: TUNING_PHASE.PID_LOG_READY });
 
     expect(screen.getByText(/Download the Blackbox log/)).toBeInTheDocument();
     await user.click(screen.getByText('Download Log'));
@@ -167,7 +168,7 @@ describe('TuningStatusBanner', () => {
     const guideBtn = screen.getByText('View Flight Guide');
     expect(guideBtn.className).toContain('wizard-btn-primary');
     await user.click(guideBtn);
-    expect(onViewGuide).toHaveBeenCalledWith('filter');
+    expect(onViewGuide).toHaveBeenCalledWith(TUNING_MODE.FILTER);
   });
 
   it('advances step indicator after flash erased in filter_flight_pending', () => {
@@ -181,7 +182,7 @@ describe('TuningStatusBanner', () => {
 
   it('shows flash erased state for pid_flight_pending', async () => {
     const user = userEvent.setup();
-    renderBanner({ ...baseSession, phase: 'pid_flight_pending' }, true);
+    renderBanner({ ...baseSession, phase: TUNING_PHASE.PID_FLIGHT_PENDING }, true);
 
     expect(
       screen.getByText(/Flash erased! Disconnect your drone and fly the PID test flight/)
@@ -189,7 +190,7 @@ describe('TuningStatusBanner', () => {
     expect(screen.queryByText('Erase Flash')).not.toBeInTheDocument();
     const guideBtn = screen.getByText('View Flight Guide');
     await user.click(guideBtn);
-    expect(onViewGuide).toHaveBeenCalledWith('pid');
+    expect(onViewGuide).toHaveBeenCalledWith(TUNING_MODE.PID);
   });
 
   it('shows Skip Erase button for filter_flight_pending', async () => {
@@ -202,13 +203,13 @@ describe('TuningStatusBanner', () => {
   });
 
   it('shows Skip Erase button for pid_flight_pending', () => {
-    renderBanner({ ...baseSession, phase: 'pid_flight_pending' });
+    renderBanner({ ...baseSession, phase: TUNING_PHASE.PID_FLIGHT_PENDING });
 
     expect(screen.getByText('Skip Erase')).toBeInTheDocument();
   });
 
   it('shows Skip Erase button for filter_applied (Continue)', () => {
-    renderBanner({ ...baseSession, phase: 'filter_applied' });
+    renderBanner({ ...baseSession, phase: TUNING_PHASE.FILTER_APPLIED });
 
     expect(screen.getByText('Continue')).toBeInTheDocument();
     expect(screen.getByText('Skip Erase')).toBeInTheDocument();
@@ -225,9 +226,13 @@ describe('TuningStatusBanner', () => {
   });
 
   it('shows erased state for pid_flight_pending with eraseSkipped', () => {
-    renderBanner({ ...baseSession, phase: 'pid_flight_pending', eraseSkipped: true }, false, {
-      flashUsedSize: 26000000,
-    });
+    renderBanner(
+      { ...baseSession, phase: TUNING_PHASE.PID_FLIGHT_PENDING, eraseSkipped: true },
+      false,
+      {
+        flashUsedSize: 26000000,
+      }
+    );
 
     expect(
       screen.getByText(/Flash erased! Disconnect your drone and fly the PID test flight/)
@@ -236,14 +241,17 @@ describe('TuningStatusBanner', () => {
   });
 
   it('does not show erased state for eraseSkipped in non-flight-pending phase', () => {
-    renderBanner({ ...baseSession, phase: 'filter_analysis', eraseSkipped: true }, false);
+    renderBanner(
+      { ...baseSession, phase: TUNING_PHASE.FILTER_ANALYSIS, eraseSkipped: true },
+      false
+    );
 
     expect(screen.queryByText(/Flash erased!/)).not.toBeInTheDocument();
     expect(screen.getByText('Open Filter Wizard')).toBeInTheDocument();
   });
 
   it('does not show Skip Erase for non-erase phases', () => {
-    renderBanner({ ...baseSession, phase: 'filter_analysis' });
+    renderBanner({ ...baseSession, phase: TUNING_PHASE.FILTER_ANALYSIS });
 
     expect(screen.queryByText('Skip Erase')).not.toBeInTheDocument();
   });
@@ -271,7 +279,7 @@ describe('TuningStatusBanner', () => {
   });
 
   it('does not show flash erased state for non-flight-pending phases', () => {
-    renderBanner({ ...baseSession, phase: 'filter_analysis' }, true);
+    renderBanner({ ...baseSession, phase: TUNING_PHASE.FILTER_ANALYSIS }, true);
 
     expect(screen.queryByText(/Flash erased!/)).not.toBeInTheDocument();
     expect(screen.getByText('Open Filter Wizard')).toBeInTheDocument();
@@ -280,7 +288,7 @@ describe('TuningStatusBanner', () => {
   it('shows downloading state when downloading prop is true', () => {
     render(
       <TuningStatusBanner
-        session={{ ...baseSession, phase: 'filter_log_ready' }}
+        session={{ ...baseSession, phase: TUNING_PHASE.FILTER_LOG_READY }}
         onAction={onAction}
         onViewGuide={onViewGuide}
         onReset={onReset}
@@ -295,7 +303,7 @@ describe('TuningStatusBanner', () => {
   it('shows download progress percentage when downloadProgress is set', () => {
     render(
       <TuningStatusBanner
-        session={{ ...baseSession, phase: 'filter_log_ready' }}
+        session={{ ...baseSession, phase: TUNING_PHASE.FILTER_LOG_READY }}
         onAction={onAction}
         onViewGuide={onViewGuide}
         onReset={onReset}
@@ -310,7 +318,7 @@ describe('TuningStatusBanner', () => {
   it('disables primary button when downloading', () => {
     render(
       <TuningStatusBanner
-        session={{ ...baseSession, phase: 'pid_log_ready' }}
+        session={{ ...baseSession, phase: TUNING_PHASE.PID_LOG_READY }}
         onAction={onAction}
         onViewGuide={onViewGuide}
         onReset={onReset}
@@ -323,7 +331,7 @@ describe('TuningStatusBanner', () => {
 
   it('shows filter_applied UI with Continue button and PID guide', async () => {
     const user = userEvent.setup();
-    renderBanner({ ...baseSession, phase: 'filter_applied' });
+    renderBanner({ ...baseSession, phase: TUNING_PHASE.FILTER_APPLIED });
 
     expect(screen.getByText(/Filters applied/)).toBeInTheDocument();
     expect(screen.getByText('Continue')).toBeInTheDocument();
@@ -335,7 +343,7 @@ describe('TuningStatusBanner', () => {
 
   it('shows pid_applied UI with Erase & Verify and Skip buttons', async () => {
     const user = userEvent.setup();
-    renderBanner({ ...baseSession, phase: 'pid_applied' });
+    renderBanner({ ...baseSession, phase: TUNING_PHASE.PID_APPLIED });
 
     expect(screen.getByText(/PIDs applied/)).toBeInTheDocument();
     expect(screen.getByText('Erase & Verify')).toBeInTheDocument();
@@ -347,7 +355,7 @@ describe('TuningStatusBanner', () => {
 
   it('shows verification_pending UI with Download Log', async () => {
     const user = userEvent.setup();
-    renderBanner({ ...baseSession, phase: 'verification_pending' });
+    renderBanner({ ...baseSession, phase: TUNING_PHASE.VERIFICATION_PENDING });
 
     expect(screen.getByText(/Download the verification hover log/)).toBeInTheDocument();
     expect(screen.getByText('Download Log')).toBeInTheDocument();
@@ -359,7 +367,11 @@ describe('TuningStatusBanner', () => {
 
   it('shows verification_pending UI with Analyze when log downloaded', async () => {
     const user = userEvent.setup();
-    renderBanner({ ...baseSession, phase: 'verification_pending', verificationLogId: 'log-ver' });
+    renderBanner({
+      ...baseSession,
+      phase: TUNING_PHASE.VERIFICATION_PENDING,
+      verificationLogId: 'log-ver',
+    });
 
     expect(screen.getByText(/Verification log ready/)).toBeInTheDocument();
     expect(screen.getByText('Analyze Verification')).toBeInTheDocument();
@@ -370,7 +382,7 @@ describe('TuningStatusBanner', () => {
 
   it('calls skip_verification from verification_pending', async () => {
     const user = userEvent.setup();
-    renderBanner({ ...baseSession, phase: 'verification_pending' });
+    renderBanner({ ...baseSession, phase: TUNING_PHASE.VERIFICATION_PENDING });
 
     await user.click(screen.getByText('Skip & Complete'));
     expect(onAction).toHaveBeenCalledWith('skip_verification');
@@ -386,7 +398,9 @@ describe('TuningStatusBanner', () => {
   });
 
   it('shows BB warning during pid_flight_pending with bbSettingsOk=false', () => {
-    renderBanner({ ...baseSession, phase: 'pid_flight_pending' }, false, { bbSettingsOk: false });
+    renderBanner({ ...baseSession, phase: TUNING_PHASE.PID_FLIGHT_PENDING }, false, {
+      bbSettingsOk: false,
+    });
 
     expect(screen.getByText(/Blackbox settings need to be fixed/)).toBeInTheDocument();
   });
@@ -398,7 +412,9 @@ describe('TuningStatusBanner', () => {
   });
 
   it('does not show BB warning for non-flight-pending phases', () => {
-    renderBanner({ ...baseSession, phase: 'filter_analysis' }, false, { bbSettingsOk: false });
+    renderBanner({ ...baseSession, phase: TUNING_PHASE.FILTER_ANALYSIS }, false, {
+      bbSettingsOk: false,
+    });
 
     expect(screen.queryByText(/Blackbox settings need to be fixed/)).not.toBeInTheDocument();
   });
@@ -443,7 +459,9 @@ describe('TuningStatusBanner', () => {
   });
 
   it('shows erased state for pid_flight_pending when flash is empty', () => {
-    renderBanner({ ...baseSession, phase: 'pid_flight_pending' }, false, { flashUsedSize: 0 });
+    renderBanner({ ...baseSession, phase: TUNING_PHASE.PID_FLIGHT_PENDING }, false, {
+      flashUsedSize: 0,
+    });
 
     expect(
       screen.getByText(/Flash erased! Disconnect your drone and fly the PID test flight/)
@@ -452,14 +470,16 @@ describe('TuningStatusBanner', () => {
   });
 
   it('does not show erased state for non-flight-pending phase even with flashUsedSize=0', () => {
-    renderBanner({ ...baseSession, phase: 'filter_analysis' }, false, { flashUsedSize: 0 });
+    renderBanner({ ...baseSession, phase: TUNING_PHASE.FILTER_ANALYSIS }, false, {
+      flashUsedSize: 0,
+    });
 
     expect(screen.queryByText(/Flash erased!/)).not.toBeInTheDocument();
     expect(screen.getByText('Open Filter Wizard')).toBeInTheDocument();
   });
 
   it('shows erased state with flight guide for verification_pending after erase', () => {
-    renderBanner({ ...baseSession, phase: 'verification_pending' }, true);
+    renderBanner({ ...baseSession, phase: TUNING_PHASE.VERIFICATION_PENDING }, true);
 
     expect(screen.getByText(/Flash erased! Disconnect and fly a 30-60s hover/)).toBeInTheDocument();
     expect(screen.getByText('View Flight Guide')).toBeInTheDocument();
@@ -468,7 +488,9 @@ describe('TuningStatusBanner', () => {
   });
 
   it('shows Download Log for verification_pending when flash has data (reconnect after flight)', () => {
-    renderBanner({ ...baseSession, phase: 'verification_pending' }, false, { flashUsedSize: 1000 });
+    renderBanner({ ...baseSession, phase: TUNING_PHASE.VERIFICATION_PENDING }, false, {
+      flashUsedSize: 1000,
+    });
 
     expect(screen.getByText('Download Log')).toBeInTheDocument();
     expect(screen.queryByText('View Flight Guide')).not.toBeInTheDocument();
@@ -476,7 +498,9 @@ describe('TuningStatusBanner', () => {
 
   it('shows Download Log when flashErased is stale but flash has data', () => {
     // erasedForPhase persists across reconnect — flash data overrides
-    renderBanner({ ...baseSession, phase: 'verification_pending' }, true, { flashUsedSize: 8000 });
+    renderBanner({ ...baseSession, phase: TUNING_PHASE.VERIFICATION_PENDING }, true, {
+      flashUsedSize: 8000,
+    });
 
     expect(screen.getByText('Download Log')).toBeInTheDocument();
     expect(screen.queryByText('View Flight Guide')).not.toBeInTheDocument();
@@ -484,21 +508,23 @@ describe('TuningStatusBanner', () => {
 
   // Import File button tests
   it('shows Import File button in filter_log_ready phase', () => {
-    renderBanner({ ...baseSession, phase: 'filter_log_ready' });
+    renderBanner({ ...baseSession, phase: TUNING_PHASE.FILTER_LOG_READY });
 
     expect(screen.getByText('Download Log')).toBeInTheDocument();
     expect(screen.getByText('Import File')).toBeInTheDocument();
   });
 
   it('shows Import File button in pid_log_ready phase', () => {
-    renderBanner({ ...baseSession, phase: 'pid_log_ready' });
+    renderBanner({ ...baseSession, phase: TUNING_PHASE.PID_LOG_READY });
 
     expect(screen.getByText('Download Log')).toBeInTheDocument();
     expect(screen.getByText('Import File')).toBeInTheDocument();
   });
 
   it('shows Import File button in verification_pending without log', () => {
-    renderBanner({ ...baseSession, phase: 'verification_pending' }, false, { flashUsedSize: 1000 });
+    renderBanner({ ...baseSession, phase: TUNING_PHASE.VERIFICATION_PENDING }, false, {
+      flashUsedSize: 1000,
+    });
 
     expect(screen.getByText('Download Log')).toBeInTheDocument();
     expect(screen.getByText('Import File')).toBeInTheDocument();
@@ -507,7 +533,7 @@ describe('TuningStatusBanner', () => {
 
   it('fires import_log action when Import File is clicked', async () => {
     const user = userEvent.setup();
-    renderBanner({ ...baseSession, phase: 'filter_log_ready' });
+    renderBanner({ ...baseSession, phase: TUNING_PHASE.FILTER_LOG_READY });
 
     await user.click(screen.getByText('Import File'));
     expect(onAction).toHaveBeenCalledWith('import_log');
@@ -521,7 +547,7 @@ describe('TuningStatusBanner', () => {
   });
 
   it('does not show Import File button in analysis phases', () => {
-    renderBanner({ ...baseSession, phase: 'filter_analysis' });
+    renderBanner({ ...baseSession, phase: TUNING_PHASE.FILTER_ANALYSIS });
 
     expect(screen.getByText('Open Filter Wizard')).toBeInTheDocument();
     expect(screen.queryByText('Import File')).not.toBeInTheDocument();
@@ -549,7 +575,9 @@ describe('TuningStatusBanner', () => {
   });
 
   it('shows "Erase Logs" label for SD card in pid_flight_pending', () => {
-    renderBanner({ ...baseSession, phase: 'pid_flight_pending' }, false, { storageType: 'sdcard' });
+    renderBanner({ ...baseSession, phase: TUNING_PHASE.PID_FLIGHT_PENDING }, false, {
+      storageType: 'sdcard',
+    });
 
     expect(screen.getByText('Erase Logs')).toBeInTheDocument();
     expect(
@@ -580,7 +608,9 @@ describe('TuningStatusBanner', () => {
   });
 
   it('shows "Erase Logs & Verify" for SD card in pid_applied', () => {
-    renderBanner({ ...baseSession, phase: 'pid_applied' }, false, { storageType: 'sdcard' });
+    renderBanner({ ...baseSession, phase: TUNING_PHASE.PID_APPLIED }, false, {
+      storageType: 'sdcard',
+    });
 
     expect(screen.getByText('Erase Logs & Verify')).toBeInTheDocument();
     expect(screen.queryByText('Erase & Verify')).not.toBeInTheDocument();
@@ -595,10 +625,14 @@ describe('TuningStatusBanner', () => {
   });
 
   it('shows erased state for verification_pending via eraseCompleted (SD card)', () => {
-    renderBanner({ ...baseSession, phase: 'verification_pending', eraseCompleted: true }, false, {
-      storageType: 'sdcard',
-      flashUsedSize: 32000,
-    });
+    renderBanner(
+      { ...baseSession, phase: TUNING_PHASE.VERIFICATION_PENDING, eraseCompleted: true },
+      false,
+      {
+        storageType: 'sdcard',
+        flashUsedSize: 32000,
+      }
+    );
 
     expect(screen.getByText(/Logs erased! Disconnect and fly a 30-60s hover/)).toBeInTheDocument();
     expect(screen.getByText('View Flight Guide')).toBeInTheDocument();

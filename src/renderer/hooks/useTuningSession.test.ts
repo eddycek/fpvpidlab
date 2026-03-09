@@ -2,10 +2,11 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { useTuningSession } from './useTuningSession';
 import type { TuningSession } from '@shared/types/tuning.types';
+import { TUNING_PHASE } from '@shared/constants';
 
 const mockSession: TuningSession = {
   profileId: 'profile-1',
-  phase: 'filter_flight_pending',
+  phase: TUNING_PHASE.FILTER_FLIGHT_PENDING,
   startedAt: '2026-02-10T10:00:00Z',
   updatedAt: '2026-02-10T10:00:00Z',
 };
@@ -119,7 +120,7 @@ describe('useTuningSession', () => {
 
     const updatedSession: TuningSession = {
       ...mockSession,
-      phase: 'filter_log_ready',
+      phase: TUNING_PHASE.FILTER_LOG_READY,
       filterLogId: 'log-42',
       updatedAt: '2026-02-10T11:00:00Z',
     };
@@ -132,11 +133,11 @@ describe('useTuningSession', () => {
     });
 
     await act(async () => {
-      await result.current.updatePhase('filter_log_ready', { filterLogId: 'log-42' });
+      await result.current.updatePhase(TUNING_PHASE.FILTER_LOG_READY, { filterLogId: 'log-42' });
     });
 
     expect(window.betaflight.updateTuningPhase).toHaveBeenCalledWith(
-      'filter_log_ready',
+      TUNING_PHASE.FILTER_LOG_READY,
       { filterLogId: 'log-42' }
     );
     expect(result.current.session).toEqual(updatedSession);
@@ -206,7 +207,7 @@ describe('useTuningSession', () => {
     // Profile changes to one with active session
     const sessionB: TuningSession = {
       profileId: 'profile-2',
-      phase: 'pid_flight_pending',
+      phase: TUNING_PHASE.PID_FLIGHT_PENDING,
       startedAt: '2026-02-11T10:00:00Z',
       updatedAt: '2026-02-11T10:00:00Z',
     };

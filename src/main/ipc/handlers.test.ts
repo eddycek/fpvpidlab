@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { IPCChannel } from '@shared/types/ipc.types';
 import type { IPCResponse } from '@shared/types/ipc.types';
 import type { PIDConfiguration } from '@shared/types/pid.types';
+import { TUNING_TYPE, TUNING_PHASE } from '@shared/constants';
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
@@ -59,16 +60,20 @@ vi.mock('../analysis/headerValidation', () => ({
   enrichSettingsFromBBLHeaders: (...args: any[]) => mockEnrichSettings(...args),
 }));
 
-vi.mock('@shared/constants', () => ({
-  PRESET_PROFILES: {
-    '5inch-freestyle': {
-      name: '5" Freestyle',
-      description: 'Standard freestyle',
-      size: '5"',
-      battery: '4S',
+vi.mock('@shared/constants', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@shared/constants')>();
+  return {
+    ...actual,
+    PRESET_PROFILES: {
+      '5inch-freestyle': {
+        name: '5" Freestyle',
+        description: 'Standard freestyle',
+        size: '5"',
+        battery: '4S',
+      },
     },
-  },
-}));
+  };
+});
 
 import {
   registerIPCHandlers,
@@ -257,13 +262,13 @@ function createMockTuningSessionManager() {
     getSession: vi.fn().mockResolvedValue(null),
     createSession: vi.fn().mockResolvedValue({
       profileId: 'prof-1',
-      phase: 'filter_flight_pending',
+      phase: TUNING_PHASE.FILTER_FLIGHT_PENDING,
       startedAt: '2026-01-01',
       updatedAt: '2026-01-01',
     }),
     updatePhase: vi.fn().mockResolvedValue({
       profileId: 'prof-1',
-      phase: 'filter_flight_pending',
+      phase: TUNING_PHASE.FILTER_FLIGHT_PENDING,
       startedAt: '2026-01-01',
       updatedAt: '2026-01-01',
     }),
@@ -1534,11 +1539,11 @@ describe('IPC Handlers', () => {
     it('returns session for current profile', async () => {
       mockTuningMgr.getSession.mockResolvedValue({
         profileId: 'prof-1',
-        phase: 'filter_flight_pending',
+        phase: TUNING_PHASE.FILTER_FLIGHT_PENDING,
       });
       const res = await invoke(IPCChannel.TUNING_GET_SESSION);
       expect(res.success).toBe(true);
-      expect(res.data.phase).toBe('filter_flight_pending');
+      expect(res.data.phase).toBe(TUNING_PHASE.FILTER_FLIGHT_PENDING);
     });
 
     it('returns null when no profile', async () => {
@@ -1559,7 +1564,7 @@ describe('IPC Handlers', () => {
     it('creates session and sends event', async () => {
       mockTuningMgr.getSession.mockResolvedValue({
         profileId: 'prof-1',
-        phase: 'filter_flight_pending',
+        phase: TUNING_PHASE.FILTER_FLIGHT_PENDING,
         startedAt: '2026-01-01',
         updatedAt: '2026-01-01',
         baselineSnapshotId: 'snap-new',
@@ -1567,10 +1572,10 @@ describe('IPC Handlers', () => {
 
       const res = await invoke(IPCChannel.TUNING_START_SESSION);
       expect(res.success).toBe(true);
-      expect(mockTuningMgr.createSession).toHaveBeenCalledWith('prof-1', 'guided');
+      expect(mockTuningMgr.createSession).toHaveBeenCalledWith('prof-1', TUNING_TYPE.DEEP);
       expect(mockMainWindow.webContents.send).toHaveBeenCalledWith(
         IPCChannel.EVENT_TUNING_SESSION_CHANGED,
-        expect.objectContaining({ phase: 'filter_flight_pending' })
+        expect.objectContaining({ phase: TUNING_PHASE.FILTER_FLIGHT_PENDING })
       );
     });
 
@@ -1591,19 +1596,23 @@ describe('IPC Handlers', () => {
     it('updates phase and sends event', async () => {
       mockTuningMgr.updatePhase.mockResolvedValue({
         profileId: 'prof-1',
-        phase: 'filter_log_ready',
+        phase: TUNING_PHASE.FILTER_LOG_READY,
       });
 
-      const res = await invoke(IPCChannel.TUNING_UPDATE_PHASE, 'filter_log_ready', {
+      const res = await invoke(IPCChannel.TUNING_UPDATE_PHASE, TUNING_PHASE.FILTER_LOG_READY, {
         filterLogId: 'log-1',
       });
       expect(res.success).toBe(true);
-      expect(mockTuningMgr.updatePhase).toHaveBeenCalledWith('prof-1', 'filter_log_ready', {
-        filterLogId: 'log-1',
-      });
+      expect(mockTuningMgr.updatePhase).toHaveBeenCalledWith(
+        'prof-1',
+        TUNING_PHASE.FILTER_LOG_READY,
+        {
+          filterLogId: 'log-1',
+        }
+      );
       expect(mockMainWindow.webContents.send).toHaveBeenCalledWith(
         IPCChannel.EVENT_TUNING_SESSION_CHANGED,
-        expect.objectContaining({ phase: 'filter_log_ready' })
+        expect.objectContaining({ phase: TUNING_PHASE.FILTER_LOG_READY })
       );
     });
   });

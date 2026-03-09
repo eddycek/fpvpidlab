@@ -4,6 +4,7 @@ import { join } from 'path';
 import { tmpdir } from 'os';
 import { TuningSessionManager } from './TuningSessionManager';
 import type { TuningSession } from '@shared/types/tuning.types';
+import { TUNING_TYPE, TUNING_PHASE } from '@shared/constants';
 
 describe('TuningSessionManager', () => {
   let manager: TuningSessionManager;
@@ -38,7 +39,7 @@ describe('TuningSessionManager', () => {
       const result = await manager.getSession('profile-1');
       expect(result).not.toBeNull();
       expect(result!.profileId).toBe('profile-1');
-      expect(result!.phase).toBe('filter_flight_pending');
+      expect(result!.phase).toBe(TUNING_PHASE.FILTER_FLIGHT_PENDING);
     });
 
     it('returns null for corrupted JSON file', async () => {
@@ -53,7 +54,7 @@ describe('TuningSessionManager', () => {
     it('creates session file in tuning directory', async () => {
       const session = await manager.createSession('profile-1');
       expect(session.profileId).toBe('profile-1');
-      expect(session.phase).toBe('filter_flight_pending');
+      expect(session.phase).toBe(TUNING_PHASE.FILTER_FLIGHT_PENDING);
       expect(session.startedAt).toBeTruthy();
       expect(session.updatedAt).toBeTruthy();
 
@@ -73,10 +74,10 @@ describe('TuningSessionManager', () => {
 
     it('overwrites existing session when creating new', async () => {
       const first = await manager.createSession('profile-1');
-      await manager.updatePhase('profile-1', 'filter_analysis');
+      await manager.updatePhase('profile-1', TUNING_PHASE.FILTER_ANALYSIS);
 
       const second = await manager.createSession('profile-1');
-      expect(second.phase).toBe('filter_flight_pending');
+      expect(second.phase).toBe(TUNING_PHASE.FILTER_FLIGHT_PENDING);
       expect(new Date(second.startedAt).getTime()).toBeGreaterThanOrEqual(
         new Date(first.startedAt).getTime()
       );
@@ -86,10 +87,10 @@ describe('TuningSessionManager', () => {
   describe('updatePhase', () => {
     it('updates phase and preserves existing data', async () => {
       const session = await manager.createSession('profile-1');
-      const updated = await manager.updatePhase('profile-1', 'filter_log_ready');
+      const updated = await manager.updatePhase('profile-1', TUNING_PHASE.FILTER_LOG_READY);
 
       expect(updated.profileId).toBe('profile-1');
-      expect(updated.phase).toBe('filter_log_ready');
+      expect(updated.phase).toBe(TUNING_PHASE.FILTER_LOG_READY);
       expect(updated.startedAt).toBe(session.startedAt);
       expect(new Date(updated.updatedAt).getTime()).toBeGreaterThanOrEqual(
         new Date(session.updatedAt).getTime()
@@ -98,20 +99,20 @@ describe('TuningSessionManager', () => {
 
     it('merges extra data into session', async () => {
       await manager.createSession('profile-1');
-      const updated = await manager.updatePhase('profile-1', 'filter_analysis', {
+      const updated = await manager.updatePhase('profile-1', TUNING_PHASE.FILTER_ANALYSIS, {
         filterLogId: 'log-123',
       });
 
-      expect(updated.phase).toBe('filter_analysis');
+      expect(updated.phase).toBe(TUNING_PHASE.FILTER_ANALYSIS);
       expect(updated.filterLogId).toBe('log-123');
     });
 
     it('preserves previous extra data across updates', async () => {
       await manager.createSession('profile-1');
-      await manager.updatePhase('profile-1', 'filter_analysis', {
+      await manager.updatePhase('profile-1', TUNING_PHASE.FILTER_ANALYSIS, {
         filterLogId: 'log-123',
       });
-      const updated = await manager.updatePhase('profile-1', 'pid_flight_pending', {
+      const updated = await manager.updatePhase('profile-1', TUNING_PHASE.PID_FLIGHT_PENDING, {
         appliedFilterChanges: [
           { setting: 'gyro_lpf1_static_hz', previousValue: 250, newValue: 150 },
         ],
@@ -119,13 +120,13 @@ describe('TuningSessionManager', () => {
 
       expect(updated.filterLogId).toBe('log-123');
       expect(updated.appliedFilterChanges).toHaveLength(1);
-      expect(updated.phase).toBe('pid_flight_pending');
+      expect(updated.phase).toBe(TUNING_PHASE.PID_FLIGHT_PENDING);
     });
 
     it('throws when session does not exist', async () => {
-      await expect(manager.updatePhase('nonexistent', 'filter_log_ready')).rejects.toThrow(
-        'No tuning session found'
-      );
+      await expect(
+        manager.updatePhase('nonexistent', TUNING_PHASE.FILTER_LOG_READY)
+      ).rejects.toThrow('No tuning session found');
     });
   });
 
@@ -146,33 +147,33 @@ describe('TuningSessionManager', () => {
 
   describe('quick tuning support', () => {
     it('creates quick session with quick_flight_pending phase', async () => {
-      const session = await manager.createSession('profile-1', 'quick');
-      expect(session.phase).toBe('quick_flight_pending');
-      expect(session.tuningType).toBe('quick');
+      const session = await manager.createSession('profile-1', TUNING_TYPE.FLASH);
+      expect(session.phase).toBe(TUNING_PHASE.QUICK_FLIGHT_PENDING);
+      expect(session.tuningType).toBe(TUNING_TYPE.FLASH);
     });
 
     it('creates guided session by default', async () => {
       const session = await manager.createSession('profile-1');
-      expect(session.phase).toBe('filter_flight_pending');
-      expect(session.tuningType).toBe('guided');
+      expect(session.phase).toBe(TUNING_PHASE.FILTER_FLIGHT_PENDING);
+      expect(session.tuningType).toBe(TUNING_TYPE.DEEP);
     });
 
     it('creates guided session with explicit type', async () => {
-      const session = await manager.createSession('profile-1', 'guided');
-      expect(session.phase).toBe('filter_flight_pending');
-      expect(session.tuningType).toBe('guided');
+      const session = await manager.createSession('profile-1', TUNING_TYPE.DEEP);
+      expect(session.phase).toBe(TUNING_PHASE.FILTER_FLIGHT_PENDING);
+      expect(session.tuningType).toBe(TUNING_TYPE.DEEP);
     });
 
     it('supports quick phase transitions', async () => {
-      await manager.createSession('profile-1', 'quick');
-      const updated = await manager.updatePhase('profile-1', 'quick_log_ready');
-      expect(updated.phase).toBe('quick_log_ready');
-      expect(updated.tuningType).toBe('quick');
+      await manager.createSession('profile-1', TUNING_TYPE.FLASH);
+      const updated = await manager.updatePhase('profile-1', TUNING_PHASE.QUICK_LOG_READY);
+      expect(updated.phase).toBe(TUNING_PHASE.QUICK_LOG_READY);
+      expect(updated.tuningType).toBe(TUNING_TYPE.FLASH);
     });
 
     it('preserves quickLogId across updates', async () => {
-      await manager.createSession('profile-1', 'quick');
-      await manager.updatePhase('profile-1', 'quick_analysis', {
+      await manager.createSession('profile-1', TUNING_TYPE.FLASH);
+      await manager.updatePhase('profile-1', TUNING_PHASE.QUICK_ANALYSIS, {
         quickLogId: 'quick-log-123',
       });
       const session = await manager.getSession('profile-1');
@@ -185,13 +186,13 @@ describe('TuningSessionManager', () => {
       await manager.createSession('profile-a');
       await manager.createSession('profile-b');
 
-      await manager.updatePhase('profile-a', 'pid_flight_pending');
+      await manager.updatePhase('profile-a', TUNING_PHASE.PID_FLIGHT_PENDING);
 
       const sessionA = await manager.getSession('profile-a');
       const sessionB = await manager.getSession('profile-b');
 
-      expect(sessionA!.phase).toBe('pid_flight_pending');
-      expect(sessionB!.phase).toBe('filter_flight_pending');
+      expect(sessionA!.phase).toBe(TUNING_PHASE.PID_FLIGHT_PENDING);
+      expect(sessionB!.phase).toBe(TUNING_PHASE.FILTER_FLIGHT_PENDING);
     });
 
     it('deleting one profile session does not affect another', async () => {

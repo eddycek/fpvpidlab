@@ -48,10 +48,57 @@ export const SIZE_DEFAULTS = {
   '10"': { weight: 1500, motorKV: 1400, battery: '6S' as const, propSize: '10"' },
 } as const;
 
+/**
+ * Tuning session type constants.
+ * Names use user-facing terminology; values are serialized strings (cannot change).
+ */
+export const TUNING_TYPE = {
+  /** Deep Tune — 2-flight guided session (filter flight + PID flight) */
+  DEEP: 'guided' as const,
+  /** Flash Tune — 1-flight session via Wiener deconvolution */
+  FLASH: 'quick' as const,
+};
+
+/**
+ * Wizard operating mode constants.
+ * Controls which analysis steps the wizard shows.
+ */
+export const TUNING_MODE = {
+  FILTER: 'filter' as const,
+  PID: 'pid' as const,
+  FULL: 'full' as const,
+  /** Flash Tune wizard mode — combined filter + transfer function analysis */
+  FLASH: 'quick' as const,
+};
+
+/**
+ * Tuning phase constants — state machine phases for tuning sessions.
+ * Deep Tune phases (filter_* → pid_*) and Flash Tune phases (quick_*).
+ */
+export const TUNING_PHASE = {
+  // Deep Tune phases
+  FILTER_FLIGHT_PENDING: 'filter_flight_pending' as const,
+  FILTER_LOG_READY: 'filter_log_ready' as const,
+  FILTER_ANALYSIS: 'filter_analysis' as const,
+  FILTER_APPLIED: 'filter_applied' as const,
+  PID_FLIGHT_PENDING: 'pid_flight_pending' as const,
+  PID_LOG_READY: 'pid_log_ready' as const,
+  PID_ANALYSIS: 'pid_analysis' as const,
+  PID_APPLIED: 'pid_applied' as const,
+  // Flash Tune phases
+  QUICK_FLIGHT_PENDING: 'quick_flight_pending' as const,
+  QUICK_LOG_READY: 'quick_log_ready' as const,
+  QUICK_ANALYSIS: 'quick_analysis' as const,
+  QUICK_APPLIED: 'quick_applied' as const,
+  // Shared phases
+  VERIFICATION_PENDING: 'verification_pending' as const,
+  COMPLETED: 'completed' as const,
+};
+
 /** Display labels for tuning types — single source of truth */
 export const TUNING_TYPE_LABELS = {
-  guided: 'Deep Tune',
-  quick: 'Flash Tune',
+  [TUNING_TYPE.DEEP]: 'Deep Tune',
+  [TUNING_TYPE.FLASH]: 'Flash Tune',
 } as const;
 
 // Helper to build preset from SIZE_DEFAULTS with overrides

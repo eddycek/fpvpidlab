@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { TUNING_WORKFLOW } from '@shared/constants/flightGuide';
-import { TUNING_TYPE_LABELS } from '@shared/constants';
+import { TUNING_TYPE, TUNING_MODE, TUNING_TYPE_LABELS } from '@shared/constants';
 import type { FlightGuideMode } from '@shared/types/tuning.types';
 import { useConnection } from '../../hooks/useConnection';
 import { FlightGuideContent } from '../TuningWizard/FlightGuideContent';
@@ -29,24 +29,24 @@ interface TuningWorkflowModalProps {
 }
 
 function getSubtitle(mode?: FlightGuideMode): string {
-  if (mode === 'filter') return 'Follow these steps for the filter tuning flight.';
-  if (mode === 'pid') return 'Follow these steps for the PID tuning flight.';
-  if (mode === 'quick')
+  if (mode === TUNING_MODE.FILTER) return 'Follow these steps for the filter tuning flight.';
+  if (mode === TUNING_MODE.PID) return 'Follow these steps for the PID tuning flight.';
+  if (mode === TUNING_MODE.FLASH)
     return 'Rip a pack, land, tune. Any flight works — no special maneuvers needed.';
   if (mode === 'verification') return 'Fly a short hover to verify noise improvement after tuning.';
   return 'Follow this workflow each time you tune. Repeat until your quad feels dialed in.';
 }
 
 function getWorkflowSteps(mode?: FlightGuideMode) {
-  if (mode === 'filter') {
+  if (mode === TUNING_MODE.FILTER) {
     // Steps 0–5: Connect → Analyze & apply filters
     return TUNING_WORKFLOW.slice(0, 6);
   }
-  if (mode === 'pid') {
+  if (mode === TUNING_MODE.PID) {
     // Steps 6–8: Erase again → Analyze & apply PIDs
     return TUNING_WORKFLOW.slice(6, 9);
   }
-  if (mode === 'quick' || mode === 'verification') {
+  if (mode === TUNING_MODE.FLASH || mode === 'verification') {
     return [];
   }
   return TUNING_WORKFLOW;
@@ -113,9 +113,9 @@ export function TuningWorkflowModal({ onClose, mode }: TuningWorkflowModalProps)
 
   // Non-overview modes: original behavior (single-mode view)
   const steps = !isOverviewMode ? getWorkflowSteps(mode) : [];
-  const isQuickMode = mode === 'quick';
-  const showFilter = !isOverviewMode && !isQuickMode && mode === 'filter';
-  const showPid = !isOverviewMode && !isQuickMode && mode === 'pid';
+  const isQuickMode = mode === TUNING_MODE.FLASH;
+  const showFilter = !isOverviewMode && !isQuickMode && mode === TUNING_MODE.FILTER;
+  const showPid = !isOverviewMode && !isQuickMode && mode === TUNING_MODE.PID;
   const showQuick = !isOverviewMode && isQuickMode;
   const isVerificationMode = mode === 'verification';
 
@@ -124,7 +124,7 @@ export function TuningWorkflowModal({ onClose, mode }: TuningWorkflowModalProps)
     : isVerificationMode
       ? 'Verification Hover'
       : isQuickMode
-        ? `${TUNING_TYPE_LABELS.quick} Flight Guide`
+        ? `${TUNING_TYPE_LABELS[TUNING_TYPE.FLASH]} Flight Guide`
         : 'How to Prepare Blackbox Data';
 
   return (
@@ -142,14 +142,14 @@ export function TuningWorkflowModal({ onClose, mode }: TuningWorkflowModalProps)
                 className={`workflow-tab ${activeTab === 'deep' ? 'active' : ''}`}
                 onClick={() => setActiveTab('deep')}
               >
-                {TUNING_TYPE_LABELS.guided}
+                {TUNING_TYPE_LABELS[TUNING_TYPE.DEEP]}
                 <span className="workflow-tab-meta">2 flights</span>
               </button>
               <button
                 className={`workflow-tab ${activeTab === 'flash' ? 'active' : ''}`}
                 onClick={() => setActiveTab('flash')}
               >
-                {TUNING_TYPE_LABELS.quick}
+                {TUNING_TYPE_LABELS[TUNING_TYPE.FLASH]}
                 <span className="workflow-tab-meta">1 flight</span>
               </button>
             </div>

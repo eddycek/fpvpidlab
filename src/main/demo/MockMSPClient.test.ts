@@ -1,5 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { MockMSPClient, DEMO_FC_SERIAL, DEMO_CLI_DIFF, DEMO_FC_INFO } from './MockMSPClient';
+import {
+  MockMSPClient,
+  DEMO_FC_SERIAL,
+  DEMO_CLI_DIFF,
+  DEMO_FC_INFO,
+  DEMO_FLIGHT,
+} from './MockMSPClient';
 
 describe('MockMSPClient', () => {
   let client: MockMSPClient;
@@ -293,14 +299,14 @@ describe('MockMSPClient', () => {
 
     it('cycles flight type: filter → pid → verification → filter', async () => {
       // Initial state: next flight is filter
-      expect(client._nextFlightType).toBe('filter');
+      expect(client._nextFlightType).toBe(DEMO_FLIGHT.FILTER);
 
       // 1st erase → generates filter BBL, next becomes pid
       const erase1 = client.eraseBlackboxFlash();
       await vi.advanceTimersByTimeAsync(500);
       await erase1;
       vi.advanceTimersByTime(3000); // auto-flight fires
-      expect(client._nextFlightType).toBe('pid');
+      expect(client._nextFlightType).toBe(DEMO_FLIGHT.PID);
 
       vi.advanceTimersByTime(1500); // reconnect
 
@@ -309,7 +315,7 @@ describe('MockMSPClient', () => {
       await vi.advanceTimersByTimeAsync(500);
       await erase2;
       vi.advanceTimersByTime(3000);
-      expect(client._nextFlightType).toBe('verification');
+      expect(client._nextFlightType).toBe(DEMO_FLIGHT.VERIFICATION);
 
       vi.advanceTimersByTime(1500);
 
@@ -318,7 +324,7 @@ describe('MockMSPClient', () => {
       await vi.advanceTimersByTimeAsync(500);
       await erase3;
       vi.advanceTimersByTime(3000);
-      expect(client._nextFlightType).toBe('filter');
+      expect(client._nextFlightType).toBe(DEMO_FLIGHT.FILTER);
 
       vi.advanceTimersByTime(1500);
 
@@ -327,7 +333,7 @@ describe('MockMSPClient', () => {
       await vi.advanceTimersByTimeAsync(500);
       await erase4;
       vi.advanceTimersByTime(3000);
-      expect(client._nextFlightType).toBe('pid');
+      expect(client._nextFlightType).toBe(DEMO_FLIGHT.PID);
     });
   });
 
@@ -500,10 +506,10 @@ describe('MockMSPClient', () => {
       await vi.advanceTimersByTimeAsync(500);
       await eraseP;
       vi.advanceTimersByTime(3000);
-      expect(client._nextFlightType).toBe('pid');
+      expect(client._nextFlightType).toBe(DEMO_FLIGHT.PID);
 
       client.resetDemoState();
-      expect(client._nextFlightType).toBe('filter');
+      expect(client._nextFlightType).toBe(DEMO_FLIGHT.FILTER);
     });
 
     it('clears flash data and BBL data', () => {
@@ -541,20 +547,20 @@ describe('MockMSPClient', () => {
         vi.advanceTimersByTime(3000);
         vi.advanceTimersByTime(1500);
       }
-      expect(client._nextFlightType).toBe('verification');
+      expect(client._nextFlightType).toBe(DEMO_FLIGHT.VERIFICATION);
       expect(client._tuningCycle).toBe(0);
 
       client.advancePastVerification();
-      expect(client._nextFlightType).toBe('filter');
+      expect(client._nextFlightType).toBe(DEMO_FLIGHT.FILTER);
       expect(client._tuningCycle).toBe(1);
     });
 
     it('does nothing when not at verification', async () => {
-      expect(client._nextFlightType).toBe('filter');
+      expect(client._nextFlightType).toBe(DEMO_FLIGHT.FILTER);
       expect(client._tuningCycle).toBe(0);
 
       client.advancePastVerification();
-      expect(client._nextFlightType).toBe('filter');
+      expect(client._nextFlightType).toBe(DEMO_FLIGHT.FILTER);
       expect(client._tuningCycle).toBe(0);
     });
   });

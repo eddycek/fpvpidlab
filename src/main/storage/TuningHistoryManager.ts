@@ -9,6 +9,7 @@ import { randomUUID } from 'crypto';
 import { promises as fs } from 'fs';
 import { join } from 'path';
 import type { TuningSession } from '@shared/types/tuning.types';
+import { TUNING_PHASE } from '@shared/constants';
 import type {
   CompletedTuningRecord,
   FilterMetricsSummary,
@@ -34,7 +35,7 @@ export class TuningHistoryManager {
    * @throws if session.phase !== 'completed'
    */
   async archiveSession(session: TuningSession): Promise<CompletedTuningRecord> {
-    if (session.phase !== 'completed') {
+    if (session.phase !== TUNING_PHASE.COMPLETED) {
       throw new Error(`Cannot archive non-completed session (phase: ${session.phase})`);
     }
 

@@ -3,6 +3,7 @@ import { RecommendationCard } from './RecommendationCard';
 import { SpectrumChart } from './charts/SpectrumChart';
 import type { FilterAnalysisResult, AnalysisProgress } from '@shared/types/analysis.types';
 import type { TuningMode } from '@shared/types/tuning.types';
+import { TUNING_MODE } from '@shared/constants';
 
 interface FilterAnalysisStepProps {
   filterResult: FilterAnalysisResult | null;
@@ -37,8 +38,9 @@ export function FilterAnalysisStep({
   onContinue,
   mode = 'full',
 }: FilterAnalysisStepProps) {
-  const continueLabel = mode === 'filter' ? 'Continue to Summary' : 'Continue to PID Analysis';
-  const skipLabel = mode === 'filter' ? 'Skip to Summary' : 'Skip to PIDs';
+  const continueLabel =
+    mode === TUNING_MODE.FILTER ? 'Continue to Summary' : 'Continue to PID Analysis';
+  const skipLabel = mode === TUNING_MODE.FILTER ? 'Skip to Summary' : 'Skip to PIDs';
   const [noiseDetailsOpen, setNoiseDetailsOpen] = useState(true);
 
   if (filterAnalyzing) {

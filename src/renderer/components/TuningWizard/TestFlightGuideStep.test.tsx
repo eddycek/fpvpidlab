@@ -3,6 +3,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { TestFlightGuideStep } from './TestFlightGuideStep';
+import { TUNING_MODE } from '@shared/constants';
 
 describe('TestFlightGuideStep', () => {
   it('renders with full mode intro text by default', () => {
@@ -13,29 +14,31 @@ describe('TestFlightGuideStep', () => {
   });
 
   it('renders filter mode intro text', () => {
-    render(<TestFlightGuideStep onContinue={() => {}} mode="filter" />);
+    render(<TestFlightGuideStep onContinue={() => {}} mode={TUNING_MODE.FILTER} />);
 
     expect(screen.getByText(/Follow this flight plan to collect noise data/)).toBeInTheDocument();
   });
 
   it('renders pid mode intro text', () => {
-    render(<TestFlightGuideStep onContinue={() => {}} mode="pid" />);
+    render(<TestFlightGuideStep onContinue={() => {}} mode={TUNING_MODE.PID} />);
 
-    expect(screen.getByText(/Follow this flight plan to collect step response data/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Follow this flight plan to collect step response data/)
+    ).toBeInTheDocument();
   });
 
   it('calls onContinue when button clicked', async () => {
     const user = userEvent.setup();
     const onContinue = vi.fn();
 
-    render(<TestFlightGuideStep onContinue={onContinue} mode="filter" />);
+    render(<TestFlightGuideStep onContinue={onContinue} mode={TUNING_MODE.FILTER} />);
 
     await user.click(screen.getByRole('button', { name: /Got it/ }));
     expect(onContinue).toHaveBeenCalledOnce();
   });
 
   it('passes mode to FlightGuideContent', () => {
-    render(<TestFlightGuideStep onContinue={() => {}} mode="filter" />);
+    render(<TestFlightGuideStep onContinue={() => {}} mode={TUNING_MODE.FILTER} />);
 
     // Filter mode shows Throttle Sweep from FlightGuideContent
     expect(screen.getByText('Throttle Sweep')).toBeInTheDocument();

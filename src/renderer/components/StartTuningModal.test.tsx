@@ -3,6 +3,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { StartTuningModal } from './StartTuningModal';
+import { TUNING_TYPE } from '@shared/constants';
 
 describe('StartTuningModal', () => {
   it('renders both tuning mode options', () => {
@@ -20,7 +21,7 @@ describe('StartTuningModal', () => {
     render(<StartTuningModal onStart={onStart} onCancel={vi.fn()} />);
 
     await user.click(screen.getByText('Deep Tune'));
-    expect(onStart).toHaveBeenCalledWith('guided');
+    expect(onStart).toHaveBeenCalledWith(TUNING_TYPE.DEEP);
   });
 
   it('calls onStart with quick when Flash Tune clicked', async () => {
@@ -29,7 +30,7 @@ describe('StartTuningModal', () => {
     render(<StartTuningModal onStart={onStart} onCancel={vi.fn()} />);
 
     await user.click(screen.getByText('Flash Tune'));
-    expect(onStart).toHaveBeenCalledWith('quick');
+    expect(onStart).toHaveBeenCalledWith(TUNING_TYPE.FLASH);
   });
 
   it('calls onCancel when Cancel clicked', async () => {

@@ -9,6 +9,7 @@ import type {
   FilterMetricsSummary,
   PIDMetricsSummary,
 } from '@shared/types/tuning-history.types';
+import { TUNING_PHASE, TUNING_TYPE } from '@shared/constants';
 
 // ResponsiveContainer mock
 vi.mock('recharts', async (importOriginal) => {
@@ -68,7 +69,7 @@ const verificationMetrics: FilterMetricsSummary = {
 
 const baseSession: TuningSession = {
   profileId: 'profile-1',
-  phase: 'completed',
+  phase: TUNING_PHASE.COMPLETED,
   startedAt: '2026-02-10T10:00:00Z',
   updatedAt: '2026-02-10T10:30:00Z',
   filterLogId: 'log-f1',
@@ -272,7 +273,7 @@ describe('TuningCompletionSummary', () => {
   it('shows "Flash Tune Complete" for quick tuning sessions', () => {
     const quickSession: TuningSession = {
       ...baseSession,
-      tuningType: 'quick',
+      tuningType: TUNING_TYPE.FLASH,
       quickLogId: 'log-q1',
       filterLogId: undefined,
       pidLogId: undefined,

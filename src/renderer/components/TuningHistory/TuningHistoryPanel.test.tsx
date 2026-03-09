@@ -4,6 +4,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { TuningHistoryPanel } from './TuningHistoryPanel';
 import type { CompletedTuningRecord } from '@shared/types/tuning-history.types';
+import { TUNING_TYPE } from '@shared/constants';
 
 // ResponsiveContainer mock (for expanded detail with chart)
 vi.mock('recharts', async (importOriginal) => {
@@ -157,7 +158,7 @@ describe('TuningHistoryPanel', () => {
   it('shows tuning type badge for all records', () => {
     const guided = makeRecord('r1', '2026-02-10T00:00:00Z');
     const quick = makeRecord('r2', '2026-02-01T00:00:00Z');
-    quick.tuningType = 'quick';
+    quick.tuningType = TUNING_TYPE.FLASH;
     render(<TuningHistoryPanel history={[guided, quick]} loading={false} />);
 
     expect(screen.getByText('Deep Tune')).toBeInTheDocument();

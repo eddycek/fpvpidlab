@@ -34,6 +34,7 @@ import type {
   FlightGuideMode,
   AppliedChange,
 } from '@shared/types/tuning.types';
+import { TUNING_MODE, TUNING_PHASE } from '@shared/constants';
 import type {
   CompletedTuningRecord,
   FilterMetricsSummary,
@@ -173,15 +174,15 @@ function AppContent() {
           const currentPhase = tuning.session?.phase;
 
           // filter_applied "Continue" → transition to pid_flight_pending before erase
-          if (currentPhase === 'filter_applied') {
-            await tuning.updatePhase('pid_flight_pending');
+          if (currentPhase === TUNING_PHASE.FILTER_APPLIED) {
+            await tuning.updatePhase(TUNING_PHASE.PID_FLIGHT_PENDING);
           }
 
           await window.betaflight.eraseBlackboxFlash();
           // Re-read phase after potential transition above
           const phaseForErase =
-            currentPhase === 'filter_applied'
-              ? 'pid_flight_pending'
+            currentPhase === TUNING_PHASE.FILTER_APPLIED
+              ? TUNING_PHASE.PID_FLIGHT_PENDING
               : (tuning.session?.phase ?? null);
           setErasedForPhase(phaseForErase);
           setFlashUsedSize(0);
@@ -203,16 +204,16 @@ function AppContent() {
         break;
       case 'skip_erase': {
         const currentPhaseSkip = tuning.session?.phase;
-        if (currentPhaseSkip === 'filter_applied') {
-          await tuning.updatePhase('pid_flight_pending', { eraseSkipped: true });
+        if (currentPhaseSkip === TUNING_PHASE.FILTER_APPLIED) {
+          await tuning.updatePhase(TUNING_PHASE.PID_FLIGHT_PENDING, { eraseSkipped: true });
         } else if (flashUsedSize != null && flashUsedSize > 0) {
           // Flash has data — advance directly to log_ready (user wants to use existing data)
           const logReadyPhase =
-            currentPhaseSkip === 'quick_flight_pending'
-              ? 'quick_log_ready'
-              : currentPhaseSkip === 'filter_flight_pending'
-                ? 'filter_log_ready'
-                : 'pid_log_ready';
+            currentPhaseSkip === TUNING_PHASE.QUICK_FLIGHT_PENDING
+              ? TUNING_PHASE.QUICK_LOG_READY
+              : currentPhaseSkip === TUNING_PHASE.FILTER_FLIGHT_PENDING
+                ? TUNING_PHASE.FILTER_LOG_READY
+                : TUNING_PHASE.PID_LOG_READY;
           await tuning.updatePhase(logReadyPhase);
         } else {
           // No data on flash — persist eraseSkipped flag, wait for reconnect after flight
@@ -230,14 +231,16 @@ function AppContent() {
 
           // Transition session to *_analysis phase and store the log ID
           const importPhase = tuning.session?.phase;
-          if (importPhase === 'filter_log_ready') {
-            await tuning.updatePhase('filter_analysis', { filterLogId: imported.id });
-          } else if (importPhase === 'pid_log_ready') {
-            await tuning.updatePhase('pid_analysis', { pidLogId: imported.id });
-          } else if (importPhase === 'quick_log_ready') {
-            await tuning.updatePhase('quick_analysis', { quickLogId: imported.id });
-          } else if (importPhase === 'verification_pending') {
-            await tuning.updatePhase('verification_pending', { verificationLogId: imported.id });
+          if (importPhase === TUNING_PHASE.FILTER_LOG_READY) {
+            await tuning.updatePhase(TUNING_PHASE.FILTER_ANALYSIS, { filterLogId: imported.id });
+          } else if (importPhase === TUNING_PHASE.PID_LOG_READY) {
+            await tuning.updatePhase(TUNING_PHASE.PID_ANALYSIS, { pidLogId: imported.id });
+          } else if (importPhase === TUNING_PHASE.QUICK_LOG_READY) {
+            await tuning.updatePhase(TUNING_PHASE.QUICK_ANALYSIS, { quickLogId: imported.id });
+          } else if (importPhase === TUNING_PHASE.VERIFICATION_PENDING) {
+            await tuning.updatePhase(TUNING_PHASE.VERIFICATION_PENDING, {
+              verificationLogId: imported.id,
+            });
           }
         } catch (err) {
           toast.error(err instanceof Error ? err.message : 'Failed to import log');
@@ -255,24 +258,24 @@ function AppContent() {
           // Transition session to *_analysis phase and store the log ID.
           // Clear eraseCompleted — the phase is advancing past the erase step.
           const phase = tuning.session?.phase;
-          if (phase === 'filter_log_ready') {
-            await tuning.updatePhase('filter_analysis', {
+          if (phase === TUNING_PHASE.FILTER_LOG_READY) {
+            await tuning.updatePhase(TUNING_PHASE.FILTER_ANALYSIS, {
               filterLogId: metadata.id,
               eraseCompleted: undefined,
             });
-          } else if (phase === 'pid_log_ready') {
-            await tuning.updatePhase('pid_analysis', {
+          } else if (phase === TUNING_PHASE.PID_LOG_READY) {
+            await tuning.updatePhase(TUNING_PHASE.PID_ANALYSIS, {
               pidLogId: metadata.id,
               eraseCompleted: undefined,
             });
-          } else if (phase === 'quick_log_ready') {
-            await tuning.updatePhase('quick_analysis', {
+          } else if (phase === TUNING_PHASE.QUICK_LOG_READY) {
+            await tuning.updatePhase(TUNING_PHASE.QUICK_ANALYSIS, {
               quickLogId: metadata.id,
               eraseCompleted: undefined,
             });
-          } else if (phase === 'verification_pending') {
+          } else if (phase === TUNING_PHASE.VERIFICATION_PENDING) {
             // Save verification log ID without changing phase
-            await tuning.updatePhase('verification_pending', {
+            await tuning.updatePhase(TUNING_PHASE.VERIFICATION_PENDING, {
               verificationLogId: metadata.id,
               eraseCompleted: undefined,
             });
@@ -307,7 +310,7 @@ function AppContent() {
       case 'open_quick_wizard': {
         const quickLogId = tuning.session?.quickLogId;
         if (quickLogId) {
-          setWizardMode('quick');
+          setWizardMode(TUNING_MODE.FLASH);
           setActiveLogId(quickLogId);
         } else {
           toast.info('Download a Blackbox log first');
@@ -325,7 +328,7 @@ function AppContent() {
       case 'complete_session':
         try {
           setErasedForPhase(null);
-          await tuning.updatePhase('completed');
+          await tuning.updatePhase(TUNING_PHASE.COMPLETED);
         } catch (err) {
           toast.error(err instanceof Error ? err.message : 'Failed to complete session');
         }
@@ -333,13 +336,13 @@ function AppContent() {
       case 'prepare_verification':
         try {
           setErasing(true);
-          await tuning.updatePhase('verification_pending');
+          await tuning.updatePhase(TUNING_PHASE.VERIFICATION_PENDING);
           await window.betaflight.eraseBlackboxFlash();
-          setErasedForPhase('verification_pending');
+          setErasedForPhase(TUNING_PHASE.VERIFICATION_PENDING);
           setFlashUsedSize(0);
           setBbRefreshKey((k) => k + 1);
           // Persist eraseCompleted for SD card MSC disconnect survival
-          await tuning.updatePhase('verification_pending', { eraseCompleted: true });
+          await tuning.updatePhase(TUNING_PHASE.VERIFICATION_PENDING, { eraseCompleted: true });
           toast.success(storageType === 'sdcard' ? 'Logs erased!' : 'Flash erased!');
         } catch (err) {
           toast.error(err instanceof Error ? err.message : 'Failed to prepare verification');
@@ -350,7 +353,7 @@ function AppContent() {
       case 'skip_verification':
         try {
           setErasedForPhase(null);
-          await tuning.updatePhase('completed');
+          await tuning.updatePhase(TUNING_PHASE.COMPLETED);
         } catch (err) {
           toast.error(err instanceof Error ? err.message : 'Failed to complete session');
         }
@@ -385,19 +388,19 @@ function AppContent() {
     transferFunctionMetrics?: TransferFunctionMetricsSummary;
   }) => {
     const phase = tuning.session?.phase;
-    if (phase === 'filter_analysis') {
-      await tuning.updatePhase('filter_applied', {
+    if (phase === TUNING_PHASE.FILTER_ANALYSIS) {
+      await tuning.updatePhase(TUNING_PHASE.FILTER_APPLIED, {
         appliedFilterChanges: changes.filterChanges,
         filterMetrics: changes.filterMetrics,
       });
-    } else if (phase === 'pid_analysis') {
-      await tuning.updatePhase('pid_applied', {
+    } else if (phase === TUNING_PHASE.PID_ANALYSIS) {
+      await tuning.updatePhase(TUNING_PHASE.PID_APPLIED, {
         appliedPIDChanges: changes.pidChanges,
         appliedFeedforwardChanges: changes.feedforwardChanges,
         pidMetrics: changes.pidMetrics,
       });
-    } else if (phase === 'quick_analysis') {
-      await tuning.updatePhase('quick_applied', {
+    } else if (phase === TUNING_PHASE.QUICK_ANALYSIS) {
+      await tuning.updatePhase(TUNING_PHASE.QUICK_APPLIED, {
         appliedFilterChanges: changes.filterChanges,
         appliedPIDChanges: changes.pidChanges,
         appliedFeedforwardChanges: changes.feedforwardChanges,
@@ -429,7 +432,7 @@ function AppContent() {
         await window.betaflight.updateVerificationMetrics(verificationMetrics);
       } else {
         // First-time — transition to completed (archives session)
-        await tuning.updatePhase('completed', { verificationMetrics });
+        await tuning.updatePhase(TUNING_PHASE.COMPLETED, { verificationMetrics });
       }
       setErasedForPhase(null);
     } catch (err) {
@@ -487,12 +490,12 @@ function AppContent() {
     if (tuning.session) {
       // Active tuning session — open wizard in mode matching current phase
       const phase = tuning.session.phase;
-      if (phase === 'filter_analysis') {
+      if (phase === TUNING_PHASE.FILTER_ANALYSIS) {
         setWizardMode('filter');
-      } else if (phase === 'pid_analysis') {
+      } else if (phase === TUNING_PHASE.PID_ANALYSIS) {
         setWizardMode('pid');
-      } else if (phase === 'quick_analysis') {
-        setWizardMode('quick');
+      } else if (phase === TUNING_PHASE.QUICK_ANALYSIS) {
+        setWizardMode(TUNING_MODE.FLASH);
       } else {
         setWizardMode('filter');
       }
@@ -559,7 +562,7 @@ function AppContent() {
             {isConnected &&
               currentProfile &&
               tuning.session &&
-              tuning.session.phase === 'completed' && (
+              tuning.session.phase === TUNING_PHASE.COMPLETED && (
                 <TuningCompletionSummary
                   session={tuning.session}
                   onDismiss={() => handleTuningAction('dismiss')}
@@ -570,7 +573,7 @@ function AppContent() {
             {isConnected &&
               currentProfile &&
               tuning.session &&
-              tuning.session.phase !== 'completed' && (
+              tuning.session.phase !== TUNING_PHASE.COMPLETED && (
                 <TuningStatusBanner
                   session={tuning.session}
                   flashErased={erasedForPhase === tuning.session.phase}

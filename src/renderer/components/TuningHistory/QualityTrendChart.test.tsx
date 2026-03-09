@@ -3,6 +3,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { QualityTrendChart } from './QualityTrendChart';
 import type { CompletedTuningRecord } from '@shared/types/tuning-history.types';
+import { TUNING_TYPE } from '@shared/constants';
 
 vi.mock('recharts', async (importOriginal) => {
   const mod = await importOriginal<typeof import('recharts')>();
@@ -18,7 +19,7 @@ function makeRecord(id: string, date: string, noiseFloorDb = -50): CompletedTuni
   return {
     id,
     profileId: 'p1',
-    tuningType: 'guided',
+    tuningType: TUNING_TYPE.DEEP,
     startedAt: '2026-01-01T00:00:00Z',
     completedAt: date,
     baselineSnapshotId: null,

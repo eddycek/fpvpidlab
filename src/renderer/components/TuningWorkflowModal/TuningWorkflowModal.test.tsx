@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { TuningWorkflowModal } from './TuningWorkflowModal';
+import { TUNING_MODE } from '@shared/constants';
 
 describe('TuningWorkflowModal', () => {
   const onClose = vi.fn();
@@ -113,9 +114,9 @@ describe('TuningWorkflowModal', () => {
     expect(onClose).not.toHaveBeenCalled();
   });
 
-  describe('mode="filter"', () => {
+  describe('mode={TUNING_MODE.FILTER}', () => {
     it('shows only filter workflow steps (1–6)', () => {
-      render(<TuningWorkflowModal onClose={onClose} mode="filter" />);
+      render(<TuningWorkflowModal onClose={onClose} mode={TUNING_MODE.FILTER} />);
       expect(screen.getByText('Connect your drone')).toBeInTheDocument();
       expect(screen.getByText('Create a backup')).toBeInTheDocument();
       expect(screen.getByText('Check Blackbox setup')).toBeInTheDocument();
@@ -130,29 +131,29 @@ describe('TuningWorkflowModal', () => {
     });
 
     it('shows only filter flight guide section', () => {
-      render(<TuningWorkflowModal onClose={onClose} mode="filter" />);
+      render(<TuningWorkflowModal onClose={onClose} mode={TUNING_MODE.FILTER} />);
       expect(screen.getByText('Flight 1: Filter Test Flight')).toBeInTheDocument();
       expect(screen.queryByText('Flight 2: PID Test Flight')).not.toBeInTheDocument();
       expect(screen.queryByText('Optional: Verification Hover')).not.toBeInTheDocument();
     });
 
     it('shows filter-specific subtitle', () => {
-      render(<TuningWorkflowModal onClose={onClose} mode="filter" />);
+      render(<TuningWorkflowModal onClose={onClose} mode={TUNING_MODE.FILTER} />);
       expect(
         screen.getByText('Follow these steps for the filter tuning flight.')
       ).toBeInTheDocument();
     });
 
     it('does not show tabs', () => {
-      render(<TuningWorkflowModal onClose={onClose} mode="filter" />);
+      render(<TuningWorkflowModal onClose={onClose} mode={TUNING_MODE.FILTER} />);
       expect(screen.queryByText('Deep Tune')).not.toBeInTheDocument();
       expect(screen.queryByText('Flash Tune')).not.toBeInTheDocument();
     });
   });
 
-  describe('mode="pid"', () => {
+  describe('mode={TUNING_MODE.PID}', () => {
     it('shows only PID workflow steps (7–9)', () => {
-      render(<TuningWorkflowModal onClose={onClose} mode="pid" />);
+      render(<TuningWorkflowModal onClose={onClose} mode={TUNING_MODE.PID} />);
       expect(screen.getByText('Erase Blackbox data again')).toBeInTheDocument();
       expect(screen.getByText('Fly: PID test flight')).toBeInTheDocument();
       expect(screen.getByText('Analyze & apply PIDs')).toBeInTheDocument();
@@ -165,14 +166,14 @@ describe('TuningWorkflowModal', () => {
     });
 
     it('shows only PID flight guide section', () => {
-      render(<TuningWorkflowModal onClose={onClose} mode="pid" />);
+      render(<TuningWorkflowModal onClose={onClose} mode={TUNING_MODE.PID} />);
       expect(screen.queryByText('Flight 1: Filter Test Flight')).not.toBeInTheDocument();
       expect(screen.getByText('Flight 2: PID Test Flight')).toBeInTheDocument();
       expect(screen.queryByText('Optional: Verification Hover')).not.toBeInTheDocument();
     });
 
     it('shows PID-specific subtitle', () => {
-      render(<TuningWorkflowModal onClose={onClose} mode="pid" />);
+      render(<TuningWorkflowModal onClose={onClose} mode={TUNING_MODE.PID} />);
       expect(screen.getByText('Follow these steps for the PID tuning flight.')).toBeInTheDocument();
     });
   });

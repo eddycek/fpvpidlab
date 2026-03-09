@@ -7,6 +7,7 @@ import type {
   TransferFunctionMetricsSummary,
 } from '@shared/types/tuning-history.types';
 import { extractFilterMetrics, extractPIDMetrics } from '@shared/utils/metricsExtract';
+import { TUNING_MODE } from '@shared/constants';
 import { WizardProgress } from './WizardProgress';
 import { TestFlightGuideStep } from './TestFlightGuideStep';
 import { SessionSelectStep } from './SessionSelectStep';
@@ -42,7 +43,7 @@ export function TuningWizard({ logId, mode = 'full', onExit, onApplyComplete }: 
 
       if (onApplyComplete) {
         const filterChanges =
-          mode !== 'pid'
+          mode !== TUNING_MODE.PID
             ? wizard.filterResult?.recommendations
                 .filter((r) => r.currentValue !== r.recommendedValue)
                 .map((r) => ({
@@ -54,7 +55,11 @@ export function TuningWizard({ logId, mode = 'full', onExit, onApplyComplete }: 
 
         // In quick mode, PID recs come from transfer function analysis
         const pidSource =
-          mode === 'quick' ? wizard.tfResult : mode !== 'filter' ? wizard.pidResult : null;
+          mode === TUNING_MODE.FLASH
+            ? wizard.tfResult
+            : mode !== TUNING_MODE.FILTER
+              ? wizard.pidResult
+              : null;
         const allPidRecs = pidSource?.recommendations ?? [];
 
         const pidChanges = allPidRecs
@@ -74,13 +79,17 @@ export function TuningWizard({ logId, mode = 'full', onExit, onApplyComplete }: 
           }));
 
         const filterMetrics =
-          mode !== 'pid' && wizard.filterResult
+          mode !== TUNING_MODE.PID && wizard.filterResult
             ? extractFilterMetrics(wizard.filterResult)
             : undefined;
 
         // For quick mode, PID-like metrics come from transfer function analysis
         const pidMetricsSource =
-          mode === 'quick' ? wizard.tfResult : mode !== 'filter' ? wizard.pidResult : null;
+          mode === TUNING_MODE.FLASH
+            ? wizard.tfResult
+            : mode !== TUNING_MODE.FILTER
+              ? wizard.pidResult
+              : null;
         const pidMetrics = pidMetricsSource ? extractPIDMetrics(pidMetricsSource) : undefined;
 
         // TODO: Extract full TF metrics once TransferFunctionEstimator exposes them on PIDAnalysisResult
@@ -125,7 +134,11 @@ export function TuningWizard({ logId, mode = 'full', onExit, onApplyComplete }: 
             onSelectSession={(idx) => {
               wizard.selectSession(idx);
               wizard.setStep(
-                mode === 'quick' ? 'quick_analysis' : mode === 'pid' ? 'pid' : 'filter'
+                mode === TUNING_MODE.FLASH
+                  ? 'quick_analysis'
+                  : mode === TUNING_MODE.PID
+                    ? 'pid'
+                    : 'filter'
               );
             }}
           />
@@ -138,7 +151,7 @@ export function TuningWizard({ logId, mode = 'full', onExit, onApplyComplete }: 
             filterProgress={wizard.filterProgress}
             filterError={wizard.filterError}
             runFilterAnalysis={wizard.runFilterAnalysis}
-            onContinue={() => wizard.setStep(mode === 'filter' ? 'summary' : 'pid')}
+            onContinue={() => wizard.setStep(mode === TUNING_MODE.FILTER ? 'summary' : 'pid')}
             mode={mode}
           />
         );

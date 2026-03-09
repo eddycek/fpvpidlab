@@ -10,6 +10,7 @@ import type {
   ApplyRecommendationsResult,
 } from '@shared/types/ipc.types';
 import type { TuningMode } from '@shared/types/tuning.types';
+import { TUNING_MODE } from '@shared/constants';
 import { markIntentionalDisconnect } from './useConnection';
 
 export type ApplyState = 'idle' | 'confirming' | 'applying' | 'done' | 'error';
@@ -128,9 +129,9 @@ export function useTuningWizard(logId: string, mode: TuningMode = 'full'): UseTu
         setSessionIndex(0);
         setSessionSelected(true);
         // Skip to the correct step based on mode
-        if (mode === 'quick') {
+        if (mode === TUNING_MODE.FLASH) {
           setStep('quick_analysis');
-        } else if (mode === 'pid') {
+        } else if (mode === TUNING_MODE.PID) {
           setStep('pid');
         } else {
           setStep('filter');
@@ -236,16 +237,16 @@ export function useTuningWizard(logId: string, mode: TuningMode = 'full'): UseTu
       try {
         // In mode-specific modes, only send relevant recommendations
         const filterRecs =
-          mode === 'pid'
+          mode === TUNING_MODE.PID
             ? []
             : (filterResult?.recommendations ?? []).filter(
                 (r) => r.currentValue !== r.recommendedValue
               );
-        // For quick mode, PID recs come from transfer function analysis
+        // For Flash Tune mode, PID recs come from transfer function analysis
         const allPidRecs =
-          mode === 'filter'
+          mode === TUNING_MODE.FILTER
             ? []
-            : mode === 'quick'
+            : mode === TUNING_MODE.FLASH
               ? (tfResult?.recommendations ?? [])
               : (pidResult?.recommendations ?? []);
         const pidRecs = allPidRecs.filter(
@@ -282,11 +283,11 @@ export function useTuningWizard(logId: string, mode: TuningMode = 'full'): UseTu
 
   const startApply = useCallback(() => {
     // Check if there are any recommendations to apply
-    const fRecs = mode === 'pid' ? [] : (filterResult?.recommendations ?? []);
+    const fRecs = mode === TUNING_MODE.PID ? [] : (filterResult?.recommendations ?? []);
     const pRecs =
-      mode === 'filter'
+      mode === TUNING_MODE.FILTER
         ? []
-        : mode === 'quick'
+        : mode === TUNING_MODE.FLASH
           ? (tfResult?.recommendations ?? [])
           : (pidResult?.recommendations ?? []);
     const totalRecs = fRecs.length + pRecs.length;

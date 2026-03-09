@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { TuningWizard } from './TuningWizard';
 import type { BlackboxParseResult, BlackboxLogSession } from '@shared/types/blackbox.types';
 import type { FilterAnalysisResult, PIDAnalysisResult } from '@shared/types/analysis.types';
+import { TUNING_MODE } from '@shared/constants';
 
 // ResponsiveContainer needs a real layout engine — mock it for JSDOM
 vi.mock('recharts', async (importOriginal) => {
@@ -870,7 +871,7 @@ describe('TuningWizard', () => {
 
   it('mode=filter skips guide and starts at session step', () => {
     vi.mocked(window.betaflight.parseBlackboxLog).mockImplementation(() => new Promise(() => {}));
-    render(<TuningWizard logId="test-log-1" mode="filter" onExit={onExit} />);
+    render(<TuningWizard logId="test-log-1" mode={TUNING_MODE.FILTER} onExit={onExit} />);
 
     // Should show parsing (session step auto-triggers), not flight guide
     expect(screen.getByText('Parsing Blackbox Log')).toBeInTheDocument();
@@ -879,7 +880,7 @@ describe('TuningWizard', () => {
 
   it('mode=pid skips guide and starts at session step', () => {
     vi.mocked(window.betaflight.parseBlackboxLog).mockImplementation(() => new Promise(() => {}));
-    render(<TuningWizard logId="test-log-1" mode="pid" onExit={onExit} />);
+    render(<TuningWizard logId="test-log-1" mode={TUNING_MODE.PID} onExit={onExit} />);
 
     // Should show parsing (session step auto-triggers), not flight guide
     expect(screen.getByText('Parsing Blackbox Log')).toBeInTheDocument();
@@ -888,7 +889,7 @@ describe('TuningWizard', () => {
 
   it('mode=filter WizardProgress hides PIDs and Flight Guide steps', () => {
     vi.mocked(window.betaflight.parseBlackboxLog).mockImplementation(() => new Promise(() => {}));
-    render(<TuningWizard logId="test-log-1" mode="filter" onExit={onExit} />);
+    render(<TuningWizard logId="test-log-1" mode={TUNING_MODE.FILTER} onExit={onExit} />);
 
     const progressLabels = screen.getAllByText(/(Flight Guide|Session|Filters|PIDs|Summary)/);
     const labels = progressLabels.map((el) => el.textContent);
@@ -899,7 +900,7 @@ describe('TuningWizard', () => {
 
   it('mode=pid WizardProgress hides Filters and Flight Guide steps', () => {
     vi.mocked(window.betaflight.parseBlackboxLog).mockImplementation(() => new Promise(() => {}));
-    render(<TuningWizard logId="test-log-1" mode="pid" onExit={onExit} />);
+    render(<TuningWizard logId="test-log-1" mode={TUNING_MODE.PID} onExit={onExit} />);
 
     const progressLabels = screen.getAllByText(/(Flight Guide|Session|Filters|PIDs|Summary)/);
     const labels = progressLabels.map((el) => el.textContent);
@@ -913,7 +914,7 @@ describe('TuningWizard', () => {
     vi.mocked(window.betaflight.analyzeFilters).mockResolvedValue(mockFilterResult);
 
     const user = userEvent.setup();
-    render(<TuningWizard logId="test-log-1" mode="filter" onExit={onExit} />);
+    render(<TuningWizard logId="test-log-1" mode={TUNING_MODE.FILTER} onExit={onExit} />);
 
     // Guide is skipped — auto-parse + auto-advance to filter step
     await waitFor(() => expect(screen.getByText('Run Filter Analysis')).toBeInTheDocument());
@@ -944,7 +945,7 @@ describe('TuningWizard', () => {
     });
 
     const user = userEvent.setup();
-    render(<TuningWizard logId="test-log-1" mode="filter" onExit={onExit} />);
+    render(<TuningWizard logId="test-log-1" mode={TUNING_MODE.FILTER} onExit={onExit} />);
 
     await waitFor(() => expect(screen.getByText('Run Filter Analysis')).toBeInTheDocument());
     await user.click(screen.getByText('Run Filter Analysis'));
@@ -980,7 +981,7 @@ describe('TuningWizard', () => {
     });
 
     const user = userEvent.setup();
-    render(<TuningWizard logId="test-log-1" mode="pid" onExit={onExit} />);
+    render(<TuningWizard logId="test-log-1" mode={TUNING_MODE.PID} onExit={onExit} />);
 
     // pid mode skips guide, auto-advances to pid step (single session)
     await waitFor(() => expect(screen.getByText('Run PID Analysis')).toBeInTheDocument());
@@ -1022,7 +1023,7 @@ describe('TuningWizard', () => {
     render(
       <TuningWizard
         logId="test-log-1"
-        mode="filter"
+        mode={TUNING_MODE.FILTER}
         onExit={onExit}
         onApplyComplete={onApplyComplete}
       />
@@ -1069,7 +1070,7 @@ describe('TuningWizard', () => {
     render(
       <TuningWizard
         logId="test-log-1"
-        mode="pid"
+        mode={TUNING_MODE.PID}
         onExit={onExit}
         onApplyComplete={onApplyComplete}
       />
@@ -1153,7 +1154,7 @@ describe('TuningWizard', () => {
     vi.mocked(window.betaflight.analyzeFilters).mockResolvedValue(mockFilterResult);
 
     const user = userEvent.setup();
-    render(<TuningWizard logId="test-log-1" mode="filter" onExit={onExit} />);
+    render(<TuningWizard logId="test-log-1" mode={TUNING_MODE.FILTER} onExit={onExit} />);
 
     await waitFor(() => expect(screen.getByText('Run Filter Analysis')).toBeInTheDocument());
     await user.click(screen.getByText('Run Filter Analysis'));

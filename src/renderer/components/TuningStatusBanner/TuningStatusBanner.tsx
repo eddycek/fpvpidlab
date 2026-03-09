@@ -6,7 +6,7 @@ import type {
   FlightGuideMode,
 } from '@shared/types/tuning.types';
 import type { BlackboxStorageType } from '@shared/types/blackbox.types';
-import { TUNING_TYPE_LABELS } from '@shared/constants';
+import { TUNING_TYPE, TUNING_MODE, TUNING_PHASE, TUNING_TYPE_LABELS } from '@shared/constants';
 import './TuningStatusBanner.css';
 
 export type TuningAction =
@@ -116,18 +116,18 @@ function getPhaseUI(
       text: `Erase Blackbox data from ${storageName}, then rip a pack — any flight style works.`,
       buttonLabel: eraseLabel,
       action: 'erase_flash',
-      guideTip: 'quick',
+      guideTip: TUNING_MODE.FLASH,
     },
     quick_log_ready: {
       stepIndex: 1,
-      text: `Flight done! Download the Blackbox log to start ${TUNING_TYPE_LABELS.quick} analysis.`,
+      text: `Flight done! Download the Blackbox log to start ${TUNING_TYPE_LABELS[TUNING_TYPE.FLASH]} analysis.`,
       buttonLabel: 'Download Log',
       action: 'download_log',
     },
     quick_analysis: {
       stepIndex: 2,
-      text: `Log downloaded. Run the ${TUNING_TYPE_LABELS.quick} Wizard to analyze and apply all changes.`,
-      buttonLabel: `Open ${TUNING_TYPE_LABELS.quick} Wizard`,
+      text: `Log downloaded. Run the ${TUNING_TYPE_LABELS[TUNING_TYPE.FLASH]} Wizard to analyze and apply all changes.`,
+      buttonLabel: `Open ${TUNING_TYPE_LABELS[TUNING_TYPE.FLASH]} Wizard`,
       action: 'open_quick_wizard',
     },
     completed: {
@@ -175,14 +175,14 @@ export function TuningStatusBanner({
     downloadProgress && downloadProgress > 0
       ? `Downloading... ${downloadProgress}%`
       : 'Downloading...';
-  const isPidApplied = session.phase === 'pid_applied';
-  const isQuickApplied = session.phase === 'quick_applied';
-  const isVerification = session.phase === 'verification_pending';
+  const isPidApplied = session.phase === TUNING_PHASE.PID_APPLIED;
+  const isQuickApplied = session.phase === TUNING_PHASE.QUICK_APPLIED;
+  const isVerification = session.phase === TUNING_PHASE.VERIFICATION_PENDING;
   const isFlightPending =
-    session.phase === 'filter_flight_pending' ||
-    session.phase === 'pid_flight_pending' ||
-    session.phase === 'quick_flight_pending';
-  const isFlashTune = session.tuningType === 'quick';
+    session.phase === TUNING_PHASE.FILTER_FLIGHT_PENDING ||
+    session.phase === TUNING_PHASE.PID_FLIGHT_PENDING ||
+    session.phase === TUNING_PHASE.QUICK_FLIGHT_PENDING;
+  const isFlashTune = session.tuningType === TUNING_TYPE.FLASH;
   const stepLabels = isFlashTune ? FLASH_STEP_LABELS : DEEP_STEP_LABELS;
 
   // Determine step index and text
@@ -212,7 +212,7 @@ export function TuningStatusBanner({
   }
 
   // For completed phase, use the last step index
-  if (session.phase === 'completed') {
+  if (session.phase === TUNING_PHASE.COMPLETED) {
     stepIndex = stepLabels.length - 1;
   }
 
@@ -226,9 +226,9 @@ export function TuningStatusBanner({
     (isFlightPending && !!session.eraseSkipped) ||
     ((isFlightPending || isVerification) && !!session.eraseCompleted);
   const flightType =
-    session.phase === 'quick_flight_pending'
-      ? TUNING_TYPE_LABELS.quick
-      : session.phase === 'filter_flight_pending'
+    session.phase === TUNING_PHASE.QUICK_FLIGHT_PENDING
+      ? TUNING_TYPE_LABELS[TUNING_TYPE.FLASH]
+      : session.phase === TUNING_PHASE.FILTER_FLIGHT_PENDING
         ? 'filter'
         : 'PID';
   const storageName = isSDCard ? 'SD card' : 'flash';

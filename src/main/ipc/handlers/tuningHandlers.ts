@@ -7,6 +7,7 @@ import {
   IPCResponse,
 } from '@shared/types/ipc.types';
 import { TuningSession, TuningPhase, TuningType } from '@shared/types/tuning.types';
+import { TUNING_TYPE, TUNING_PHASE } from '@shared/constants';
 import { CompletedTuningRecord, FilterMetricsSummary } from '@shared/types/tuning-history.types';
 import { PIDConfiguration } from '@shared/types/pid.types';
 import { HandlerDependencies, createResponse } from './types';
@@ -213,7 +214,7 @@ export function registerTuningHandlers(deps: HandlerDependencies): void {
     IPCChannel.TUNING_START_SESSION,
     async (_event, tuningType?: TuningType): Promise<IPCResponse<TuningSession>> => {
       try {
-        const resolvedType: TuningType = tuningType ?? 'guided';
+        const resolvedType: TuningType = tuningType ?? TUNING_TYPE.DEEP;
 
         if (!tuningSessionManager || !profileManager) {
           return createResponse<TuningSession>(undefined, 'Tuning session manager not initialized');
@@ -237,7 +238,7 @@ export function registerTuningHandlers(deps: HandlerDependencies): void {
 
         // Tell MockMSPClient which flight type cycle to use
         if (deps.isDemoMode && mspClient instanceof MockMSPClient) {
-          if (resolvedType === 'quick') {
+          if (resolvedType === TUNING_TYPE.FLASH) {
             mspClient.setFlashTuneMode();
           } else {
             mspClient.setDeepTuneMode();
@@ -246,7 +247,9 @@ export function registerTuningHandlers(deps: HandlerDependencies): void {
 
         const session = await tuningSessionManager.createSession(profileId, resolvedType);
         const initialPhase =
-          resolvedType === 'quick' ? 'quick_flight_pending' : 'filter_flight_pending';
+          resolvedType === TUNING_TYPE.FLASH
+            ? TUNING_PHASE.QUICK_FLIGHT_PENDING
+            : TUNING_PHASE.FILTER_FLIGHT_PENDING;
         if (baselineSnapshotId) {
           await tuningSessionManager.updatePhase(profileId, initialPhase, {
             baselineSnapshotId,
@@ -280,7 +283,7 @@ export function registerTuningHandlers(deps: HandlerDependencies): void {
         }
 
         // Archive session to history before completing
-        if (phase === 'completed' && tuningHistoryManager) {
+        if (phase === TUNING_PHASE.COMPLETED && tuningHistoryManager) {
           try {
             // In demo mode, advance past skipped verification so flight type cycle stays in sync
             if (deps.isDemoMode && mspClient instanceof MockMSPClient) {
@@ -288,7 +291,11 @@ export function registerTuningHandlers(deps: HandlerDependencies): void {
             }
 
             // First update the phase to 'completed' so the session has the final data
-            const completedSession = await tuningSessionManager.updatePhase(profileId, phase, data);
+            const completedSession = await tuningSessionManager.updatePhase(
+              profileId,
+              TUNING_PHASE.COMPLETED,
+              data
+            );
             await tuningHistoryManager.archiveSession(completedSession);
             logger.info(`Tuning session archived to history for profile ${profileId}`);
             sendTuningSessionChanged(completedSession);
@@ -366,7 +373,7 @@ export function registerTuningHandlers(deps: HandlerDependencies): void {
         }
 
         // Update the active session's verification metrics (keep phase as 'completed')
-        const updated = await tuningSessionManager.updatePhase(profileId, 'completed', {
+        const updated = await tuningSessionManager.updatePhase(profileId, TUNING_PHASE.COMPLETED, {
           verificationMetrics,
         });
 
