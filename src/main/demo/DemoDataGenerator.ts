@@ -641,11 +641,11 @@ export function generateFlashDemoBBL(cycle = 0): Buffer {
   return buildDemoSession({
     frameCount: 80000, // 20s at 4000 Hz
     gyroBase: [2, -1, 0],
-    noiseAmplitude: 12 * f,
+    noiseAmplitude: 8 * f,
     motorHarmonicHz: 160,
-    motorHarmonicAmplitude: 30 * f,
+    motorHarmonicAmplitude: 20 * f,
     electricalNoiseHz: 600,
-    electricalNoiseAmplitude: 6 * f,
+    electricalNoiseAmplitude: 4 * f,
     injectSteps: false,
     iInterval: 2,
     responseParams: computeCycleResponseParams(cycle),

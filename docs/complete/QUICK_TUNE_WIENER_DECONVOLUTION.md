@@ -495,7 +495,7 @@ export interface TransferFunctionMetricsSummary {
 
 ### 6.5 Quality Score Compatibility
 
-`computeTuneQualityScore()` now accepts `transferFunctionMetrics` and uses TF-derived components (Bandwidth, Phase Margin) for Flash Tune scoring instead of step response metrics (Tracking RMS, Overshoot, Settling Time). This makes Flash Tune scores (3 components: Noise Floor + Bandwidth + Phase Margin) comparable with Deep Tune scores (4 components: Noise Floor + Tracking RMS + Overshoot + Settling Time). Points are redistributed evenly among available components.
+`computeTuneQualityScore()` uses unified overshoot scoring across both tuning types. Deep Tune uses step response overshoot (4 components: Noise Floor + Tracking RMS + Overshoot + Settling Time). Flash Tune uses TF synthetic step response overshoot (2 components: Noise Floor + Overshoot). Noise Delta is an optional 5th component when verification data exists. Points are redistributed evenly among available components.
 
 ### 6.6 TuningHistoryManager.archiveSession Changes
 

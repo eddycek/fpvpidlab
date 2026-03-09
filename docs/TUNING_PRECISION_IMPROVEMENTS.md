@@ -206,22 +206,21 @@ Also consider flight style: aggressive/race needs higher propwash floor (~120 Hz
 
 **Problem**: No holistic metric to track tuning progress across sessions. Flash Tune (Wiener deconvolution) produces no step response data, making scores incomparable with Deep Tune.
 
-**Solution**: Compute a 0-100 "tune quality score" with type-aware components, redistributed evenly among available ones:
+**Solution**: Compute a 0-100 "tune quality score" with unified overshoot scoring, redistributed evenly among available components:
 
-**Deep Tune components** (step response data):
+**Deep Tune components** (4 components, step response data):
 - Noise floor level (filter quality)
 - Tracking error RMS (overall quality)
-- Mean overshoot (PID quality)
+- Mean overshoot from step response (PID quality)
 - Mean settling time (PID quality)
 
-**Flash Tune components** (transfer function data):
+**Flash Tune components** (2 components, transfer function data):
 - Noise floor level (filter quality)
-- Bandwidth Hz (tracking speed from TF)
-- Phase margin degrees (stability from TF)
+- Overshoot from TF synthetic step response (PID quality)
 
-**Optional** (when verification flight present): Noise Delta (before/after improvement)
+**Optional 5th component** (when verification flight present): Noise Delta (before/after improvement)
 
-Display as trend chart in TuningHistoryPanel across tuning sessions. Both tuning types produce comparable 0-100 scores.
+Display as trend chart in TuningHistoryPanel across tuning sessions. Both tuning types use unified overshoot scoring for comparable 0-100 scores.
 
 ---
 

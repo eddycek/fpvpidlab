@@ -424,7 +424,7 @@ describe('computeTuneQualityScore', () => {
         bandwidthHz: 80,
         phaseMarginDeg: 60,
         gainMarginDb: 12,
-        overshootPercent: 5,
+        overshootPercent: 0,
         settlingTimeMs: 60,
         riseTimeMs: 10,
       },
@@ -432,7 +432,7 @@ describe('computeTuneQualityScore', () => {
         bandwidthHz: 80,
         phaseMarginDeg: 60,
         gainMarginDb: 12,
-        overshootPercent: 5,
+        overshootPercent: 0,
         settlingTimeMs: 60,
         riseTimeMs: 10,
       },
@@ -440,7 +440,7 @@ describe('computeTuneQualityScore', () => {
         bandwidthHz: 80,
         phaseMarginDeg: 60,
         gainMarginDb: 12,
-        overshootPercent: 5,
+        overshootPercent: 0,
         settlingTimeMs: 60,
         riseTimeMs: 10,
       },
@@ -451,7 +451,7 @@ describe('computeTuneQualityScore', () => {
         bandwidthHz: 10,
         phaseMarginDeg: 15,
         gainMarginDb: 2,
-        overshootPercent: 40,
+        overshootPercent: 50,
         settlingTimeMs: 400,
         riseTimeMs: 80,
       },
@@ -459,7 +459,7 @@ describe('computeTuneQualityScore', () => {
         bandwidthHz: 10,
         phaseMarginDeg: 15,
         gainMarginDb: 2,
-        overshootPercent: 40,
+        overshootPercent: 50,
         settlingTimeMs: 400,
         riseTimeMs: 80,
       },
@@ -467,35 +467,34 @@ describe('computeTuneQualityScore', () => {
         bandwidthHz: 10,
         phaseMarginDeg: 15,
         gainMarginDb: 2,
-        overshootPercent: 40,
+        overshootPercent: 50,
         settlingTimeMs: 400,
         riseTimeMs: 80,
       },
     };
 
-    it('adds Bandwidth and Phase Margin components for Flash Tune', () => {
+    it('uses TF overshoot as Overshoot component for Flash Tune (no step data)', () => {
       const result = computeTuneQualityScore({
         filterMetrics: perfectFilter,
         pidMetrics: { ...perfectPID, stepsDetected: 0 },
         transferFunctionMetrics: perfectTF,
       });
       expect(result).not.toBeNull();
-      // Noise Floor + Bandwidth + Phase Margin = 3 components
-      expect(result!.components).toHaveLength(3);
-      expect(result!.components.find((c) => c.label === 'Bandwidth')).toBeDefined();
-      expect(result!.components.find((c) => c.label === 'Phase Margin')).toBeDefined();
+      // Noise Floor + Overshoot (from TF) = 2 components
+      expect(result!.components).toHaveLength(2);
+      expect(result!.components.find((c) => c.label === 'Overshoot')).toBeDefined();
       expect(result!.components.find((c) => c.label === 'Noise Floor')).toBeDefined();
     });
 
-    it('scores near 100 with perfect TF + filter metrics', () => {
+    it('scores 100 with perfect TF + filter metrics', () => {
       const result = computeTuneQualityScore({
         filterMetrics: perfectFilter,
         pidMetrics: { ...perfectPID, stepsDetected: 0 },
         transferFunctionMetrics: perfectTF,
       });
       expect(result).not.toBeNull();
-      // 3 components × 33 pts = 99 (rounding: Math.round(100/3) = 33)
-      expect(result!.overall).toBeGreaterThanOrEqual(99);
+      // 2 components × 50 pts = 100
+      expect(result!.overall).toBe(100);
       expect(result!.tier).toBe('excellent');
     });
 
@@ -516,7 +515,7 @@ describe('computeTuneQualityScore', () => {
         filterMetrics: perfectFilter,
         pidMetrics: perfectPID,
       });
-      // Perfect Flash Tune: 3 components × 33 pts ≈ 100
+      // Perfect Flash Tune: 2 components × 50 pts = 100
       const flashScore = computeTuneQualityScore({
         filterMetrics: perfectFilter,
         pidMetrics: { ...perfectPID, stepsDetected: 0 },
@@ -524,17 +523,17 @@ describe('computeTuneQualityScore', () => {
       });
       expect(deepScore).not.toBeNull();
       expect(flashScore).not.toBeNull();
-      // Both perfect → both near 100
-      expect(flashScore!.overall).toBeGreaterThanOrEqual(99);
+      // Both perfect → both 100
+      expect(flashScore!.overall).toBe(100);
     });
 
-    it('mid-range TF metrics produce mid-range score', () => {
+    it('mid-range TF overshoot produces mid-range score', () => {
       const midTF: TransferFunctionMetricsSummary = {
         roll: {
           bandwidthHz: 45,
           phaseMarginDeg: 37.5,
           gainMarginDb: 7,
-          overshootPercent: 20,
+          overshootPercent: 25,
           settlingTimeMs: 200,
           riseTimeMs: 40,
         },
@@ -542,7 +541,7 @@ describe('computeTuneQualityScore', () => {
           bandwidthHz: 45,
           phaseMarginDeg: 37.5,
           gainMarginDb: 7,
-          overshootPercent: 20,
+          overshootPercent: 25,
           settlingTimeMs: 200,
           riseTimeMs: 40,
         },
@@ -550,7 +549,7 @@ describe('computeTuneQualityScore', () => {
           bandwidthHz: 45,
           phaseMarginDeg: 37.5,
           gainMarginDb: 7,
-          overshootPercent: 20,
+          overshootPercent: 25,
           settlingTimeMs: 200,
           riseTimeMs: 40,
         },
@@ -567,33 +566,51 @@ describe('computeTuneQualityScore', () => {
         transferFunctionMetrics: midTF,
       });
       expect(result).not.toBeNull();
-      expect(result!.overall).toBeGreaterThanOrEqual(40);
-      expect(result!.overall).toBeLessThanOrEqual(60);
+      // NF: (-40-(-20))/(-60-(-20)) = 0.5 → 25 pts, OS: (25-50)/(0-50) = 0.5 → 25 pts → 50
+      expect(result!.overall).toBe(50);
     });
 
-    it('does not add TF components when transferFunctionMetrics is null', () => {
+    it('does not use TF overshoot when step data is available (Deep Tune)', () => {
       const result = computeTuneQualityScore({
         filterMetrics: perfectFilter,
         pidMetrics: perfectPID,
         transferFunctionMetrics: null,
       });
       expect(result).not.toBeNull();
-      expect(result!.components.find((c) => c.label === 'Bandwidth')).toBeUndefined();
-      expect(result!.components.find((c) => c.label === 'Phase Margin')).toBeUndefined();
-      // Standard 4 components (Deep Tune)
+      // Standard 4 Deep Tune components (Overshoot from step response, not TF)
       expect(result!.components).toHaveLength(4);
     });
 
-    it('TF components coexist with step response components when both present', () => {
+    it('prefers step-based overshoot when both step data and TF available', () => {
       // Edge case: both step response and TF metrics available
       const result = computeTuneQualityScore({
         filterMetrics: perfectFilter,
-        pidMetrics: perfectPID,
+        pidMetrics: perfectPID, // stepsDetected: 30
         transferFunctionMetrics: perfectTF,
       });
       expect(result).not.toBeNull();
-      // All 6 components: Noise Floor, Tracking RMS, Overshoot, Settling Time, Bandwidth, Phase Margin
-      expect(result!.components).toHaveLength(6);
+      // Overshoot uses step data (pid.stepsDetected > 0), TF overshoot ignored
+      // Still 4 Deep Tune components: Noise Floor, Tracking RMS, Overshoot, Settling Time
+      expect(result!.components).toHaveLength(4);
+      const overshootComponent = result!.components.find((c) => c.label === 'Overshoot')!;
+      // Step-based overshoot: perfectPID.roll.meanOvershoot = 0 → perfect score
+      expect(overshootComponent.score).toBe(overshootComponent.maxPoints);
+    });
+
+    it('TF overshoot beyond worst clamps to 0', () => {
+      const extremeTF: TransferFunctionMetricsSummary = {
+        roll: { ...worstTF.roll, overshootPercent: 150 },
+        pitch: { ...worstTF.pitch, overshootPercent: 150 },
+        yaw: { ...worstTF.yaw, overshootPercent: 150 },
+      };
+      const result = computeTuneQualityScore({
+        filterMetrics: worstFilter,
+        pidMetrics: { ...perfectPID, stepsDetected: 0 },
+        transferFunctionMetrics: extremeTF,
+      });
+      expect(result).not.toBeNull();
+      const overshootComponent = result!.components.find((c) => c.label === 'Overshoot')!;
+      expect(overshootComponent.score).toBe(0);
     });
 
     it('backwards compatible: old records without TF metrics still score correctly', () => {

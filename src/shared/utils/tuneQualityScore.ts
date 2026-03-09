@@ -1,11 +1,15 @@
 /**
  * Compute a 0-100 tune quality score from filter, PID, and transfer function metrics.
  *
- * Up to 6 components, linear interpolation with clamp.
+ * Up to 5 components, linear interpolation with clamp.
  * Missing components are redistributed evenly among available ones.
  *
  * Deep Tune (step response): Noise Floor, Tracking RMS, Overshoot, Settling Time, [Noise Delta]
- * Flash Tune (transfer function): Noise Floor, Bandwidth, Phase Margin, [Noise Delta]
+ * Flash Tune (transfer function): Noise Floor, Overshoot (from TF synthetic step), [Noise Delta]
+ *
+ * Overshoot is a unified metric — Deep Tune sources it from step response measurements,
+ * Flash Tune sources it from the TF-derived synthetic step response. Both measure the
+ * same physical property (how much the system overshoots a target), making scores comparable.
  */
 
 import type {
@@ -22,8 +26,6 @@ export const TIER_LABELS: Record<TuneQualityScore['tier'], string> = {
   fair: 'Fair',
   poor: 'Poor',
 };
-
-const BASE_POINTS = 25;
 
 interface ComponentDef {
   label: string;
@@ -70,9 +72,16 @@ const COMPONENTS: ComponentDef[] = [
   },
   {
     label: 'Overshoot',
-    getValue: (_filter, pid) => {
-      if (!pid || pid.stepsDetected === 0) return undefined;
-      return (pid.roll.meanOvershoot + pid.pitch.meanOvershoot + pid.yaw.meanOvershoot) / 3;
+    getValue: (_filter, pid, _verification, tf) => {
+      // Deep Tune: step-based overshoot (preferred when available)
+      if (pid && pid.stepsDetected > 0) {
+        return (pid.roll.meanOvershoot + pid.pitch.meanOvershoot + pid.yaw.meanOvershoot) / 3;
+      }
+      // Flash Tune: TF-derived overshoot from synthetic step response
+      if (tf) {
+        return (tf.roll.overshootPercent + tf.pitch.overshootPercent + tf.yaw.overshootPercent) / 3;
+      }
+      return undefined;
     },
     best: 0,
     worst: 50,
@@ -88,26 +97,6 @@ const COMPONENTS: ComponentDef[] = [
     },
     best: 50,
     worst: 500,
-  },
-  {
-    label: 'Bandwidth',
-    getValue: (_filter, _pid, _verification, tf) => {
-      if (!tf) return undefined;
-      return (tf.roll.bandwidthHz + tf.pitch.bandwidthHz + tf.yaw.bandwidthHz) / 3;
-    },
-    // 80 Hz bandwidth → full score (fast tracking), 10 Hz → zero (sluggish)
-    best: 80,
-    worst: 10,
-  },
-  {
-    label: 'Phase Margin',
-    getValue: (_filter, _pid, _verification, tf) => {
-      if (!tf) return undefined;
-      return (tf.roll.phaseMarginDeg + tf.pitch.phaseMarginDeg + tf.yaw.phaseMarginDeg) / 3;
-    },
-    // 60° → full score (well damped), 15° → zero (oscillation-prone)
-    best: 60,
-    worst: 15,
   },
   {
     label: 'Noise Delta',
