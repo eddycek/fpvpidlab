@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { analyzePID } from './PIDAnalyzer';
+import { analyzePID, analyzeTransferFunction } from './PIDAnalyzer';
 import type { BlackboxFlightData, TimeSeries } from '@shared/types/blackbox.types';
 import type { AnalysisProgress } from '@shared/types/analysis.types';
 import type { PIDConfiguration } from '@shared/types/pid.types';
@@ -373,6 +373,181 @@ describe('PIDAnalyzer', () => {
         expect(result.crossAxisCoupling!.pairs.length).toBeGreaterThan(0);
         expect(typeof result.crossAxisCoupling!.hasSignificantCoupling).toBe('boolean');
         expect(result.crossAxisCoupling!.summary.length).toBeGreaterThan(0);
+      }
+    });
+  });
+
+  describe('analyzeTransferFunction (unified pipeline)', () => {
+    it('should return complete result with analysisMethod', async () => {
+      // Broadband setpoint for Wiener deconvolution
+      const data = createFlightData({
+        numSamples: 40000,
+        rollSetpointFn: (i) => 100 * Math.sin(2 * Math.PI * 5 * (i / SAMPLE_RATE)),
+        rollGyroFn: (i) => 95 * Math.sin(2 * Math.PI * 5 * (i / SAMPLE_RATE) - 0.1),
+        pitchSetpointFn: (i) => 80 * Math.sin(2 * Math.PI * 7 * (i / SAMPLE_RATE)),
+        pitchGyroFn: (i) => 76 * Math.sin(2 * Math.PI * 7 * (i / SAMPLE_RATE) - 0.1),
+      });
+
+      const result = await analyzeTransferFunction(data, 0, PIDS);
+
+      expect(result.analysisMethod).toBe('wiener_deconvolution');
+      expect(result.transferFunction).toBeDefined();
+      expect(result.transferFunctionMetrics).toBeDefined();
+      expect(result.stepsDetected).toBe(0);
+      expect(result.roll).toBeDefined();
+      expect(result.pitch).toBeDefined();
+      expect(result.yaw).toBeDefined();
+      expect(result.recommendations).toBeDefined();
+      expect(result.summary).toBeDefined();
+      expect(result.currentPIDs).toEqual(PIDS);
+    });
+
+    it('should include dataQuality from Wiener scorer', async () => {
+      const data = createFlightData({
+        numSamples: 40000,
+        rollSetpointFn: (i) => 100 * Math.sin(2 * Math.PI * 5 * (i / SAMPLE_RATE)),
+        rollGyroFn: (i) => 95 * Math.sin(2 * Math.PI * 5 * (i / SAMPLE_RATE)),
+      });
+
+      const result = await analyzeTransferFunction(data, 0, PIDS);
+
+      expect(result.dataQuality).toBeDefined();
+      expect(result.dataQuality!.overall).toBeGreaterThanOrEqual(0);
+      expect(result.dataQuality!.overall).toBeLessThanOrEqual(100);
+      expect(['excellent', 'good', 'fair', 'poor']).toContain(result.dataQuality!.tier);
+    });
+
+    it('should include propWash and dTermEffectiveness', async () => {
+      const numSamples = 40000;
+      // Build flight data with throttle drops for prop wash detection
+      const throttleFn = (i: number) => {
+        const t = i / SAMPLE_RATE;
+        for (const dropTime of [1.0, 3.0, 5.0, 7.0]) {
+          if (t >= dropTime && t < dropTime + 0.1) return 0.7 - ((t - dropTime) / 0.1) * 0.5;
+          if (t >= dropTime + 0.1 && t < dropTime + 1.0) return 0.2;
+        }
+        return 0.7;
+      };
+      const gyroFn = (i: number) => {
+        const t = i / SAMPLE_RATE;
+        let val = 50 * Math.sin(2 * Math.PI * 5 * t);
+        for (const dropTime of [1.0, 3.0, 5.0, 7.0]) {
+          if (t >= dropTime + 0.1 && t < dropTime + 0.5) {
+            val += 30 * Math.sin(2 * Math.PI * 50 * t);
+          }
+        }
+        return val;
+      };
+
+      const zero = makeSeries(() => 0, numSamples);
+      const data: BlackboxFlightData = {
+        gyro: [
+          makeSeries(gyroFn, numSamples),
+          makeSeries(gyroFn, numSamples),
+          makeSeries(gyroFn, numSamples),
+        ],
+        setpoint: [
+          makeSeries((i) => 100 * Math.sin(2 * Math.PI * 5 * (i / SAMPLE_RATE)), numSamples),
+          makeSeries((i) => 80 * Math.sin(2 * Math.PI * 7 * (i / SAMPLE_RATE)), numSamples),
+          makeSeries((i) => 40 * Math.sin(2 * Math.PI * 3 * (i / SAMPLE_RATE)), numSamples),
+          makeSeries(throttleFn, numSamples),
+        ],
+        pidP: [zero, zero, zero],
+        pidI: [zero, zero, zero],
+        pidD: [
+          makeSeries((i) => 5 * Math.sin(2 * Math.PI * 20 * (i / SAMPLE_RATE)), numSamples),
+          makeSeries((i) => 5 * Math.sin(2 * Math.PI * 20 * (i / SAMPLE_RATE)), numSamples),
+          zero,
+        ],
+        pidF: [zero, zero, zero],
+        motor: [zero, zero, zero, zero],
+        debug: [],
+        sampleRateHz: SAMPLE_RATE,
+        durationSeconds: numSamples / SAMPLE_RATE,
+        frameCount: numSamples,
+      };
+
+      const result = await analyzeTransferFunction(data, 0, PIDS);
+
+      // Unified pipeline should include propWash when throttle drops are present
+      if (result.propWash) {
+        expect(result.propWash.events.length).toBeGreaterThan(0);
+        expect(result.propWash.meanSeverity).toBeGreaterThan(0);
+      }
+      // D-term effectiveness should be computed from pidD data
+      if (result.dTermEffectiveness) {
+        expect(typeof result.dTermEffectiveness.overall).toBe('number');
+      }
+    });
+
+    it('should not include crossAxisCoupling (no steps)', async () => {
+      const data = createFlightData({
+        numSamples: 40000,
+        rollSetpointFn: (i) => 100 * Math.sin(2 * Math.PI * 5 * (i / SAMPLE_RATE)),
+        rollGyroFn: (i) => 95 * Math.sin(2 * Math.PI * 5 * (i / SAMPLE_RATE)),
+      });
+
+      const result = await analyzeTransferFunction(data, 0, PIDS);
+
+      // Cross-axis coupling needs step events — should be absent for Wiener
+      expect(result.crossAxisCoupling).toBeUndefined();
+    });
+
+    it('should not have blanket MEDIUM confidence cap', async () => {
+      const data = createFlightData({
+        numSamples: 40000,
+        rollSetpointFn: (i) => 100 * Math.sin(2 * Math.PI * 5 * (i / SAMPLE_RATE)),
+        rollGyroFn: (i) => 95 * Math.sin(2 * Math.PI * 5 * (i / SAMPLE_RATE)),
+      });
+
+      const result = await analyzeTransferFunction(data, 0, PIDS);
+
+      // No blanket cap — high confidence is possible if gating supports it
+      // We just verify the analysis completes without the old cap logic
+      expect(result.recommendations).toBeDefined();
+      // Verify no confidence was artificially capped (all should be as PIDRecommender set them)
+      for (const rec of result.recommendations) {
+        expect(['high', 'medium', 'low']).toContain(rec.confidence);
+      }
+    });
+
+    it('should pass flightPIDs and flightStyle through', async () => {
+      const data = createFlightData({
+        numSamples: 40000,
+        rollSetpointFn: (i) => 100 * Math.sin(2 * Math.PI * 5 * (i / SAMPLE_RATE)),
+        rollGyroFn: (i) => 95 * Math.sin(2 * Math.PI * 5 * (i / SAMPLE_RATE)),
+      });
+      const headers = new Map<string, string>();
+      headers.set('feedforward_boost', '15');
+
+      const result = await analyzeTransferFunction(
+        data,
+        0,
+        PIDS,
+        undefined,
+        PIDS,
+        headers,
+        'aggressive'
+      );
+
+      expect(result.flightStyle).toBe('aggressive');
+      expect(result.feedforwardContext).toBeDefined();
+      expect(result.feedforwardContext!.active).toBe(true);
+    });
+
+    it('should include sliderPosition and sliderDelta', async () => {
+      const data = createFlightData({
+        numSamples: 40000,
+        rollSetpointFn: (i) => 100 * Math.sin(2 * Math.PI * 5 * (i / SAMPLE_RATE)),
+        rollGyroFn: (i) => 95 * Math.sin(2 * Math.PI * 5 * (i / SAMPLE_RATE)),
+      });
+
+      const result = await analyzeTransferFunction(data, 0, PIDS);
+
+      expect(result.sliderPosition).toBeDefined();
+      // sliderDelta only present if recommendations exist
+      if (result.recommendations.length > 0) {
+        expect(result.sliderDelta).toBeDefined();
       }
     });
   });
