@@ -110,6 +110,7 @@ export function QualityTrendChart({ history }: QualityTrendChartProps) {
         filterMetrics: record.filterMetrics,
         pidMetrics: record.pidMetrics,
         verificationMetrics: record.verificationMetrics,
+        transferFunctionMetrics: record.transferFunctionMetrics,
       });
       if (score) {
         const componentLabels = score.components

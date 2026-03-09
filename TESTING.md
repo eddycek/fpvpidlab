@@ -163,7 +163,7 @@ npm run test:ui           # Visual interface with DOM snapshots
 
 ## Test Inventory
 
-**Total: 2261 unit tests across 112 files + 25 Playwright E2E tests** (last verified: March 8, 2026)
+**Total: 2272 unit tests across 112 files + 25 Playwright E2E tests** (last verified: March 9, 2026)
 
 ### UI Components
 
@@ -340,7 +340,7 @@ npm run test:ui           # Visual interface with DOM snapshots
 | File | Tests | Description |
 |------|-------|-------------|
 | `shared/utils/metricsExtract.test.ts` | 17 | Spectrum downsampling, filter/PID/TF metrics extraction, boundary handling, trackingErrorRMS extraction |
-| `shared/utils/tuneQualityScore.test.ts` | 25 | Quality score computation, tier boundaries, partial metrics, backward compat, clamping, TIER_LABELS, verification quality |
+| `shared/utils/tuneQualityScore.test.ts` | 35 | Quality score computation, tier boundaries, partial metrics, backward compat, clamping, TIER_LABELS, verification quality, transfer function metrics (bandwidth, phase margin) |
 | `shared/constants.test.ts` | 7 | Preset profile flight style mapping validation |
 | `shared/types/profile.types.test.ts` | 5 | FlightStyle type compilation, DroneProfileOptional inheritance |
 

@@ -495,7 +495,7 @@ export interface TransferFunctionMetricsSummary {
 
 ### 6.5 Quality Score Compatibility
 
-`computeTuneQualityScore()` already handles missing `pidMetrics` gracefully (redistributes points). For quick tune with Wiener-derived synthetic step metrics, the existing PID metric fields (overshoot, settling time) are populated from the synthetic response, so the score computation works unchanged.
+`computeTuneQualityScore()` now accepts `transferFunctionMetrics` and uses TF-derived components (Bandwidth, Phase Margin) for Flash Tune scoring instead of step response metrics (Tracking RMS, Overshoot, Settling Time). This makes Flash Tune scores (3 components: Noise Floor + Bandwidth + Phase Margin) comparable with Deep Tune scores (4 components: Noise Floor + Tracking RMS + Overshoot + Settling Time). Points are redistributed evenly among available components.
 
 ### 6.6 TuningHistoryManager.archiveSession Changes
 
@@ -724,7 +724,7 @@ After snapshot, transition `quick_applied → verification_pending` (reuses exis
 | F1 | ✅ TuningCompletionSummary quick mode | `src/renderer/components/TuningHistory/TuningCompletionSummary.tsx`, `.test.tsx` | Component test: "Quick Tune Complete", 1 flight count |
 | F2 | ✅ TuningHistoryPanel tuning type badge | `src/renderer/components/TuningHistory/TuningHistoryPanel.tsx`, `.test.tsx` | Component test: "(Quick Tune)" summary suffix |
 | F3 | ✅ TuningSessionDetail quick flight count | `src/renderer/components/TuningHistory/TuningSessionDetail.tsx` | quickLogId counted in flight total |
-| F4 | ✅ Quality score with TF metrics | `src/shared/utils/tuneQualityScore.ts` | Existing dynamic redistribution already handles missing PID metrics — no changes needed |
+| F4 | ✅ Quality score with TF metrics | `src/shared/utils/tuneQualityScore.ts` | TF-derived Bandwidth + Phase Margin components for Flash Tune scoring (PR #190) |
 
 ### Phase G: Demo Mode & E2E
 

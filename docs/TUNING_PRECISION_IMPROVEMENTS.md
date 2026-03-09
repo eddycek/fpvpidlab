@@ -204,15 +204,24 @@ Also consider flight style: aggressive/race needs higher propwash floor (~120 Hz
 
 ### 10. ✅ Flight Quality Score — `tuneQualityScore.ts`
 
-**Problem**: No holistic metric to track tuning progress across sessions.
+**Problem**: No holistic metric to track tuning progress across sessions. Flash Tune (Wiener deconvolution) produces no step response data, making scores incomparable with Deep Tune.
 
-**Solution**: Compute a 0-100 "tune quality score" combining:
-- Noise floor level (filter quality) — 25 points
-- Tracking error RMS (overall quality) — 25 points
-- Mean overshoot (PID quality) — 25 points
-- Mean settling time (PID quality) — 25 points
+**Solution**: Compute a 0-100 "tune quality score" with type-aware components, redistributed evenly among available ones:
 
-Display as trend chart in TuningHistoryPanel across tuning sessions.
+**Deep Tune components** (step response data):
+- Noise floor level (filter quality)
+- Tracking error RMS (overall quality)
+- Mean overshoot (PID quality)
+- Mean settling time (PID quality)
+
+**Flash Tune components** (transfer function data):
+- Noise floor level (filter quality)
+- Bandwidth Hz (tracking speed from TF)
+- Phase margin degrees (stability from TF)
+
+**Optional** (when verification flight present): Noise Delta (before/after improvement)
+
+Display as trend chart in TuningHistoryPanel across tuning sessions. Both tuning types produce comparable 0-100 scores.
 
 ---
 

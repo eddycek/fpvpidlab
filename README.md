@@ -123,7 +123,7 @@ Inspired by [Plasmatree PID-Analyzer](https://github.com/Plasmatree/PID-Analyzer
 - Rates input flight data 0-100 (excellent/good/fair/poor)
 - Adjusts recommendation confidence based on data quality
 - Warns about insufficient hover time, missing axes, too few steps
-- Flight quality score: composite 0-100 metric tracking tuning progress across sessions
+- Flight quality score: composite 0-100 metric with type-aware components (Deep Tune: step response metrics; Flash Tune: TF bandwidth + phase margin)
 
 ### Deep Tune (Two-Flight Workflow)
 
@@ -263,7 +263,7 @@ npm run rebuild                      # Rebuild native modules (serialport)
 
 All UI changes must include tests. Tests automatically run before commits. Coverage thresholds enforced: 80% lines/functions/statements, 75% branches.
 
-**Unit tests:** 2180 tests across 107 files — MSP protocol, storage managers, IPC handlers, UI components, hooks, BBL parser fuzz, analysis pipeline validation.
+**Unit tests:** 2272 tests across 112 files — MSP protocol, storage managers, IPC handlers, UI components, hooks, BBL parser fuzz, analysis pipeline validation.
 
 **Playwright E2E:** 25 tests across 4 spec files — launches real Electron app in demo mode, walks through complete tuning cycles (Deep Tune and Flash Tune).
 

@@ -51,6 +51,7 @@ export function TuningHistoryPanel({
           filterMetrics: record.filterMetrics,
           pidMetrics: record.pidMetrics,
           verificationMetrics: record.verificationMetrics,
+          transferFunctionMetrics: record.transferFunctionMetrics,
         })
       );
     }

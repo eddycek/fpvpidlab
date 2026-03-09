@@ -60,8 +60,14 @@ export function TuningCompletionSummary({
         filterMetrics: session.filterMetrics,
         pidMetrics: session.pidMetrics,
         verificationMetrics: session.verificationMetrics,
+        transferFunctionMetrics: session.transferFunctionMetrics,
       }),
-    [session.filterMetrics, session.verificationMetrics, session.pidMetrics]
+    [
+      session.filterMetrics,
+      session.verificationMetrics,
+      session.pidMetrics,
+      session.transferFunctionMetrics,
+    ]
   );
 
   return (

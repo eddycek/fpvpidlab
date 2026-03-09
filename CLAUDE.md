@@ -260,7 +260,7 @@ Rates flight data quality 0-100 before generating recommendations. Integrated in
 - Quality warnings: `few_segments`, `short_hover_time`, `narrow_throttle_coverage`, `few_steps_per_axis`, `missing_axis_coverage`, `low_step_magnitude`
 - UI: quality pill in FilterAnalysisStep, PIDAnalysisStep, AnalysisOverview
 - History: compact `dataQuality` in `FilterMetricsSummary` / `PIDMetricsSummary`
-- **Flight quality score** (`src/shared/utils/tuneQualityScore.ts`): Composite 0-100 score combining data quality, noise reduction, and PID metrics. Displayed as badge in TuningCompletionSummary and TuningHistoryPanel. Trend chart (QualityTrendChart) shows progression across sessions.
+- **Flight quality score** (`src/shared/utils/tuneQualityScore.ts`): Composite 0-100 score with type-aware components. Deep Tune: noise floor, tracking RMS, overshoot, settling time. Flash Tune: noise floor, bandwidth (from TF), phase margin (from TF). Optional Noise Delta when verification present. Points redistributed evenly among available components. Displayed as badge in TuningCompletionSummary and TuningHistoryPanel. Trend chart (QualityTrendChart) shows progression across sessions.
 
 ### Stateful Tuning Session
 

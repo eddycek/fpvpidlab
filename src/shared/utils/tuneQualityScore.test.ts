@@ -1,6 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import { computeTuneQualityScore } from './tuneQualityScore';
-import type { FilterMetricsSummary, PIDMetricsSummary } from '../types/tuning-history.types';
+import type {
+  FilterMetricsSummary,
+  PIDMetricsSummary,
+  TransferFunctionMetricsSummary,
+} from '../types/tuning-history.types';
 
 const perfectFilter: FilterMetricsSummary = {
   noiseLevel: 'low',
@@ -385,7 +389,7 @@ describe('computeTuneQualityScore', () => {
     expect(result!.overall).toBeLessThanOrEqual(42);
   });
 
-  it('skips PID components when stepsDetected is 0 (Flash Tune / transfer function)', () => {
+  it('skips PID components when stepsDetected is 0 and no TF metrics', () => {
     const tfPID: PIDMetricsSummary = {
       ...perfectPID,
       stepsDetected: 0,
@@ -395,13 +399,13 @@ describe('computeTuneQualityScore', () => {
       pidMetrics: tfPID,
     });
     expect(result).not.toBeNull();
-    // Only Noise Floor — Tracking RMS, Overshoot, Settling Time all skipped
+    // Only Noise Floor — Tracking RMS, Overshoot, Settling Time all skipped, no TF metrics
     expect(result!.components).toHaveLength(1);
     expect(result!.components[0].label).toBe('Noise Floor');
     expect(result!.components[0].maxPoints).toBe(100);
   });
 
-  it('returns null when stepsDetected is 0 and no filter metrics', () => {
+  it('returns null when stepsDetected is 0 and no filter metrics and no TF metrics', () => {
     const tfPID: PIDMetricsSummary = {
       ...perfectPID,
       stepsDetected: 0,
@@ -412,6 +416,195 @@ describe('computeTuneQualityScore', () => {
     });
     // No usable components → null
     expect(result).toBeNull();
+  });
+
+  describe('transfer function metrics integration (Flash Tune)', () => {
+    const perfectTF: TransferFunctionMetricsSummary = {
+      roll: {
+        bandwidthHz: 80,
+        phaseMarginDeg: 60,
+        gainMarginDb: 12,
+        overshootPercent: 5,
+        settlingTimeMs: 60,
+        riseTimeMs: 10,
+      },
+      pitch: {
+        bandwidthHz: 80,
+        phaseMarginDeg: 60,
+        gainMarginDb: 12,
+        overshootPercent: 5,
+        settlingTimeMs: 60,
+        riseTimeMs: 10,
+      },
+      yaw: {
+        bandwidthHz: 80,
+        phaseMarginDeg: 60,
+        gainMarginDb: 12,
+        overshootPercent: 5,
+        settlingTimeMs: 60,
+        riseTimeMs: 10,
+      },
+    };
+
+    const worstTF: TransferFunctionMetricsSummary = {
+      roll: {
+        bandwidthHz: 10,
+        phaseMarginDeg: 15,
+        gainMarginDb: 2,
+        overshootPercent: 40,
+        settlingTimeMs: 400,
+        riseTimeMs: 80,
+      },
+      pitch: {
+        bandwidthHz: 10,
+        phaseMarginDeg: 15,
+        gainMarginDb: 2,
+        overshootPercent: 40,
+        settlingTimeMs: 400,
+        riseTimeMs: 80,
+      },
+      yaw: {
+        bandwidthHz: 10,
+        phaseMarginDeg: 15,
+        gainMarginDb: 2,
+        overshootPercent: 40,
+        settlingTimeMs: 400,
+        riseTimeMs: 80,
+      },
+    };
+
+    it('adds Bandwidth and Phase Margin components for Flash Tune', () => {
+      const result = computeTuneQualityScore({
+        filterMetrics: perfectFilter,
+        pidMetrics: { ...perfectPID, stepsDetected: 0 },
+        transferFunctionMetrics: perfectTF,
+      });
+      expect(result).not.toBeNull();
+      // Noise Floor + Bandwidth + Phase Margin = 3 components
+      expect(result!.components).toHaveLength(3);
+      expect(result!.components.find((c) => c.label === 'Bandwidth')).toBeDefined();
+      expect(result!.components.find((c) => c.label === 'Phase Margin')).toBeDefined();
+      expect(result!.components.find((c) => c.label === 'Noise Floor')).toBeDefined();
+    });
+
+    it('scores near 100 with perfect TF + filter metrics', () => {
+      const result = computeTuneQualityScore({
+        filterMetrics: perfectFilter,
+        pidMetrics: { ...perfectPID, stepsDetected: 0 },
+        transferFunctionMetrics: perfectTF,
+      });
+      expect(result).not.toBeNull();
+      // 3 components × 33 pts = 99 (rounding: Math.round(100/3) = 33)
+      expect(result!.overall).toBeGreaterThanOrEqual(99);
+      expect(result!.tier).toBe('excellent');
+    });
+
+    it('scores 0 with worst TF + filter metrics', () => {
+      const result = computeTuneQualityScore({
+        filterMetrics: worstFilter,
+        pidMetrics: { ...perfectPID, stepsDetected: 0 },
+        transferFunctionMetrics: worstTF,
+      });
+      expect(result).not.toBeNull();
+      expect(result!.overall).toBe(0);
+      expect(result!.tier).toBe('poor');
+    });
+
+    it('Flash Tune scores are comparable to Deep Tune scores', () => {
+      // Perfect Deep Tune: 4 components × 25 pts = 100
+      const deepScore = computeTuneQualityScore({
+        filterMetrics: perfectFilter,
+        pidMetrics: perfectPID,
+      });
+      // Perfect Flash Tune: 3 components × 33 pts ≈ 100
+      const flashScore = computeTuneQualityScore({
+        filterMetrics: perfectFilter,
+        pidMetrics: { ...perfectPID, stepsDetected: 0 },
+        transferFunctionMetrics: perfectTF,
+      });
+      expect(deepScore).not.toBeNull();
+      expect(flashScore).not.toBeNull();
+      // Both perfect → both near 100
+      expect(flashScore!.overall).toBeGreaterThanOrEqual(99);
+    });
+
+    it('mid-range TF metrics produce mid-range score', () => {
+      const midTF: TransferFunctionMetricsSummary = {
+        roll: {
+          bandwidthHz: 45,
+          phaseMarginDeg: 37.5,
+          gainMarginDb: 7,
+          overshootPercent: 20,
+          settlingTimeMs: 200,
+          riseTimeMs: 40,
+        },
+        pitch: {
+          bandwidthHz: 45,
+          phaseMarginDeg: 37.5,
+          gainMarginDb: 7,
+          overshootPercent: 20,
+          settlingTimeMs: 200,
+          riseTimeMs: 40,
+        },
+        yaw: {
+          bandwidthHz: 45,
+          phaseMarginDeg: 37.5,
+          gainMarginDb: 7,
+          overshootPercent: 20,
+          settlingTimeMs: 200,
+          riseTimeMs: 40,
+        },
+      };
+      const midFilter: FilterMetricsSummary = {
+        ...perfectFilter,
+        roll: { noiseFloorDb: -40, peakCount: 2 },
+        pitch: { noiseFloorDb: -40, peakCount: 2 },
+        yaw: { noiseFloorDb: -40, peakCount: 2 },
+      };
+      const result = computeTuneQualityScore({
+        filterMetrics: midFilter,
+        pidMetrics: { ...perfectPID, stepsDetected: 0 },
+        transferFunctionMetrics: midTF,
+      });
+      expect(result).not.toBeNull();
+      expect(result!.overall).toBeGreaterThanOrEqual(40);
+      expect(result!.overall).toBeLessThanOrEqual(60);
+    });
+
+    it('does not add TF components when transferFunctionMetrics is null', () => {
+      const result = computeTuneQualityScore({
+        filterMetrics: perfectFilter,
+        pidMetrics: perfectPID,
+        transferFunctionMetrics: null,
+      });
+      expect(result).not.toBeNull();
+      expect(result!.components.find((c) => c.label === 'Bandwidth')).toBeUndefined();
+      expect(result!.components.find((c) => c.label === 'Phase Margin')).toBeUndefined();
+      // Standard 4 components (Deep Tune)
+      expect(result!.components).toHaveLength(4);
+    });
+
+    it('TF components coexist with step response components when both present', () => {
+      // Edge case: both step response and TF metrics available
+      const result = computeTuneQualityScore({
+        filterMetrics: perfectFilter,
+        pidMetrics: perfectPID,
+        transferFunctionMetrics: perfectTF,
+      });
+      expect(result).not.toBeNull();
+      // All 6 components: Noise Floor, Tracking RMS, Overshoot, Settling Time, Bandwidth, Phase Margin
+      expect(result!.components).toHaveLength(6);
+    });
+
+    it('backwards compatible: old records without TF metrics still score correctly', () => {
+      const result = computeTuneQualityScore({
+        filterMetrics: perfectFilter,
+        pidMetrics: perfectPID,
+      });
+      expect(result).not.toBeNull();
+      expect(result!.overall).toBe(100);
+      expect(result!.components).toHaveLength(4);
+    });
   });
 
   describe('verification metrics integration', () => {

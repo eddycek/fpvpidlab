@@ -1,13 +1,17 @@
 /**
- * Compute a 0-100 tune quality score from filter and PID metrics.
+ * Compute a 0-100 tune quality score from filter, PID, and transfer function metrics.
  *
- * 4 components × 25 points, linear interpolation with clamp.
+ * Up to 6 components, linear interpolation with clamp.
  * Missing components are redistributed evenly among available ones.
+ *
+ * Deep Tune (step response): Noise Floor, Tracking RMS, Overshoot, Settling Time, [Noise Delta]
+ * Flash Tune (transfer function): Noise Floor, Bandwidth, Phase Margin, [Noise Delta]
  */
 
 import type {
   FilterMetricsSummary,
   PIDMetricsSummary,
+  TransferFunctionMetricsSummary,
   TuneQualityScore,
   TuneQualityComponent,
 } from '../types/tuning-history.types';
@@ -26,7 +30,8 @@ interface ComponentDef {
   getValue: (
     filter: FilterMetricsSummary | null | undefined,
     pid: PIDMetricsSummary | null | undefined,
-    verification?: FilterMetricsSummary | null | undefined
+    verification?: FilterMetricsSummary | null | undefined,
+    tf?: TransferFunctionMetricsSummary | null | undefined
   ) => number | undefined;
   /** Value that yields full score */
   best: number;
@@ -85,6 +90,26 @@ const COMPONENTS: ComponentDef[] = [
     worst: 500,
   },
   {
+    label: 'Bandwidth',
+    getValue: (_filter, _pid, _verification, tf) => {
+      if (!tf) return undefined;
+      return (tf.roll.bandwidthHz + tf.pitch.bandwidthHz + tf.yaw.bandwidthHz) / 3;
+    },
+    // 80 Hz bandwidth → full score (fast tracking), 10 Hz → zero (sluggish)
+    best: 80,
+    worst: 10,
+  },
+  {
+    label: 'Phase Margin',
+    getValue: (_filter, _pid, _verification, tf) => {
+      if (!tf) return undefined;
+      return (tf.roll.phaseMarginDeg + tf.pitch.phaseMarginDeg + tf.yaw.phaseMarginDeg) / 3;
+    },
+    // 60° → full score (well damped), 15° → zero (oscillation-prone)
+    best: 60,
+    worst: 15,
+  },
+  {
     label: 'Noise Delta',
     getValue: (filter, _pid, verification) => {
       // Only available when both filter-flight and verification-flight data exist
@@ -123,15 +148,21 @@ export function computeTuneQualityScore(metrics: {
   filterMetrics: FilterMetricsSummary | null | undefined;
   pidMetrics?: PIDMetricsSummary | null | undefined;
   verificationMetrics?: FilterMetricsSummary | null | undefined;
+  transferFunctionMetrics?: TransferFunctionMetricsSummary | null | undefined;
 }): TuneQualityScore | null {
-  const { filterMetrics, pidMetrics, verificationMetrics } = metrics;
+  const { filterMetrics, pidMetrics, verificationMetrics, transferFunctionMetrics } = metrics;
 
   if (!filterMetrics && !pidMetrics) return null;
 
   // Determine which components have data
   const available: { def: ComponentDef; rawValue: number }[] = [];
   for (const def of COMPONENTS) {
-    const val = def.getValue(filterMetrics, pidMetrics, verificationMetrics);
+    const val = def.getValue(
+      filterMetrics,
+      pidMetrics,
+      verificationMetrics,
+      transferFunctionMetrics
+    );
     if (val !== undefined) {
       available.push({ def, rawValue: val });
     }

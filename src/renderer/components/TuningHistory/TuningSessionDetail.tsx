@@ -33,8 +33,14 @@ export function TuningSessionDetail({ record, onReanalyzeVerification }: TuningS
         filterMetrics: record.filterMetrics,
         pidMetrics: record.pidMetrics,
         verificationMetrics: record.verificationMetrics,
+        transferFunctionMetrics: record.transferFunctionMetrics,
       }),
-    [record.filterMetrics, record.verificationMetrics, record.pidMetrics]
+    [
+      record.filterMetrics,
+      record.verificationMetrics,
+      record.pidMetrics,
+      record.transferFunctionMetrics,
+    ]
   );
   const flights = flightCount(record);
 
