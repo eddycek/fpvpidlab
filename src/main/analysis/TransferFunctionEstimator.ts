@@ -543,7 +543,7 @@ function computeRiseTime(step: SyntheticStepResponse): number {
 /**
  * Trim Bode plot to maximum frequency of interest.
  */
-function trimBode(bode: BodeResult, maxFreqHz: number): BodeResult {
+export function trimBode(bode: BodeResult, maxFreqHz: number): BodeResult {
   let endIdx = bode.frequencies.length;
   for (let i = 0; i < bode.frequencies.length; i++) {
     if (bode.frequencies[i] > maxFreqHz) {

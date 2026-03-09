@@ -91,7 +91,8 @@ export interface AnalysisWarning {
     | 'narrow_throttle_coverage'
     | 'few_steps_per_axis'
     | 'missing_axis_coverage'
-    | 'low_step_magnitude';
+    | 'low_step_magnitude'
+    | 'tpa_variance';
   message: string;
   severity: 'info' | 'warning' | 'error';
 }
@@ -425,6 +426,30 @@ export interface PIDAnalysisResult {
   sliderDelta?: { masterMultiplierDelta: number; pdRatioDelta: number; summary: string };
   /** Extended feedforward analysis (leading-edge, jitter, RC rate) */
   feedforwardAnalysis?: FeedforwardAnalysis;
+  /** Per-band transfer function analysis across throttle levels (Flash Tune only) */
+  throttleTF?: {
+    bands: {
+      throttleMin: number;
+      throttleMax: number;
+      sampleCount: number;
+      metrics: {
+        bandwidthHz: number;
+        phaseMarginDeg: number;
+        gainMarginDb: number;
+        overshootPercent: number;
+        settlingTimeMs: number;
+        riseTimeMs: number;
+        dcGainDb: number;
+      } | null;
+    }[];
+    bandsWithData: number;
+    metricsVariance: {
+      bandwidthHz: number;
+      overshootPercent: number;
+      phaseMarginDeg: number;
+    };
+    tpaWarning?: string;
+  };
   /** Full transfer function data (present only for Flash Tune / Wiener deconvolution analysis).
    * Arrays may be Float64Array (from main process) or number[] (after IPC serialization). */
   transferFunction?: {
