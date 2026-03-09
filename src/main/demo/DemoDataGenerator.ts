@@ -255,7 +255,7 @@ function buildDemoSession(config: DemoSessionConfig): Buffer {
   // 18 steps total (6 per axis) for robust PID analysis.
   const steps: StepEvent[] = [];
   if (injectSteps) {
-    const holdFrames = Math.round(0.4 * sampleRateHz); // 400ms hold
+    const holdFrames = Math.round(0.7 * sampleRateHz); // 700ms hold — must exceed STEP_RESPONSE_WINDOW_MAX_MS (500ms) so steady-state measurement stays within hold
     const cooldownFrames = Math.round(0.3 * sampleRateHz); // 300ms between steps (well above 100ms detector threshold)
     const stepMagnitudes = [
       200,
@@ -453,7 +453,7 @@ export function generateFilterDemoBBL(cycle = 0): Buffer {
  * - 18 step inputs across all 3 axes (for step response detection)
  * - Cycle-dependent second-order step response model (cycle 0: ~35% overshoot → cycle 4: ~3%)
  * - Cycle-dependent latency (16ms → 6ms)
- * - 400ms step hold ensures correct overshoot measurement
+ * - 700ms step hold ensures steady-state is measured within hold (exceeds 500ms analysis window)
  *
  * @param cycle - Tuning cycle number (0 = first, higher = progressively cleaner)
  */
@@ -463,7 +463,7 @@ export function generatePIDDemoBBL(cycle = 0): Buffer {
     `[DEMO] Generating PID analysis demo BBL (cycle ${cycle}, factor ${f.toFixed(2)})...`
   );
   return buildDemoSession({
-    frameCount: 56000, // 14s at 4000 Hz — fits 18 steps × (400ms hold + 300ms cool) + 0.5s lead
+    frameCount: 76000, // 19s at 4000 Hz — fits 18 steps × (700ms hold + 300ms cool) + 0.5s lead
     gyroBase: [0, 0, 0],
     noiseAmplitude: 5 * f,
     motorHarmonicHz: 160,
@@ -525,7 +525,7 @@ export function generateFlashDemoBBL(cycle = 0): Buffer {
   const f = progressiveFactor(cycle);
   logger.info(`[DEMO] Generating Flash Tune demo BBL (cycle ${cycle}, factor ${f.toFixed(2)})...`);
   return buildDemoSession({
-    frameCount: 60000, // 15s at 4000 Hz — enough for hover segments + 12 steps
+    frameCount: 80000, // 20s at 4000 Hz — enough for hover segments + 12 steps (700ms hold)
     gyroBase: [2, -1, 0],
     noiseAmplitude: 12 * f,
     motorHarmonicHz: 160,
@@ -568,7 +568,7 @@ export function generateCombinedDemoBBL(cycle = 0): Buffer {
   }
 
   const pidSession = buildDemoSession({
-    frameCount: 56000,
+    frameCount: 76000,
     gyroBase: [0, 0, 0],
     noiseAmplitude: 5 * f,
     motorHarmonicHz: 160,
