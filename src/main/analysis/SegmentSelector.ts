@@ -189,22 +189,43 @@ export function findThrottleSweepSegments(flightData: BlackboxFlightData): Fligh
 
   const segments: FlightSegment[] = [];
 
-  // Sliding window approach: try to find the longest sweep starting at each position
+  // Sliding window approach: try to find the longest sweep starting at each position.
+  // Use a coarse step (100ms) for the inner window extension to avoid O(n²×m) complexity.
+  // Without this, throttle discontinuities (e.g. prop wash cuts) prevent early sweep
+  // discovery and cause the outer loop to increment by 1 for every sample — resulting
+  // in millions of expensive computeLinearResidual calls.
+  const coarseStep = Math.max(1, Math.floor(sampleRateHz * 0.1)); // 100ms step
+  const outerStep = Math.max(1, Math.floor(sampleRateHz * 0.05)); // 50ms outer advance on failure
+
   let i = 0;
   while (i < numSamples - minSweepSamples) {
     const startThr = smoothed[i];
 
     // Skip if throttle too low (not in flight)
     if (startThr < THROTTLE_MIN_FLIGHT) {
-      i++;
+      i += outerStep;
       continue;
     }
 
-    // Extend the window as far as the monotonicity holds
+    // Quick monotonicity check at minimum window — if it fails, skip ahead
+    const quickEnd = i + minSweepSamples;
+    const quickRange = Math.abs(smoothed[quickEnd - 1] - startThr);
+    if (quickRange < SWEEP_MIN_THROTTLE_RANGE * 0.5) {
+      // Not enough throttle change even at minimum window — skip ahead
+      i += outerStep;
+      continue;
+    }
+
+    // Extend the window as far as the monotonicity holds (coarse step)
     let bestEnd = -1;
     let bestRange = 0;
+    let consecutiveFails = 0;
 
-    for (let end = i + minSweepSamples; end <= Math.min(i + maxSweepSamples, numSamples); end++) {
+    for (
+      let end = i + minSweepSamples;
+      end <= Math.min(i + maxSweepSamples, numSamples);
+      end += coarseStep
+    ) {
       const endThr = smoothed[end - 1];
       const range = Math.abs(endThr - startThr);
 
@@ -219,6 +240,11 @@ export function findThrottleSweepSegments(flightData: BlackboxFlightData): Fligh
           bestRange = range;
           bestEnd = end;
         }
+        consecutiveFails = 0;
+      } else {
+        consecutiveFails++;
+        // If residual fails 3 times in a row, monotonicity is broken — stop extending
+        if (consecutiveFails >= 3) break;
       }
     }
 
@@ -251,7 +277,7 @@ export function findThrottleSweepSegments(flightData: BlackboxFlightData): Fligh
       // Jump past this sweep
       i = bestEnd;
     } else {
-      i++;
+      i += outerStep;
     }
   }
 

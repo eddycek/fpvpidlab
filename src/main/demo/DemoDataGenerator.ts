@@ -196,6 +196,68 @@ function computeCycleResponseParams(
 }
 
 /**
+ * Prop wash throttle-cut events embedded in the throttle profile.
+ *
+ * Each event is a rapid throttle punch-down (1750→1200 in ~120ms) followed by
+ * recovery back to cruise. The derivative exceeds -0.3 normalized/s for ≥50ms,
+ * triggering PropWashDetector. 4 events at fixed normalized positions ensure
+ * ≥3 detections regardless of flight duration.
+ */
+interface ThrottleCutEvent {
+  /** Normalized time (0-1) of the cut start */
+  tStart: number;
+  /** Duration of the cut in normalized time */
+  tCutDuration: number;
+  /** Duration of the recovery in normalized time */
+  tRecoveryDuration: number;
+  /** Throttle value at which the cut starts */
+  fromThrottle: number;
+  /** Throttle value at the bottom of the cut */
+  toThrottle: number;
+}
+
+/** 4 prop wash events during the high-throttle / descent phases.
+ *
+ * tCutDuration must produce >1 raw throttle unit change per frame after Math.round()
+ * to guarantee every consecutive frame pair has non-zero derivative.
+ * For 20s flight at 4000 Hz: 0.004 * 20 = 80ms = 320 frames → 600/320 = 1.875/frame ✓
+ * For 10s flight at 4000 Hz: 0.004 * 10 = 40ms = 160 frames — below 50ms detection minimum,
+ * so we use 0.005 (50ms at 10s, 100ms at 20s) to stay above PROPWASH_MIN_DROP_DURATION_MS.
+ */
+const THROTTLE_CUT_EVENTS: ThrottleCutEvent[] = [
+  // During high hover phase (t=0.50-0.70): 2 punch-downs
+  {
+    tStart: 0.53,
+    tCutDuration: 0.005,
+    tRecoveryDuration: 0.015,
+    fromThrottle: 1800,
+    toThrottle: 1200,
+  },
+  {
+    tStart: 0.6,
+    tCutDuration: 0.005,
+    tRecoveryDuration: 0.015,
+    fromThrottle: 1800,
+    toThrottle: 1200,
+  },
+  // During descent ramp (t=0.70-1.00): 2 punch-downs
+  {
+    tStart: 0.75,
+    tCutDuration: 0.005,
+    tRecoveryDuration: 0.015,
+    fromThrottle: 1700,
+    toThrottle: 1100,
+  },
+  {
+    tStart: 0.85,
+    tCutDuration: 0.005,
+    tRecoveryDuration: 0.015,
+    fromThrottle: 1600,
+    toThrottle: 1050,
+  },
+];
+
+/**
  * Multi-phase throttle profile for realistic segment detection.
  *
  * Profile (as proportion of total duration):
@@ -204,10 +266,32 @@ function computeCycleResponseParams(
  *  50-70%:  High hover at 1800 (80%)
  *  70-100%: Linear ramp 1800→1350 (80%→35%) — sweep segment
  *
+ * Overlay: 4 rapid throttle punch-downs for prop wash detection.
+ * Each cut drops ~550µs in ~120ms (derivative > -0.45 normalized/s).
+ *
  * Result: 2 sweep segments + 2 hover segments = 4 segments, 45% throttle coverage.
  */
 function computeThrottle(timeSec: number, durationSec: number): number {
   const t = timeSec / durationSec; // Normalized 0..1
+
+  // Check for throttle-cut overlay events first
+  for (const cut of THROTTLE_CUT_EVENTS) {
+    const cutEnd = cut.tStart + cut.tCutDuration;
+    const recoveryEnd = cutEnd + cut.tRecoveryDuration;
+    if (t >= cut.tStart && t < recoveryEnd) {
+      if (t < cutEnd) {
+        // Rapid drop phase
+        const progress = (t - cut.tStart) / cut.tCutDuration;
+        return cut.fromThrottle - progress * (cut.fromThrottle - cut.toThrottle);
+      } else {
+        // Recovery phase
+        const progress = (t - cutEnd) / cut.tRecoveryDuration;
+        return cut.toThrottle + progress * (cut.fromThrottle - cut.toThrottle);
+      }
+    }
+  }
+
+  // Base throttle profile
   if (t < 0.2) {
     return 1350;
   } else if (t < 0.5) {
@@ -390,6 +474,7 @@ function buildDemoSession(config: DemoSessionConfig): Buffer {
   }
 
   // ── Frame generation ────────────────────────────────────────────
+  const durationSec = frameCount / sampleRateHz;
   for (let f = 0; f < frameCount; f++) {
     const frame: number[] = [0x49]; // I-frame marker
 
@@ -422,6 +507,26 @@ function buildDemoSession(config: DemoSessionConfig): Buffer {
       // Electrical noise (high frequency)
       value +=
         electricalNoiseAmplitude * Math.sin(2 * Math.PI * electricalNoiseHz * timeSec + axis * 1.3);
+
+      // Prop wash oscillation injection (30-60 Hz bursts after throttle cuts)
+      // Roll gets strongest, pitch moderate, yaw minimal — matches real prop wash behavior
+      // Amplitude scales with noise (noiseAmplitude) — well-tuned quads (cycle 4+) have
+      // minimal prop wash because higher D-term dampens the oscillation.
+      const propWashAxisScale = axis === 0 ? 1.0 : axis === 1 ? 0.7 : 0.15;
+      const propWashBaseAmplitude = Math.max(20, noiseAmplitude * 5);
+      for (const cut of THROTTLE_CUT_EVENTS) {
+        const cutEndSec = (cut.tStart + cut.tCutDuration) * durationSec;
+        const afterCut = timeSec - cutEndSec;
+        // Inject oscillation for 400ms after the throttle cut bottom
+        if (afterCut > 0 && afterCut < 0.4) {
+          // Decaying 45 Hz oscillation — dominant prop wash frequency
+          const decay = Math.exp(-afterCut * 6);
+          const amplitude = propWashBaseAmplitude * propWashAxisScale * decay;
+          value += amplitude * Math.sin(2 * Math.PI * 45 * afterCut + axis * 1.2);
+          // Add secondary 28 Hz component for broader band energy
+          value += amplitude * 0.4 * Math.sin(2 * Math.PI * 28 * afterCut + axis * 0.8);
+        }
+      }
 
       // Continuous setpoint tracking response (Flash Tune)
       if (broadbandGyroResponse) {
@@ -486,7 +591,6 @@ function buildDemoSession(config: DemoSessionConfig): Buffer {
     }
 
     // Throttle: multi-phase profile for realistic segment detection
-    const durationSec = frameCount / sampleRateHz;
     frame.push(...encodeSVB(Math.round(computeThrottle(timeSec, durationSec))));
 
     parts.push(Buffer.from(frame));

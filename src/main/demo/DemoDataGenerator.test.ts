@@ -8,6 +8,7 @@ import {
 } from './DemoDataGenerator';
 import { BlackboxParser } from '../blackbox/BlackboxParser';
 import { detectSteps } from '../analysis/StepDetector';
+import { detectThrottleDrops, analyzePropWash } from '../analysis/PropWashDetector';
 
 describe('DemoDataGenerator', () => {
   describe('generateFilterDemoBBL', () => {
@@ -354,6 +355,60 @@ describe('DemoDataGenerator', () => {
         expect(session.header.firmwareRevision).toBe('4.5.1');
         expect(session.header.looptime).toBe(125);
       }
+    });
+  });
+
+  describe('prop wash detection in demo data', () => {
+    it('PID demo BBL produces throttle drops detectable by PropWashDetector', async () => {
+      const buffer = generatePIDDemoBBL();
+      const result = await BlackboxParser.parse(buffer);
+      const session = result.sessions[0];
+
+      const throttle = session.flightData.setpoint[3];
+      const sampleRateHz = session.flightData.sampleRateHz;
+
+      const drops = detectThrottleDrops(throttle.values, throttle.time, sampleRateHz);
+      // Should detect at least 3 throttle-cut events (we inject 4)
+      expect(drops.length).toBeGreaterThanOrEqual(3);
+    });
+
+    it('PID demo BBL produces full PropWashAnalysis with ≥3 events', async () => {
+      const buffer = generatePIDDemoBBL();
+      const result = await BlackboxParser.parse(buffer);
+      const session = result.sessions[0];
+
+      const propWash = analyzePropWash(session.flightData);
+      expect(propWash).toBeDefined();
+      expect(propWash!.events.length).toBeGreaterThanOrEqual(3);
+      expect(propWash!.meanSeverity).toBeGreaterThan(0);
+      expect(propWash!.worstAxis).toBeDefined();
+      expect(propWash!.dominantFrequencyHz).toBeGreaterThan(20);
+      expect(propWash!.dominantFrequencyHz).toBeLessThan(90);
+    });
+
+    it('filter demo BBL also produces throttle drops', async () => {
+      const buffer = generateFilterDemoBBL();
+      const result = await BlackboxParser.parse(buffer);
+      const session = result.sessions[0];
+
+      const throttle = session.flightData.setpoint[3];
+      const drops = detectThrottleDrops(
+        throttle.values,
+        throttle.time,
+        session.flightData.sampleRateHz
+      );
+      expect(drops.length).toBeGreaterThanOrEqual(3);
+    });
+
+    it('prop wash severity is highest on roll axis', async () => {
+      const buffer = generatePIDDemoBBL();
+      const result = await BlackboxParser.parse(buffer);
+      const session = result.sessions[0];
+
+      const propWash = analyzePropWash(session.flightData);
+      expect(propWash).toBeDefined();
+      // Roll gets 1.0x prop wash amplitude, pitch 0.7x, yaw 0.15x
+      expect(propWash!.worstAxis).toBe('roll');
     });
   });
 });
