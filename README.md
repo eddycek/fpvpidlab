@@ -629,12 +629,15 @@ PIDlab automates the two core aspects of FPV quad tuning: **filter tuning** (red
 
 ### Filter Tuning (FFT Analysis)
 
-The filter tuning pipeline analyzes gyro noise to determine optimal lowpass filter cutoff frequencies. It runs identically for both Deep Tune and Flash Tune — in Flash Tune mode, filter analysis runs **in parallel** with the transfer function PID analysis.
+The filter tuning pipeline analyzes gyro noise to determine optimal lowpass filter cutoff frequencies. The analysis code (`FilterAnalyzer.analyze()`) is identical for both tuning modes — what differs is the **input flight data** and how that affects segment selection:
+
+- **Deep Tune** — Runs on a **dedicated filter flight** (phase `filter_flight_pending`). The pilot is guided to fly gentle hovers with throttle sweeps (~30 seconds). This produces ideal data for `SegmentSelector`: plenty of hover segments and clean throttle sweeps across the RPM range.
+- **Flash Tune** — Runs on the **same flight** used for PID/TF analysis (phase `quick_flight_pending`). The pilot flies normally (freestyle, race, cruise — no special maneuvers). `SegmentSelector` extracts any hover/sweep segments it can find from the normal flying. If none are found (e.g. aggressive acro with no hover), the pipeline falls back to analyzing the entire flight with an accuracy warning. Filter and transfer function analyses run **in parallel** (`Promise.all` in `useTuningWizard`).
 
 **Core pipeline:** `SegmentSelector` → `FFTCompute` → `NoiseAnalyzer` → `FilterRecommender`
 **Supplementary:** `DataQualityScorer`, `ThrottleSpectrogramAnalyzer`, `GroupDelayEstimator`, `WindDisturbanceDetector`, `MechanicalHealthChecker`, `DynamicLowpassRecommender`
 
-1. **Segment selection** — Identifies stable hover segments from throttle and gyro data, excluding takeoff, landing, and aggressive maneuvers. Prefers throttle sweep segments (higher quality noise data across RPM range), falls back to steady hovers. Uses up to 5 segments. When no segments found, analyzes the entire flight as fallback (with accuracy warning).
+1. **Segment selection** — Identifies stable hover segments from throttle and gyro data, excluding takeoff, landing, and aggressive maneuvers. Prefers throttle sweep segments (higher quality noise data across RPM range), falls back to steady hovers. Uses up to 5 segments. When no segments found (common in Flash Tune with aggressive flying), analyzes the entire flight as fallback (with accuracy warning and lower data quality score).
 2. **Data quality scoring** — Rates flight data quality 0–100 before generating recommendations. Sub-scores: segment count (0.20), hover time (0.35), throttle coverage (0.25), segment type (0.20). Tiers: excellent (80–100), good (60–79), fair (40–59), poor (0–39). Fair/poor quality downgrades recommendation confidence.
 3. **FFT computation** — Applies Welch's method (Hanning window, 50% overlap, 4096-sample windows) to compute power spectral density for each axis. Spectra trimmed to 20–1000 Hz range.
 4. **Noise analysis** — Estimates the noise floor (lower quartile), detects prominent peaks (>6 dB above local floor), and classifies noise sources:
