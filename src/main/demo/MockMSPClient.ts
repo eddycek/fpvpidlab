@@ -13,7 +13,7 @@ import type { BlackboxInfo } from '@shared/types/blackbox.types';
 import {
   generateFilterDemoBBL,
   generatePIDDemoBBL,
-  generateQuickDemoBBL,
+  generateFlashDemoBBL,
   generateVerificationDemoBBL,
   generatePoorQualityBBL,
   generateMechanicalIssueBBL,
@@ -30,7 +30,7 @@ type BBLGenerator = (cycle: number) => Buffer;
  */
 export interface StressScenario {
   /** Which flight type to override */
-  flightType: 'filter' | 'pid' | 'quick';
+  flightType: 'filter' | 'pid' | 'flash';
   /** Custom BBL generator to use instead of the default */
   generator: BBLGenerator;
 }
@@ -184,9 +184,9 @@ export class MockMSPClient extends EventEmitter {
   /** Pre-generated demo BBL data (set by DemoDataGenerator) */
   private _demoBBLData: Buffer | null = null;
   /** Which BBL type the next auto-flight will generate (exposed for testing) */
-  _nextFlightType: 'filter' | 'pid' | 'quick' | 'verification' = 'filter';
+  _nextFlightType: 'filter' | 'pid' | 'flash' | 'verification' = 'filter';
   /** Last session type — determines what `advancePastVerification` resets to */
-  _lastSessionType: 'guided' | 'quick' = 'guided';
+  _lastSessionType: 'deep' | 'flash' = 'deep';
   /** Current tuning cycle (0-based). Increments each time a new session starts.
    *  Used for progressive noise reduction in demo data generation. */
   _tuningCycle = 0;
@@ -195,7 +195,7 @@ export class MockMSPClient extends EventEmitter {
   /**
    * Per-cycle stress scenario overrides.
    * Key = cycle number, value = generator to use instead of the default.
-   * Only applies to the matching flight type (filter/pid/quick).
+   * Only applies to the matching flight type (filter/pid/flash).
    */
   private _stressSchedule = new Map<number, StressScenario>();
 
@@ -282,7 +282,7 @@ export class MockMSPClient extends EventEmitter {
     this.cancelAutoFlight();
     this._tuningCycle = 0;
     this._nextFlightType = 'filter';
-    this._lastSessionType = 'guided';
+    this._lastSessionType = 'deep';
     this.connection.appliedSettings.clear();
     this._flashHasData = false;
     this._demoBBLData = null;
@@ -298,7 +298,7 @@ export class MockMSPClient extends EventEmitter {
   advancePastVerification(): void {
     if (this._nextFlightType === 'verification') {
       this._tuningCycle++;
-      this._nextFlightType = this._lastSessionType === 'quick' ? 'quick' : 'filter';
+      this._nextFlightType = this._lastSessionType === 'flash' ? 'flash' : 'filter';
       logger.info(
         `[DEMO] Skipped verification — advanced to cycle ${this._tuningCycle}, next flight: ${this._nextFlightType}`
       );
@@ -306,24 +306,24 @@ export class MockMSPClient extends EventEmitter {
   }
 
   /**
-   * Set the next flight type for quick tune sessions.
-   * Called when a quick tuning session is started.
+   * Set the next flight type for Flash Tune sessions.
+   * Called when a Flash Tune (quick) tuning session is started.
    */
-  setQuickTuneMode(): void {
-    this._nextFlightType = 'quick';
-    this._lastSessionType = 'quick';
-    logger.info('[DEMO] Quick tune mode set — next flight: quick');
+  setFlashTuneMode(): void {
+    this._nextFlightType = 'flash';
+    this._lastSessionType = 'flash';
+    logger.info('[DEMO] Flash Tune mode set — next flight: flash');
   }
 
   /**
-   * Set the next flight type for guided (Deep Tune) sessions.
-   * Called when a guided tuning session is started.
+   * Set the next flight type for Deep Tune sessions.
+   * Called when a Deep Tune (guided) tuning session is started.
    * Ensures correct flight cycling after a previous Flash Tune session.
    */
-  setGuidedTuneMode(): void {
+  setDeepTuneMode(): void {
     this._nextFlightType = 'filter';
-    this._lastSessionType = 'guided';
-    logger.info('[DEMO] Guided tune mode set — next flight: filter');
+    this._lastSessionType = 'deep';
+    logger.info('[DEMO] Deep Tune mode set — next flight: filter');
   }
 
   /**
@@ -605,7 +605,7 @@ export class MockMSPClient extends EventEmitter {
         const generators: Record<typeof this._nextFlightType, (cycle: number) => Buffer> = {
           filter: generateFilterDemoBBL,
           pid: generatePIDDemoBBL,
-          quick: generateQuickDemoBBL,
+          flash: generateFlashDemoBBL,
           verification: generateVerificationDemoBBL,
         };
         this._demoBBLData = generators[this._nextFlightType](c);
@@ -614,8 +614,8 @@ export class MockMSPClient extends EventEmitter {
       const nextType: Record<string, typeof this._nextFlightType> = {
         filter: 'pid',
         pid: 'verification',
-        quick: 'verification',
-        verification: this._lastSessionType === 'quick' ? 'quick' : 'filter',
+        flash: 'verification',
+        verification: this._lastSessionType === 'flash' ? 'flash' : 'filter',
       };
       // After verification completes a full cycle — increment for next round
       if (this._nextFlightType === 'verification') {

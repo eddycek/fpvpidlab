@@ -521,9 +521,9 @@ export function generateVerificationDemoBBL(cycle = 0): Buffer {
  *
  * @param cycle - Tuning cycle number (0 = first, higher = progressively cleaner)
  */
-export function generateQuickDemoBBL(cycle = 0): Buffer {
+export function generateFlashDemoBBL(cycle = 0): Buffer {
   const f = progressiveFactor(cycle);
-  logger.info(`[DEMO] Generating quick tune demo BBL (cycle ${cycle}, factor ${f.toFixed(2)})...`);
+  logger.info(`[DEMO] Generating Flash Tune demo BBL (cycle ${cycle}, factor ${f.toFixed(2)})...`);
   return buildDemoSession({
     frameCount: 60000, // 15s at 4000 Hz — enough for hover segments + 12 steps
     gyroBase: [2, -1, 0],

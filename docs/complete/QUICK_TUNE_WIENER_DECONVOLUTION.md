@@ -731,7 +731,7 @@ After snapshot, transition `quick_applied → verification_pending` (reuses exis
 | # | Task | Files | Tests |
 |---|------|-------|-------|
 | G1 | ✅ MockMSPClient quick tune support | `src/main/demo/MockMSPClient.ts` | Unit test: flight type cycling for quick mode |
-| G2 | ✅ Mock BBL data for quick flights | `src/main/demo/DemoDataGenerator.ts` | `generateQuickDemoBBL()` — hover + step inputs |
+| G2 | ✅ Mock BBL data for flash flights | `src/main/demo/DemoDataGenerator.ts` | `generateFlashDemoBBL()` — hover + step inputs |
 | G3 | ✅ E2E: Quick Tune full cycle | `e2e/demo-quick-tune-cycle.spec.ts` | E2E test: Start Quick → Erase → Download → Wizard → Apply → Skip → Complete → History |
 | G4 | ✅ E2E: Guided still works | Existing `e2e/demo-tuning-cycle.spec.ts` | Updated for StartTuningModal (Guided Tune button) |
 | G5 | ✅ E2E: History shows both types | `e2e/demo-generate-history.spec.ts` | Updated for StartTuningModal |

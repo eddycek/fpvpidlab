@@ -238,9 +238,9 @@ export function registerTuningHandlers(deps: HandlerDependencies): void {
         // Tell MockMSPClient which flight type cycle to use
         if (deps.isDemoMode && mspClient instanceof MockMSPClient) {
           if (resolvedType === 'quick') {
-            mspClient.setQuickTuneMode();
+            mspClient.setFlashTuneMode();
           } else {
-            mspClient.setGuidedTuneMode();
+            mspClient.setDeepTuneMode();
           }
         }
 
