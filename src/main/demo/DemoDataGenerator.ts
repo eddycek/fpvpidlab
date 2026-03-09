@@ -587,7 +587,7 @@ export function generatePIDDemoBBL(cycle = 0): Buffer {
 }
 
 /**
- * Generate a demo BBL buffer for verification flight (post-all tuning).
+ * Generate a demo BBL buffer for Deep Tune verification flight (post-all tuning).
  *
  * Contains one session with:
  * - ~10 seconds of hover data at 4000 Hz (I-frame only, iInterval=2)
@@ -616,6 +616,47 @@ export function generateVerificationDemoBBL(cycle = 0): Buffer {
     electricalNoiseAmplitude: 0.8 * f,
     injectSteps: false,
     iInterval: 2,
+  });
+}
+
+/**
+ * Generate a demo BBL buffer for Flash Tune verification flight (post-tune).
+ *
+ * Unlike Deep Tune verification (hover-only), Flash Tune verification needs
+ * broadband setpoint excitation for Wiener deconvolution to produce meaningful
+ * transfer function / step response results.
+ *
+ * Uses the same continuous broadband setpoint as generateFlashDemoBBL but with:
+ * - IMPROVED response params (higher damping, higher bandwidth, lower latency)
+ *   simulating the effect of applied tuning recommendations
+ * - Lower noise floor (post-tune improvement)
+ * - Same amplitude and duration as the original flash flight
+ *
+ * The response improvement is computed by advancing one cycle ahead of the current
+ * cycle's params, clamped to cycle+1 for realistic post-tune improvement.
+ *
+ * @param cycle - Tuning cycle number (0 = first, higher = progressively cleaner)
+ */
+export function generateFlashVerificationDemoBBL(cycle = 0): Buffer {
+  const f = progressiveFactor(cycle);
+  // Use cycle+1 response params to simulate post-tune improvement
+  const improvedResponseParams = computeCycleResponseParams(cycle + 1);
+  logger.info(
+    `[DEMO] Generating Flash Tune verification demo BBL (cycle ${cycle}, factor ${f.toFixed(2)}, improved response from cycle ${cycle + 1})...`
+  );
+  return buildDemoSession({
+    frameCount: 80000, // 20s at 4000 Hz (same as flash flight)
+    gyroBase: [2, -1, 0],
+    noiseAmplitude: 3 * f, // Low noise (post-tune)
+    motorHarmonicHz: 160,
+    motorHarmonicAmplitude: 5 * f, // Low harmonics (post-tune)
+    electricalNoiseHz: 600,
+    electricalNoiseAmplitude: 0.8 * f,
+    injectSteps: false,
+    iInterval: 2,
+    responseParams: improvedResponseParams,
+    continuousSetpoint: true,
+    continuousSetpointAmplitude: 150, // Same as flash flight
   });
 }
 
