@@ -46,6 +46,7 @@ import { suggestNextPID, type PIDObservation } from './BayesianPIDOptimizer';
 import { analyzeDTermEffectiveness } from './DTermAnalyzer';
 import { mapToSliders, computeSliderDelta, buildRecommendedPIDs } from './SliderMapper';
 import { analyzeFeedforward, recommendFeedforward } from './FeedforwardAnalyzer';
+import { analyzeThrottleTF } from './ThrottleTFAnalyzer';
 
 /** Default PID configuration if none provided */
 const DEFAULT_PIDS: PIDConfiguration = {
@@ -311,6 +312,12 @@ async function analyzePIDCore(params: CoreParams): Promise<PIDAnalysisResult> {
   const dTermEffectiveness = analyzeDTermEffectiveness(flightData);
   const feedforwardContext = rawHeaders ? extractFeedforwardContext(rawHeaders) : undefined;
 
+  // ── Per-band TF analysis (Flash Tune only) ──
+  const throttleTF =
+    extracted.mode === 'wiener_deconvolution'
+      ? analyzeThrottleTF(flightData, flightData.sampleRateHz)
+      : undefined;
+
   // ── Analyses requiring step events (Deep Tune only, null for Flash) ──
   const crossAxisCoupling =
     steps.length > 0 ? analyzeCrossAxisCoupling(steps, flightData) : undefined;
@@ -358,6 +365,13 @@ async function analyzePIDCore(params: CoreParams): Promise<PIDAnalysisResult> {
 
   // ── Warnings ──
   const warnings: AnalysisWarning[] = [...qualityResult.warnings];
+  if (throttleTF?.tpaWarning) {
+    warnings.push({
+      code: 'tpa_variance',
+      message: throttleTF.tpaWarning,
+      severity: 'warning',
+    });
+  }
   if (feedforwardContext?.active) {
     const ffMessage =
       extracted.mode === 'wiener_deconvolution'
@@ -398,6 +412,7 @@ async function analyzePIDCore(params: CoreParams): Promise<PIDAnalysisResult> {
     ...(bayesianSuggestion ? { bayesianSuggestion } : {}),
     ...(dTermEffectiveness ? { dTermEffectiveness } : {}),
     ...(feedforwardAnalysis ? { feedforwardAnalysis } : {}),
+    ...(throttleTF ? { throttleTF } : {}),
     ...(extracted.tfResult ? { transferFunction: extracted.tfResult } : {}),
     ...(extracted.tfResult
       ? {
