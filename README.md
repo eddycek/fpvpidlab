@@ -220,6 +220,7 @@ This will:
 - Start Vite dev server for hot reload
 - Launch Electron with the app
 - Open DevTools automatically
+- Start debug HTTP server on `http://127.0.0.1:9300` (endpoints: `/state`, `/screenshot`, `/logs`, `/console`, `/msp`)
 
 ### Demo Mode (No Hardware Needed)
 
@@ -234,8 +235,8 @@ Demo mode auto-connects to a virtual FC, creates a demo profile, and generates r
 
 ```bash
 # Development
-npm run dev                          # Start with hot reload
-npm run dev:demo                     # Start with simulated FC (no hardware needed)
+npm run dev                          # Start with hot reload + debug server (:9300)
+npm run dev:demo                     # Start with simulated FC + debug server (:9300)
 
 # Testing
 npm test                             # Unit tests in watch mode
@@ -346,6 +347,8 @@ pidlab/
 │   │   ├── msc/                 # SD card Mass Storage Class support
 │   │   │   ├── MSCManager.ts          # MSC download/erase orchestration
 │   │   │   └── driveDetector.ts       # Cross-platform drive mount detection
+│   │   ├── debug/              # Debug HTTP server (dev-only, port 9300)
+│   │   │   └── DebugServer.ts         # /state, /screenshot, /logs, /console, /msp
 │   │   ├── demo/               # Demo mode (offline UX testing)
 │   │   │   ├── MockMSPClient.ts       # Simulated FC (47 tests)
 │   │   │   └── DemoDataGenerator.ts   # Realistic BBL generation (26 tests)

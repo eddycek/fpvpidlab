@@ -375,3 +375,4 @@ End-to-end tests that launch the real Electron app in demo mode and walk through
 - `playwright.config.ts` — Config: 1 worker, 60s timeout, trace on failure
 - `.e2e-userdata/` — Isolated user data directory (wiped before each test file for clean state)
 - `E2E_USER_DATA_DIR` env var — Overrides Electron `userData` path for test isolation
+- `DEBUG_SERVER=true` env var — E2E tests launch with debug HTTP server on port 9300 for post-failure inspection (`/state`, `/logs`, `/screenshot`)

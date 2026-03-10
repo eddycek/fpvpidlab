@@ -84,9 +84,9 @@
 
 ## Main Process (`src/main/`)
 
-### Entry Point (`index.ts`, 238 lines)
+### Entry Point (`index.ts`, 440 lines)
 
-Creates and wires six managers:
+Creates and wires six managers + optional debug server:
 
 ```typescript
 const mspClient = new MSPClient();
@@ -117,6 +117,8 @@ If tuning session exists AND phase is filter_flight_pending, pid_flight_pending,
     Transition to filter_log_ready or pid_log_ready
     Broadcast EVENT_TUNING_SESSION_CHANGED
 ```
+
+**Debug server** (when `DEBUG_SERVER=true`): After managers are initialized, `setDebugDependencies()` and `startDebugServer()` launch an HTTP server on port 9300. After window creation, `captureRendererConsole()` hooks into `webContents.on('console-message')`. Implementation: `src/main/debug/DebugServer.ts` (304 lines). Endpoints: `/health`, `/state`, `/screenshot`, `/logs`, `/console`, `/msp`.
 
 ---
 

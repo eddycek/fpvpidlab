@@ -14,7 +14,7 @@ PIDlab is an Electron-based desktop application for managing FPV drone PID confi
 
 ### Essential Commands
 ```bash
-# Start development with hot reload
+# Start development with hot reload (includes debug server on port 9300)
 npm run dev
 
 # Run unit tests (watch mode)
@@ -38,10 +38,31 @@ npm run rebuild
 
 ### Demo Mode (Offline UX Testing)
 ```bash
-# Start with simulated FC — no hardware needed
+# Start with simulated FC — no hardware needed (includes debug server)
 npm run dev:demo
 ```
 Boots the app with a mock flight controller that auto-connects on startup. Generates realistic BBL data, allows full tuning workflow testing (all 10 phases), and runs real analysis (FFT, step response). See `docs/OFFLINE_UX_TESTING.md` for details.
+
+### Debug Server
+
+Both `npm run dev` and `npm run dev:demo` start with `DEBUG_SERVER=true`, which launches an HTTP debug server on `http://127.0.0.1:9300`. The server exposes app state for tooling integration (e.g., Claude Code).
+
+**Endpoints:**
+
+| Endpoint | Description |
+|----------|-------------|
+| `GET /health` | Health check (PID, uptime) |
+| `GET /state` | Connection, profile, tuning session, blackbox info |
+| `GET /screenshot` | Capture renderer screenshot (saves PNG, returns path) |
+| `GET /logs` | Last N lines from electron-log (`?n=100` for count) |
+| `GET /console` | Renderer console messages (`?level=error` to filter) |
+| `GET /msp` | MSP connection details, CLI mode, FC info, filter/PID config |
+
+**Configuration:**
+- Controlled by `DEBUG_SERVER=true` environment variable (not active in production builds)
+- Port override: `DEBUG_SERVER_PORT=9400` (default: 9300)
+- Screenshots saved to `debug-screenshots/` (gitignored)
+- Implementation: `src/main/debug/DebugServer.ts`
 
 ### After Native Module Changes
 If serialport or other native modules fail:
@@ -61,6 +82,7 @@ npm run rebuild
 - Blackbox parsing: `src/main/blackbox/` (BBL binary log parser)
 - FFT analysis: `src/main/analysis/` (noise analysis & filter tuning)
 - Step response analysis: `src/main/analysis/` (PID tuning via step metrics)
+- Debug server: `src/main/debug/DebugServer.ts` (HTTP endpoints for tooling, port 9300)
 
 **Preload Script** (`src/preload/index.ts`)
 - Exposes `window.betaflight` API to renderer
