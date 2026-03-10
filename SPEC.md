@@ -169,7 +169,7 @@ High-level user journey:
 | Requirement | Status | Notes |
 |-------------|--------|-------|
 | Package analysis engine as a stateless service (container) | :fast_forward: | Architecture supports this — analysis modules are pure functions |
-| Keep core algorithms pure and testable (input → output) | :white_check_mark: | All analysis modules: pure TypeScript, no side effects, 327 tests (151 filter + 122 PID + 22 data quality + 27 header validation + 5 misc) |
+| Keep core algorithms pure and testable (input → output) | :white_check_mark: | All analysis modules: pure TypeScript, no side effects, 347 tests (160 filter + 130 PID + 25 data quality + 27 header validation + 5 misc) |
 | Cloud optional; local remains primary | :white_check_mark: | Fully offline, no network calls |
 
 ---
@@ -351,7 +351,7 @@ Automated end-to-end tests running in CI pipeline against a real FC connected to
 
 ## Progress Summary
 
-**Last Updated:** March 10, 2026 | **Tests:** 2330 unit tests across 114 files + 26 Playwright E2E tests | **PRs Merged:** #1–#215
+**Last Updated:** March 10, 2026 | **Tests:** 2351 unit tests across 114 files + 26 Playwright E2E tests | **PRs Merged:** #1–#219
 
 | Phase | Status | Notes |
 |-------|--------|-------|

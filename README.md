@@ -267,7 +267,7 @@ npm run rebuild                      # Rebuild native modules (serialport)
 
 All UI changes must include tests. Tests automatically run before commits. Coverage thresholds enforced: 80% lines/functions/statements, 75% branches.
 
-**Unit tests:** 2330 tests across 114 files — MSP protocol, storage managers, IPC handlers, UI components, hooks, BBL parser fuzz, analysis pipeline validation.
+**Unit tests:** 2351 tests across 114 files — MSP protocol, storage managers, IPC handlers, UI components, hooks, BBL parser fuzz, analysis pipeline validation.
 
 **Playwright E2E:** 26 tests across 5 spec files — launches real Electron app in demo mode, walks through complete tuning cycles (Deep Tune, Flash Tune, and stress-test edge cases).
 

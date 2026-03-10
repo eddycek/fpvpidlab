@@ -1,6 +1,6 @@
 # Architecture Overview
 
-**Last Updated:** March 10, 2026 | **Phase 4 Complete, Phase 6 Complete** | **2330 unit tests, 114 files + 26 Playwright E2E tests**
+**Last Updated:** March 10, 2026 | **Phase 4 Complete, Phase 6 Complete** | **2351 unit tests, 114 files + 26 Playwright E2E tests**
 
 ---
 
@@ -284,17 +284,17 @@ Two independent analysis pipelines: **filter tuning** (FFT noise analysis) and *
 | `FFTCompute.ts` | 171 | 20 | Welch's method, Hanning window |
 | `SegmentSelector.ts` | 195 | 27 | Hover + throttle sweep detection |
 | `NoiseAnalyzer.ts` | 246 | 25 | Peak detection, noise classification |
-| `FilterRecommender.ts` | 330 | 48 | Noise-based filter targets, RPM-aware bounds, propwash floor |
+| `FilterRecommender.ts` | 330 | 57 | Noise-based filter targets, RPM-aware bounds, propwash floor, medium noise, notch-aware resonance, LPF2 |
 | `FilterAnalyzer.ts` | 206 | 19 | Filter analysis orchestrator (data quality, throttle spectrogram, group delay) |
 | `ThrottleSpectrogramAnalyzer.ts` | — | 19 | Throttle-dependent spectrogram analysis |
 | `GroupDelayEstimator.ts` | — | 23 | Group delay estimation, filter latency measurement |
 | `StepDetector.ts` | 142 | 16 | Derivative-based step input detection |
 | `StepMetrics.ts` | 330 | 38 | Rise time, overshoot, settling, trace, FF contribution, adaptive window |
-| `PIDRecommender.ts` | 380 | 69 | Flight-PID-anchored P/D recommendations, FF-aware, damping ratio, I-term |
+| `PIDRecommender.ts` | 380 | 92 | Flight-PID-anchored P/D recommendations, FF-aware, damping ratio, I-term, quad-size-aware bounds |
 | `PIDAnalyzer.ts` | 185 | 21 | PID analysis orchestrator (FF context, data quality, cross-axis, propwash) |
 | `CrossAxisDetector.ts` | — | 20 | Cross-axis coupling detection |
 | `PropWashDetector.ts` | — | 16 | Propwash detection and analysis |
-| `DataQualityScorer.ts` | ~200 | 22 | Flight data quality scoring (0-100), confidence adjustment |
+| `DataQualityScorer.ts` | ~200 | 39 | Flight data quality scoring (0-100), confidence adjustment, low coherence warning |
 | `headerValidation.ts` | 94 | 20 | BB header diagnostics, version-aware debug mode, RPM enrichment |
 | `constants.ts` | 177 | — | All tunable thresholds |
 
@@ -819,13 +819,13 @@ Hardware error (FC timeout, USB disconnect)
 
 ## Testing Strategy
 
-**2330 unit tests across 114 files + 26 Playwright E2E tests**. See [TESTING.md](./TESTING.md) for complete inventory.
+**2351 unit tests across 114 files + 26 Playwright E2E tests**. See [TESTING.md](./TESTING.md) for complete inventory.
 
 | Area | Files | Tests |
 |------|-------|-------|
 | Blackbox Parser | 9 | 245 |
-| FFT Analysis (+ Data Quality + Spectrogram + Delay) | 8 | 216 |
-| Step Response + PID + TF + CrossAxis + PropWash + DTerm + Bayesian | 10 | 292 |
+| FFT Analysis (+ Data Quality + Spectrogram + Delay) | 8 | 225 |
+| Step Response + PID + TF + CrossAxis + PropWash + DTerm + Bayesian | 10 | 300 |
 | Header Validation + Constants | 2 | 31 |
 | MSP Protocol & Client | 4 | 173 |
 | MSC (Mass Storage) | 2 | 43 |

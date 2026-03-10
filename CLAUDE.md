@@ -243,7 +243,7 @@ Analyzes gyro noise spectra to produce filter tuning recommendations.
 - **SegmentSelector**: Finds stable hover segments and throttle sweep segments (excludes takeoff/landing/acro)
 - **FFTCompute**: Hanning window, Welch's method (50% overlap), power spectral density
 - **NoiseAnalyzer**: Noise floor estimation, peak detection (prominence-based), source classification (frame resonance 80-200 Hz, motor harmonics, electrical >500 Hz)
-- **FilterRecommender**: Absolute noise-based target computation (convergent), safety bounds, propwash-aware gyro LPF1 floor (100 Hz min, bypass at -15 dB extreme noise), beginner-friendly explanations
+- **FilterRecommender**: Absolute noise-based target computation (convergent), safety bounds, propwash-aware gyro LPF1 floor (100 Hz min, bypass at -15 dB extreme noise), beginner-friendly explanations. Medium noise handling (conditional LPF2 recommendations), notch-aware resonance (notch already covering peak suppresses LPF lowering), conditional dynamic notch Q based on noise severity
 - **ThrottleSpectrogramAnalyzer**: Bins gyro data by throttle level (10 bands), per-band FFT spectra and noise floors. Returns `ThrottleSpectrogramResult`
 - **GroupDelayEstimator**: Per-filter group delay estimation (PT1, biquad, notch). Returns `FilterGroupDelay` with gyroTotalMs, dtermTotalMs, warning if >2ms. Smart `dyn_notch_q` handling: `Q > 10 ? Q / 100 : Q` for BF internal storage quirk
 - **FilterAnalyzer**: Orchestrator with async progress reporting. Returns throttle spectrogram + group delay in result
@@ -259,7 +259,7 @@ Analyzes step response metrics from setpoint/gyro data to produce PID tuning rec
 
 - **StepDetector**: Derivative-based step input detection in setpoint data, hold/cooldown validation. Configurable window parameter (`windowMs?`)
 - **StepMetrics**: Rise time, overshoot percentage, settling time, latency, ringing measurement. Adaptive two-pass window sizing (`computeAdaptiveWindowMs()` — median-based, clamped 150-500ms). Steady-state error tracking (`steadyStateErrorPercent`)
-- **PIDRecommender**: Flight-PID-anchored P/D/I recommendations (convergent), `extractFlightPIDs()` from BBL header, proportional severity-based steps (D: +5/+10/+15, P: -5/-10), I-term rules based on `meanSteadyStateError` with flight-style thresholds, D/P damping ratio validation (0.45-0.85 range), safety bounds (P: 20-120, D: 15-80, I: 30-120). **D-term effectiveness gating**: 3-tier D-increase gating (>0.7 boost confidence, 0.3-0.7 allow+warn, <0.3 redirect to filters). **Prop wash integration**: severe prop wash (≥5×) boosts D-increase confidence or generates new D+5 recommendation on worst axis. **Rule TF-4**: DC gain deficit from transfer function → I-term increase recommendation (Flash Tune equivalent of steady-state error detection)
+- **PIDRecommender**: Flight-PID-anchored P/D/I recommendations (convergent), `extractFlightPIDs()` from BBL header, proportional severity-based steps (D: +5/+10/+15, P: -5/-10), I-term rules based on `meanSteadyStateError` with flight-style thresholds, D/P damping ratio validation (0.45-0.85 range), safety bounds (P: 20-120, D: 15-80, I: 30-120). **Quad-size-aware bounds**: `droneSize` parameter narrows P/D/I bounds via `QUAD_SIZE_BOUNDS` (e.g., micro quads get lower P caps). **Severity-scaled sluggish P**: P increase scales with rise time severity (+5/+10/+15). **P-too-high warning**: when P is above size-appropriate max but no overshoot, emits informational recommendation. **D-term effectiveness gating**: 3-tier D-increase gating (>0.7 boost confidence, 0.3-0.7 allow+warn, <0.3 redirect to filters). **Prop wash integration**: severe prop wash (≥5×) boosts D-increase confidence or generates new D+5 recommendation on worst axis. **Rule TF-4**: DC gain deficit from transfer function → I-term increase recommendation (Flash Tune equivalent of steady-state error detection)
 - **CrossAxisDetector**: Pearson correlation coupling detection between axis pairs. Thresholds: none (<0.15), mild (0.15-0.4), significant (≥0.4). Returns `CrossAxisCoupling`
 - **PropWashDetector**: Throttle-down event detection, post-event FFT in 20-90 Hz band. Returns `PropWashAnalysis` with events, meanSeverity, worstAxis, dominantFrequencyHz. Passed to `recommendPID()` for prop wash-aware D recommendations
 - **PIDAnalyzer**: Orchestrator with async progress reporting, threads `flightPIDs` through pipeline. Two-pass step detection (first 500ms, then adaptive). Passes both `dTermEffectiveness` and `propWash` to `recommendPID()` for integrated D-gain gating
@@ -283,7 +283,7 @@ Rates flight data quality 0-100 before generating recommendations. Integrated in
 - **`scorePIDDataQuality()`**: Sub-scores: step count (0.30), axis coverage (0.30), magnitude variety (0.20), hold quality (0.20)
 - **`adjustFilterConfidenceByQuality()` / `adjustPIDConfidenceByQuality()`**: Downgrades recommendation confidence for fair/poor data
 - Tier mapping: 80-100 excellent, 60-79 good, 40-59 fair, 0-39 poor
-- Quality warnings: `few_segments`, `short_hover_time`, `narrow_throttle_coverage`, `few_steps_per_axis`, `missing_axis_coverage`, `low_step_magnitude`
+- Quality warnings: `few_segments`, `short_hover_time`, `narrow_throttle_coverage`, `few_steps_per_axis`, `missing_axis_coverage`, `low_step_magnitude`, `low_coherence`
 - UI: quality pill in FilterAnalysisStep, PIDAnalysisStep, AnalysisOverview
 - History: compact `dataQuality` in `FilterMetricsSummary` / `PIDMetricsSummary`
 - **Flight quality score** (`src/shared/utils/tuneQualityScore.ts`): Composite 0-100 score with type-aware components. Deep Tune: noise floor, tracking RMS, overshoot (step response), settling time (4 components). Flash Tune: noise floor, overshoot (TF synthetic step response), phase margin, bandwidth (4 components). When both step data AND TF are present, 6 components are available. Optional Noise Delta component when verification present. Points redistributed evenly among available components. Displayed as badge in TuningCompletionSummary and TuningHistoryPanel. Trend chart (QualityTrendChart) shows progression across sessions.
@@ -535,7 +535,7 @@ Renderer components subscribe to events:
 - `src/shared/constants.ts` - MSP codes, Betaflight vendor IDs, preset profiles, size defaults
 - `src/shared/types/*.types.ts` - Shared type definitions (common, profile, pid, blackbox, analysis)
 - `src/shared/constants/flightGuide.ts` - Flight guide phases, tips, and tuning workflow steps
-- `src/main/analysis/constants.ts` - FFT thresholds, peak detection, safety bounds, propwash floor, damping ratio, I-term bounds, adaptive window (tunable)
+- `src/main/analysis/constants.ts` - FFT thresholds, peak detection, safety bounds, propwash floor, damping ratio, I-term bounds, adaptive window, QUAD_SIZE_BOUNDS, BANDWIDTH_LOW_HZ_BY_STYLE, LPF2 thresholds (tunable)
 - `vitest.config.ts` - Test configuration with jsdom environment
 
 ### Size Defaults
