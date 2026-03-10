@@ -146,7 +146,44 @@ export function registerTuningHandlers(deps: HandlerDependencies): void {
           percent: 85,
         });
 
-        // Stage 4: Save and reboot
+        // Stage 4: Create post-tuning snapshot (before save & reboot to avoid race)
+        // FC is in CLI mode from filter/FF apply (or snapshot will enter CLI).
+        // This is non-fatal — if it fails, we still save and reboot.
+        if (snapshotManager && profileManager && tuningSessionManager) {
+          try {
+            const profileId = profileManager.getCurrentProfileId();
+            if (profileId) {
+              const session = await tuningSessionManager.getSession(profileId);
+              if (session && !session.postTuningSnapshotId) {
+                let sessionNumber = 1;
+                if (tuningHistoryManager) {
+                  const history = await tuningHistoryManager.getHistory(profileId);
+                  sessionNumber = history.length + 1;
+                }
+                const tuningType = session.tuningType ?? 'guided';
+                const label = `Post-tuning #${sessionNumber} (${TUNING_TYPE_LABELS[tuningType]})`;
+                sendProgress({
+                  stage: 'save',
+                  message: 'Creating post-tuning snapshot...',
+                  percent: 88,
+                });
+                const snapshot = await snapshotManager.createSnapshot(label, 'auto', {
+                  tuningSessionNumber: sessionNumber,
+                  tuningType,
+                  snapshotRole: 'post-tuning',
+                });
+                await tuningSessionManager.updatePhase(profileId, session.phase, {
+                  postTuningSnapshotId: snapshot.id,
+                });
+                logger.info(`Post-tuning snapshot created: ${snapshot.id}`);
+              }
+            }
+          } catch (e) {
+            logger.warn('Could not create post-tuning snapshot (non-fatal):', e);
+          }
+        }
+
+        // Stage 5: Save and reboot
         sendProgress({ stage: 'save', message: 'Saving and rebooting FC...', percent: 90 });
         await mspClient.saveAndReboot();
 

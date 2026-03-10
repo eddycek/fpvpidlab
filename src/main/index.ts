@@ -261,48 +261,8 @@ async function initialize(): Promise<void> {
               }
             }
 
-            // Create post-tuning snapshot on first reconnect after PID/Quick apply
-            if (
-              session.phase === TUNING_PHASE.PID_APPLIED ||
-              session.phase === TUNING_PHASE.QUICK_APPLIED
-            ) {
-              // Dedup: skip if snapshot already created on a previous reconnect
-              if (session.postTuningSnapshotId) {
-                logger.info('Post-tuning snapshot already exists, skipping');
-              } else {
-                // Compute session number from history (session not yet archived)
-                let sessionNumber = 1;
-                if (tuningHistoryManager) {
-                  const history = await tuningHistoryManager.getHistory(existingProfile.id);
-                  sessionNumber = history.length + 1;
-                }
-                const tuningType = session.tuningType ?? 'guided';
-                const label = `Post-tuning #${sessionNumber} (${TUNING_TYPE_LABELS[tuningType]})`;
-                logger.info(`Creating post-apply snapshot: ${label}`);
-                const snapshot = await snapshotManager.createSnapshot(label, 'auto', {
-                  tuningSessionNumber: sessionNumber,
-                  tuningType,
-                  snapshotRole: 'post-tuning',
-                });
-
-                // Save snapshot ID to tuning session for history tracking
-                const updated = await tuningSessionManager.updatePhase(
-                  existingProfile.id,
-                  session.phase, // same phase — just adding data
-                  { postTuningSnapshotId: snapshot.id }
-                );
-                sendTuningSessionChanged(updated);
-
-                // Snapshot creation left FC in CLI mode (via exportCLIDiff).
-                // close() will send 'exit' (rebooting FC out of CLI).
-                // Set rebootPending so disconnect handler keeps the profile.
-                logger.info('Disconnecting to reboot FC out of CLI after post-apply snapshot');
-                mspClient.setRebootPending();
-                await mspClient.disconnect();
-                // FC will reconnect; dedup guard prevents infinite loop.
-                return;
-              }
-            }
+            // Post-tuning snapshot is now created during apply (before save & reboot)
+            // to avoid race conditions with UI phase transitions.
           }
         } catch (err) {
           logger.warn('Smart reconnect check failed (non-fatal):', err);

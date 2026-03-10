@@ -82,6 +82,7 @@ import {
   setProfileManager,
   setBlackboxManager,
   setTuningSessionManager,
+  setTuningHistoryManager,
   consumePendingSettingsSnapshot,
 } from './handlers';
 import { shell } from 'electron';
@@ -276,6 +277,15 @@ function createMockTuningSessionManager() {
   };
 }
 
+function createMockTuningHistoryManager() {
+  return {
+    getHistory: vi.fn().mockResolvedValue([]),
+    archiveSession: vi.fn().mockResolvedValue(undefined),
+    updateLatestVerification: vi.fn().mockResolvedValue(undefined),
+    updateRecordVerification: vi.fn().mockResolvedValue(undefined),
+  };
+}
+
 /** Invoke a registered IPC handler by channel name */
 async function invoke(channel: string, ...args: any[]): Promise<IPCResponse<any>> {
   const handler = registeredHandlers.get(channel);
@@ -303,6 +313,7 @@ describe('IPC Handlers', () => {
   let mockSnapshotMgr: ReturnType<typeof createMockSnapshotManager>;
   let mockBBMgr: ReturnType<typeof createMockBlackboxManager>;
   let mockTuningMgr: ReturnType<typeof createMockTuningSessionManager>;
+  let mockTuningHistoryMgr: ReturnType<typeof createMockTuningHistoryManager>;
 
   beforeEach(() => {
     registeredHandlers.clear();
@@ -312,12 +323,14 @@ describe('IPC Handlers', () => {
     mockSnapshotMgr = createMockSnapshotManager();
     mockBBMgr = createMockBlackboxManager();
     mockTuningMgr = createMockTuningSessionManager();
+    mockTuningHistoryMgr = createMockTuningHistoryManager();
 
     setMSPClient(mockMSP);
     setProfileManager(mockProfileMgr);
     setSnapshotManager(mockSnapshotMgr);
     setBlackboxManager(mockBBMgr);
     setTuningSessionManager(mockTuningMgr);
+    setTuningHistoryManager(mockTuningHistoryMgr);
 
     mockMainWindow = {
       webContents: { send: vi.fn() },
@@ -1283,11 +1296,25 @@ describe('IPC Handlers', () => {
       expect(res.data.rebooted).toBe(false);
     });
 
-    it('does not create snapshot during apply', async () => {
+    it('creates post-tuning snapshot during apply', async () => {
+      // Setup: active session without post-tuning snapshot
+      mockTuningMgr.getSession.mockResolvedValue({
+        profileId: 'prof-1',
+        phase: TUNING_PHASE.PID_APPLIED,
+        tuningType: 'guided',
+        startedAt: '2026-01-01',
+        updatedAt: '2026-01-01',
+      });
+
       const { event } = createMockEvent();
       const res = await invokeWithEvent(IPCChannel.TUNING_APPLY_RECOMMENDATIONS, event, baseInput);
       expect(res.success).toBe(true);
-      expect(mockSnapshotMgr.createSnapshot).not.toHaveBeenCalled();
+      // Post-tuning snapshot created before save & reboot
+      expect(mockSnapshotMgr.createSnapshot).toHaveBeenCalledWith(
+        'Post-tuning #1 (Deep Tune)',
+        'auto',
+        { tuningSessionNumber: 1, tuningType: 'guided', snapshotRole: 'post-tuning' }
+      );
     });
 
     it('applies feedforward recommendations via CLI', async () => {
