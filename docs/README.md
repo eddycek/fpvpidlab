@@ -2,6 +2,12 @@
 
 Overview of all design documents in this directory. Completed documents are archived in [`complete/`](./complete/) as historical design records.
 
+## Reference Documents
+
+| Document | Description |
+|----------|-------------|
+| [PID_TUNING_KNOWLEDGE](./PID_TUNING_KNOWLEDGE.md) | FPV tuning knowledge base — PID/filter theory, quad archetypes, best practices. Used by the `/tuning-advisor` skill. |
+
 ## Active Documents
 
 | Document | Status | PRs | Description |

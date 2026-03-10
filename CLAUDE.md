@@ -57,6 +57,10 @@ Both `npm run dev` and `npm run dev:demo` start with `DEBUG_SERVER=true`, which 
 | `GET /logs` | Last N lines from electron-log (`?n=100` for count) |
 | `GET /console` | Renderer console messages (`?level=error` to filter) |
 | `GET /msp` | MSP connection details, CLI mode, FC info, filter/PID config |
+| `GET /tuning-history` | Completed tuning session records for current profile |
+| `GET /tuning-session` | Active tuning session state |
+| `GET /snapshots` | Configuration snapshots for current profile |
+| `GET /blackbox-logs` | Downloaded blackbox logs for current profile |
 
 **Configuration:**
 - Controlled by `DEBUG_SERVER=true` environment variable (not active in production builds)
@@ -649,6 +653,26 @@ Claude has **full autonomous access** exclusively to `eddycek/pidlab` repo:
 - **Deny**: Credentials, secrets, SSH keys, certificates, `node -e`/`python3` (arbitrary code exec)
 - **Ask**: Destructive ops (`rm`, `git reset --hard`, `git clean`), package installations (`npm install`), lock files
 - **Location**: `.claude/settings.json` (project-specific)
+
+### Tuning Advisor Skill (`/tuning-advisor`)
+
+Custom Claude Code skill for PID tuning expertise. Invoke with `/tuning-advisor` or `/tuning-advisor <mode>`.
+
+**Modes:**
+- `consult` (default) — Analyze current tuning progress via debug server endpoints, give expert advice
+- `review` — Review code changes affecting tuning logic (`src/main/analysis/`)
+- `audit` — Full audit of recommendation quality against best practices
+- `analyze` — Deep analysis of specific flight data or tuning results
+
+**Knowledge base:** `docs/PID_TUNING_KNOWLEDGE.md` — FPV tuning theory, filter/PID architecture, quad archetypes, PIDlab-specific analysis rules.
+
+**Skill definition:** `.claude/skills/tuning-advisor/SKILL.md`
+
+### PostToolUse Hook (Tuning Logic Check)
+
+A PostToolUse hook (`.claude/hooks/tuning-logic-check.sh`) triggers on Edit/Write to files in `src/main/analysis/` or `src/main/demo/DemoDataGenerator*`. It emits a reminder to consider running `/tuning-advisor review` before committing tuning logic changes. Non-blocking (exit 0).
+
+Registered in `.claude/settings.json` under `hooks.PostToolUse`.
 
 ## Platform-Specific Notes
 

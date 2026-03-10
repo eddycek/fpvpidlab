@@ -220,7 +220,7 @@ This will:
 - Start Vite dev server for hot reload
 - Launch Electron with the app
 - Open DevTools automatically
-- Start debug HTTP server on `http://127.0.0.1:9300` (endpoints: `/state`, `/screenshot`, `/logs`, `/console`, `/msp`)
+- Start debug HTTP server on `http://127.0.0.1:9300` (endpoints: `/state`, `/screenshot`, `/logs`, `/console`, `/msp`, `/tuning-history`, `/tuning-session`, `/snapshots`, `/blackbox-logs`)
 
 ### Demo Mode (No Hardware Needed)
 
@@ -348,7 +348,7 @@ pidlab/
 │   │   │   ├── MSCManager.ts          # MSC download/erase orchestration
 │   │   │   └── driveDetector.ts       # Cross-platform drive mount detection
 │   │   ├── debug/              # Debug HTTP server (dev-only, port 9300)
-│   │   │   └── DebugServer.ts         # /state, /screenshot, /logs, /console, /msp
+│   │   │   └── DebugServer.ts         # 10 endpoints: /state, /screenshot, /logs, /console, /msp, /tuning-history, /tuning-session, /snapshots, /blackbox-logs, /health
 │   │   ├── demo/               # Demo mode (offline UX testing)
 │   │   │   ├── MockMSPClient.ts       # Simulated FC (47 tests)
 │   │   │   └── DemoDataGenerator.ts   # Realistic BBL generation (26 tests)
@@ -439,8 +439,14 @@ pidlab/
 │   ├── demo-generate-history.spec.ts  # Mixed history generator
 │   └── demo-generate-stress.spec.ts   # Stress test (edge cases)
 │
+├── .claude/                     # Claude Code configuration
+│   ├── settings.json                    # Permissions + PostToolUse hook registration
+│   ├── skills/tuning-advisor/SKILL.md   # /tuning-advisor skill (4 modes: consult, review, audit, analyze)
+│   └── hooks/tuning-logic-check.sh      # PostToolUse hook for analysis file edits
+│
 └── docs/                        # Design documents (see docs/README.md for index)
     ├── README.md                          # Document index
+    ├── PID_TUNING_KNOWLEDGE.md            # FPV tuning knowledge base (for /tuning-advisor skill)
     ├── FLASH_TUNE_RECOMMENDATION_PARITY.md # Active — unified pipeline, quality score parity
     ├── TUNING_PRECISION_IMPROVEMENTS.md   # Active — 4/15 improvements done
     ├── UX_IMPROVEMENT_IDEAS.md            # Active — 4/7 ideas done

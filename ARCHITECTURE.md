@@ -118,7 +118,7 @@ If tuning session exists AND phase is filter_flight_pending, pid_flight_pending,
     Broadcast EVENT_TUNING_SESSION_CHANGED
 ```
 
-**Debug server** (when `DEBUG_SERVER=true`): After managers are initialized, `setDebugDependencies()` and `startDebugServer()` launch an HTTP server on port 9300. After window creation, `captureRendererConsole()` hooks into `webContents.on('console-message')`. Implementation: `src/main/debug/DebugServer.ts` (304 lines). Endpoints: `/health`, `/state`, `/screenshot`, `/logs`, `/console`, `/msp`.
+**Debug server** (when `DEBUG_SERVER=true`): After managers are initialized, `setDebugDependencies()` and `startDebugServer()` launch an HTTP server on port 9300. After window creation, `captureRendererConsole()` hooks into `webContents.on('console-message')`. Implementation: `src/main/debug/DebugServer.ts` (435 lines). 10 endpoints: `/health`, `/state`, `/screenshot`, `/logs`, `/console`, `/msp`, `/tuning-history`, `/tuning-session`, `/snapshots`, `/blackbox-logs`.
 
 ---
 
