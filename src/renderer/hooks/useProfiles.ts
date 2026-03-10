@@ -54,10 +54,10 @@ export function useProfiles() {
       } finally {
         setLoading(false);
       }
-      // eslint-disable-next-line react-hooks/exhaustive-deps
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [loadProfiles]
-  ); // toast is stable
+  );
 
   const createProfileFromPreset = useCallback(
     async (presetId: string, customName?: string): Promise<DroneProfile> => {
@@ -77,10 +77,10 @@ export function useProfiles() {
       } finally {
         setLoading(false);
       }
-      // eslint-disable-next-line react-hooks/exhaustive-deps
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [loadProfiles]
-  ); // toast is stable
+  );
 
   const updateProfile = useCallback(
     async (id: string, updates: ProfileUpdateInput): Promise<DroneProfile> => {
@@ -102,10 +102,10 @@ export function useProfiles() {
       } finally {
         setLoading(false);
       }
-      // eslint-disable-next-line react-hooks/exhaustive-deps
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [loadProfiles, currentProfile]
-  ); // toast is stable
+  );
 
   const deleteProfile = useCallback(
     async (id: string): Promise<void> => {
@@ -126,10 +126,10 @@ export function useProfiles() {
       } finally {
         setLoading(false);
       }
-      // eslint-disable-next-line react-hooks/exhaustive-deps
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [loadProfiles, currentProfile]
-  ); // toast is stable
+  );
 
   const setAsCurrentProfile = useCallback(
     async (id: string): Promise<DroneProfile> => {
@@ -149,10 +149,10 @@ export function useProfiles() {
       } finally {
         setLoading(false);
       }
-      // eslint-disable-next-line react-hooks/exhaustive-deps
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [loadProfiles]
-  ); // toast is stable
+  );
 
   const getProfile = useCallback(async (id: string): Promise<DroneProfile | null> => {
     try {
