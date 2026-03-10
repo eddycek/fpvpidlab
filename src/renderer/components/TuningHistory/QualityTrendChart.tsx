@@ -47,15 +47,6 @@ function formatDateFull(iso: string): string {
   });
 }
 
-function formatDateAxis(iso: string): string {
-  return new Date(iso).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
-
 function CustomTooltip({ active, payload }: any) {
   if (!active || !payload?.[0]) return null;
   const d = payload[0].payload as TrendDataPoint;

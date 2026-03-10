@@ -6,7 +6,7 @@
  * 2. Throttle sweep segments — monotonically changing throttle across wide range
  *    (preferred for filter analysis: captures noise across full RPM range)
  */
-import type { BlackboxFlightData, TimeSeries } from '@shared/types/blackbox.types';
+import type { BlackboxFlightData } from '@shared/types/blackbox.types';
 import type { FlightSegment } from '@shared/types/analysis.types';
 import {
   THROTTLE_MIN_FLIGHT,

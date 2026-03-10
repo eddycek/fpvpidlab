@@ -143,6 +143,7 @@ export function useTuningWizard(logId: string, mode: TuningMode = 'full'): UseTu
     } finally {
       setParsing(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [logId]);
 
   const runFilterAnalysis = useCallback(async () => {

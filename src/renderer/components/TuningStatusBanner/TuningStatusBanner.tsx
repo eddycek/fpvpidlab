@@ -231,7 +231,6 @@ export function TuningStatusBanner({
       : session.phase === TUNING_PHASE.FILTER_FLIGHT_PENDING
         ? 'filter'
         : 'PID';
-  const storageName = isSDCard ? 'SD card' : 'flash';
   const activeStepIndex = showErasedState && isFlightPending ? stepIndex + 1 : stepIndex;
 
   const showBBWarning =

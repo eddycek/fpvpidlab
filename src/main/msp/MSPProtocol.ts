@@ -1,4 +1,4 @@
-import { MSPMessage, MSPResponse, MSP_PROTOCOL } from './types';
+import { MSPResponse, MSP_PROTOCOL } from './types';
 import { MSPError } from '../utils/errors';
 
 export class MSPProtocol {
@@ -224,7 +224,7 @@ export class MSPProtocol {
           // Incomplete message, save remaining
           break;
         }
-      } catch (error) {
+      } catch {
         // Invalid message, skip preamble and continue
         offset += 2;
       }

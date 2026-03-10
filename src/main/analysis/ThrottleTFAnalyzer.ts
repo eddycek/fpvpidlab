@@ -8,7 +8,7 @@
  */
 
 import type { BlackboxFlightData } from '@shared/types/blackbox.types';
-import { binByThrottle, MIN_SAMPLES_PER_BAND } from './ThrottleSpectrogramAnalyzer';
+import { binByThrottle } from './ThrottleSpectrogramAnalyzer';
 import {
   estimateTransferFunction,
   extractMetrics,

@@ -23,7 +23,7 @@ import {
   consumePendingSettingsSnapshot,
 } from './ipc/handlers';
 import { logger } from './utils/logger';
-import { SNAPSHOT, PROFILE, TUNING_PHASE, TUNING_TYPE_LABELS } from '@shared/constants';
+import { SNAPSHOT, PROFILE, TUNING_PHASE } from '@shared/constants';
 import { MockMSPClient, DEMO_FC_SERIAL } from './demo/MockMSPClient';
 import { generateFilterDemoBBL } from './demo/DemoDataGenerator';
 import {

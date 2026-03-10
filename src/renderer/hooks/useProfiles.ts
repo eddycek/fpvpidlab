@@ -3,7 +3,7 @@ import type {
   DroneProfile,
   DroneProfileMetadata,
   ProfileCreationInput,
-  ProfileUpdateInput
+  ProfileUpdateInput,
 } from '@shared/types/profile.types';
 import { useToast } from './useToast';
 
@@ -36,103 +36,123 @@ export function useProfiles() {
     }
   }, []);
 
-  const createProfile = useCallback(async (input: ProfileCreationInput): Promise<DroneProfile> => {
-    try {
-      setLoading(true);
-      setError(null);
-      const profile = await window.betaflight.createProfile(input);
-      await loadProfiles();
-      setCurrentProfile(profile);
-      toast.success(`Profile '${profile.name}' created`);
-      return profile;
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to create profile';
-      setError(message);
-      toast.error(message);
-      throw new Error(message);
-    } finally {
-      setLoading(false);
-    }
-  }, [loadProfiles]); // toast is stable
-
-  const createProfileFromPreset = useCallback(async (presetId: string, customName?: string): Promise<DroneProfile> => {
-    try {
-      setLoading(true);
-      setError(null);
-      const profile = await window.betaflight.createProfileFromPreset(presetId, customName);
-      await loadProfiles();
-      setCurrentProfile(profile);
-      toast.success(`Profile '${profile.name}' created`);
-      return profile;
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to create profile from preset';
-      setError(message);
-      toast.error(message);
-      throw new Error(message);
-    } finally {
-      setLoading(false);
-    }
-  }, [loadProfiles]); // toast is stable
-
-  const updateProfile = useCallback(async (id: string, updates: ProfileUpdateInput): Promise<DroneProfile> => {
-    try {
-      setLoading(true);
-      setError(null);
-      const profile = await window.betaflight.updateProfile(id, updates);
-      await loadProfiles();
-      if (currentProfile?.id === id) {
+  const createProfile = useCallback(
+    async (input: ProfileCreationInput): Promise<DroneProfile> => {
+      try {
+        setLoading(true);
+        setError(null);
+        const profile = await window.betaflight.createProfile(input);
+        await loadProfiles();
         setCurrentProfile(profile);
+        toast.success(`Profile '${profile.name}' created`);
+        return profile;
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Failed to create profile';
+        setError(message);
+        toast.error(message);
+        throw new Error(message);
+      } finally {
+        setLoading(false);
       }
-      toast.success('Profile updated');
-      return profile;
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to update profile';
-      setError(message);
-      toast.error(message);
-      throw new Error(message);
-    } finally {
-      setLoading(false);
-    }
-  }, [loadProfiles, currentProfile]); // toast is stable
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    },
+    [loadProfiles]
+  ); // toast is stable
 
-  const deleteProfile = useCallback(async (id: string): Promise<void> => {
-    try {
-      setLoading(true);
-      setError(null);
-      await window.betaflight.deleteProfile(id);
-      await loadProfiles();
-      if (currentProfile?.id === id) {
-        setCurrentProfile(null);
+  const createProfileFromPreset = useCallback(
+    async (presetId: string, customName?: string): Promise<DroneProfile> => {
+      try {
+        setLoading(true);
+        setError(null);
+        const profile = await window.betaflight.createProfileFromPreset(presetId, customName);
+        await loadProfiles();
+        setCurrentProfile(profile);
+        toast.success(`Profile '${profile.name}' created`);
+        return profile;
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Failed to create profile from preset';
+        setError(message);
+        toast.error(message);
+        throw new Error(message);
+      } finally {
+        setLoading(false);
       }
-      toast.success('Profile deleted');
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to delete profile';
-      setError(message);
-      toast.error(message);
-      throw new Error(message);
-    } finally {
-      setLoading(false);
-    }
-  }, [loadProfiles, currentProfile]); // toast is stable
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    },
+    [loadProfiles]
+  ); // toast is stable
 
-  const setAsCurrentProfile = useCallback(async (id: string): Promise<DroneProfile> => {
-    try {
-      setLoading(true);
-      setError(null);
-      const profile = await window.betaflight.setCurrentProfile(id);
-      setCurrentProfile(profile);
-      await loadProfiles();
-      toast.info(`Switched to profile '${profile.name}'`);
-      return profile;
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to set current profile';
-      setError(message);
-      toast.error(message);
-      throw new Error(message);
-    } finally {
-      setLoading(false);
-    }
-  }, [loadProfiles]); // toast is stable
+  const updateProfile = useCallback(
+    async (id: string, updates: ProfileUpdateInput): Promise<DroneProfile> => {
+      try {
+        setLoading(true);
+        setError(null);
+        const profile = await window.betaflight.updateProfile(id, updates);
+        await loadProfiles();
+        if (currentProfile?.id === id) {
+          setCurrentProfile(profile);
+        }
+        toast.success('Profile updated');
+        return profile;
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Failed to update profile';
+        setError(message);
+        toast.error(message);
+        throw new Error(message);
+      } finally {
+        setLoading(false);
+      }
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    },
+    [loadProfiles, currentProfile]
+  ); // toast is stable
+
+  const deleteProfile = useCallback(
+    async (id: string): Promise<void> => {
+      try {
+        setLoading(true);
+        setError(null);
+        await window.betaflight.deleteProfile(id);
+        await loadProfiles();
+        if (currentProfile?.id === id) {
+          setCurrentProfile(null);
+        }
+        toast.success('Profile deleted');
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Failed to delete profile';
+        setError(message);
+        toast.error(message);
+        throw new Error(message);
+      } finally {
+        setLoading(false);
+      }
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    },
+    [loadProfiles, currentProfile]
+  ); // toast is stable
+
+  const setAsCurrentProfile = useCallback(
+    async (id: string): Promise<DroneProfile> => {
+      try {
+        setLoading(true);
+        setError(null);
+        const profile = await window.betaflight.setCurrentProfile(id);
+        setCurrentProfile(profile);
+        await loadProfiles();
+        toast.info(`Switched to profile '${profile.name}'`);
+        return profile;
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Failed to set current profile';
+        setError(message);
+        toast.error(message);
+        throw new Error(message);
+      } finally {
+        setLoading(false);
+      }
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    },
+    [loadProfiles]
+  ); // toast is stable
 
   const getProfile = useCallback(async (id: string): Promise<DroneProfile | null> => {
     try {
@@ -153,6 +173,7 @@ export function useProfiles() {
       toast.error(message);
       throw new Error(message);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // toast is stable
 
   useEffect(() => {
@@ -180,6 +201,6 @@ export function useProfiles() {
     deleteProfile,
     setAsCurrentProfile,
     getProfile,
-    exportProfile
+    exportProfile,
   };
 }

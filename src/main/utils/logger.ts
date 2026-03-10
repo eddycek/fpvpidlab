@@ -1,5 +1,4 @@
 import log from 'electron-log';
-import { LOG_LEVELS } from '@shared/constants';
 
 class Logger {
   constructor() {

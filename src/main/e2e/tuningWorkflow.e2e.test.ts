@@ -484,15 +484,9 @@ describe('E2E Tuning Workflow', () => {
   // ═══════════════════════════════════════════════════════════════════════════
 
   describe('Snapshot Workflow', () => {
-    let profileId: string;
-
     beforeEach(async () => {
       // Create a profile for snapshot tests
-      const res = await invoke(
-        IPCChannel.PROFILE_CREATE,
-        makeProfileInput('SN-SNAP-001', 'Snapshot Test')
-      );
-      profileId = res.data.id;
+      await invoke(IPCChannel.PROFILE_CREATE, makeProfileInput('SN-SNAP-001', 'Snapshot Test'));
     });
 
     it('create manual snapshot -> appears in list', async () => {

@@ -3,7 +3,6 @@ import {
   analyzeDynamicLowpass,
   recommendDynamicLowpass,
   DYNAMIC_LOWPASS_NOISE_INCREASE_DB,
-  DYNAMIC_LOWPASS_MIN_BANDS,
   DYNAMIC_LOWPASS_MIN_CORRELATION,
 } from './DynamicLowpassRecommender';
 import type { ThrottleSpectrogramResult, ThrottleBand } from '@shared/types/analysis.types';

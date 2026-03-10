@@ -68,7 +68,7 @@ const mockRoll = makeProfile(5);
 const mockPitch = makeProfile(3);
 const mockYaw = makeProfile(2);
 
-const emptyProfile: AxisStepProfile = {
+const _emptyProfile: AxisStepProfile = {
   responses: [],
   meanOvershoot: 0,
   meanRiseTimeMs: 0,
@@ -121,7 +121,7 @@ describe('StepResponseChart', () => {
     render(<StepResponseChart roll={mockRoll} pitch={mockPitch} yaw={mockYaw} />);
 
     // Find which step we start at
-    const initialText = screen.getByText(/Step \d+ \/ 5/).textContent!;
+    const _initialText = screen.getByText(/Step \d+ \/ 5/).textContent!;
 
     // Click Next
     await user.click(screen.getByText('Next'));
@@ -134,7 +134,7 @@ describe('StepResponseChart', () => {
   });
 
   it('disables Prev button at first step', async () => {
-    const user = userEvent.setup();
+    const _user = userEvent.setup();
     render(<StepResponseChart roll={makeProfile(1)} pitch={mockPitch} yaw={mockYaw} />);
 
     // With only 1 step, both prev and next should be disabled

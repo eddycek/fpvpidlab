@@ -15,7 +15,6 @@
 import type { BlackboxFlightData } from '@shared/types/blackbox.types';
 import type { PropWashEvent, PropWashAnalysis } from '@shared/types/analysis.types';
 import { computePowerSpectrum, trimSpectrum } from './FFTCompute';
-import { estimateNoiseFloor } from './NoiseAnalyzer';
 import {
   PROPWASH_THROTTLE_DROP_RATE,
   PROPWASH_MIN_DROP_DURATION_MS,

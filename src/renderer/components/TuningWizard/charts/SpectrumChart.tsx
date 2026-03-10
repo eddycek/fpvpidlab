@@ -8,16 +8,9 @@ import {
   CartesianGrid,
   Tooltip,
   ReferenceLine,
-  Legend,
 } from 'recharts';
 import { AxisTabs, type AxisSelection } from './AxisTabs';
-import {
-  spectrumToRechartsData,
-  downsampleData,
-  AXIS_COLORS,
-  type Axis,
-  type SpectrumDataPoint,
-} from './chartUtils';
+import { spectrumToRechartsData, downsampleData, AXIS_COLORS, type Axis } from './chartUtils';
 import type { NoiseProfile, NoisePeak } from '@shared/types/analysis.types';
 import './SpectrumChart.css';
 
@@ -82,16 +75,18 @@ export function SpectrumChart({ noise }: SpectrumChartProps) {
     if (yMax === -Infinity) {
       yMax = 0;
       yMin = -60;
-      xMaxSignificant = downsampled.length > 0 ? downsampled[downsampled.length - 1].frequency : 500;
+      xMaxSignificant =
+        downsampled.length > 0 ? downsampled[downsampled.length - 1].frequency : 500;
     }
 
-    const dataMaxFreq = downsampled.length > 0 ? downsampled[downsampled.length - 1].frequency : 1000;
+    const dataMaxFreq =
+      downsampled.length > 0 ? downsampled[downsampled.length - 1].frequency : 1000;
     const freqPadding = (xMaxSignificant - 20) * FREQ_PADDING_RATIO;
     const xMax = Math.min(xMaxSignificant + freqPadding, dataMaxFreq);
 
     // Filter data to last significant frequency only — padding is visual (empty space),
     // not data. This prevents -240 dB floor values from creating a cliff and stretching the Y-axis.
-    const filtered = downsampled.filter(p => p.frequency <= xMaxSignificant);
+    const filtered = downsampled.filter((p) => p.frequency <= xMaxSignificant);
 
     return {
       data: filtered,
@@ -100,9 +95,7 @@ export function SpectrumChart({ noise }: SpectrumChartProps) {
     };
   }, [noise]);
 
-  const visibleAxes: Axis[] = selectedAxis === 'all'
-    ? ['roll', 'pitch', 'yaw']
-    : [selectedAxis];
+  const visibleAxes: Axis[] = selectedAxis === 'all' ? ['roll', 'pitch', 'yaw'] : [selectedAxis];
 
   // Collect peaks for visible axes
   const visiblePeaks: (NoisePeak & { axis: Axis })[] = [];
@@ -113,17 +106,13 @@ export function SpectrumChart({ noise }: SpectrumChartProps) {
   }
 
   // Noise floor for visible axes
-  const noiseFloors = visibleAxes.map(axis => ({
+  const noiseFloors = visibleAxes.map((axis) => ({
     axis,
     value: noise[axis].noiseFloorDb,
   }));
 
   if (data.length === 0) {
-    return (
-      <div className="spectrum-chart-empty">
-        No spectrum data available.
-      </div>
-    );
+    return <div className="spectrum-chart-empty">No spectrum data available.</div>;
   }
 
   return (
@@ -131,70 +120,87 @@ export function SpectrumChart({ noise }: SpectrumChartProps) {
       <AxisTabs selected={selectedAxis} onChange={setSelectedAxis} />
       <div className="spectrum-chart-container">
         <ResponsiveContainer width="100%" aspect={ASPECT_RATIO} minHeight={MIN_HEIGHT}>
-        <LineChart
-          data={data}
-          margin={{ top: 8, right: 16, left: 8, bottom: 4 }}
-        >
-          <CartesianGrid strokeDasharray="3 3" stroke="#333" />
-          <XAxis
-            dataKey="frequency"
-            type="number"
-            domain={xDomain}
-            allowDataOverflow={true}
-            tick={{ fontSize: 11, fill: '#aaa' }}
-            label={{ value: 'Frequency (Hz)', position: 'insideBottom', offset: -2, style: { fontSize: 11, fill: '#888' } }}
-          />
-          <YAxis
-            domain={yDomain}
-            allowDataOverflow={true}
-            tick={{ fontSize: 11, fill: '#aaa' }}
-            label={{ value: 'Noise (dB)', angle: -90, position: 'insideLeft', style: { fontSize: 11, fill: '#888' } }}
-          />
-          <Tooltip
-            contentStyle={{ background: '#1a1a1a', border: '1px solid #444', borderRadius: 4, fontSize: 12 }}
-            labelFormatter={(val) => `${val} Hz`}
-            formatter={((value: number | undefined, name: string) => [`${(value ?? 0).toFixed(1)} dB`, name]) as any}
-          />
-
-          {visibleAxes.map(axis => (
-            <Line
-              key={axis}
-              dataKey={axis}
-              stroke={AXIS_COLORS[axis]}
-              strokeWidth={1.5}
-              dot={false}
-              isAnimationActive={false}
-              name={axis}
-            />
-          ))}
-
-          {/* Noise floor reference lines */}
-          {noiseFloors.map(({ axis, value }) => (
-            <ReferenceLine
-              key={`floor-${axis}`}
-              y={value}
-              stroke={AXIS_COLORS[axis]}
-              strokeDasharray="5 5"
-              strokeOpacity={0.4}
-            />
-          ))}
-
-          {/* Peak markers as vertical reference lines */}
-          {visiblePeaks.map((peak, i) => (
-            <ReferenceLine
-              key={`peak-${peak.axis}-${i}`}
-              x={peak.frequency}
-              stroke={PEAK_COLORS[peak.type] || '#aaa'}
-              strokeDasharray="3 3"
-              strokeOpacity={0.6}
+          <LineChart data={data} margin={{ top: 8, right: 16, left: 8, bottom: 4 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#333" />
+            <XAxis
+              dataKey="frequency"
+              type="number"
+              domain={xDomain}
+              allowDataOverflow={true}
+              tick={{ fontSize: 11, fill: '#aaa' }}
               label={{
-                value: `${PEAK_LABELS[peak.type] || peak.type} ${peak.frequency.toFixed(0)}Hz`,
-                position: 'top',
-                style: { fontSize: 9, fill: PEAK_COLORS[peak.type] || '#aaa' },
+                value: 'Frequency (Hz)',
+                position: 'insideBottom',
+                offset: -2,
+                style: { fontSize: 11, fill: '#888' },
               }}
             />
-          ))}
-        </LineChart>
+            <YAxis
+              domain={yDomain}
+              allowDataOverflow={true}
+              tick={{ fontSize: 11, fill: '#aaa' }}
+              label={{
+                value: 'Noise (dB)',
+                angle: -90,
+                position: 'insideLeft',
+                style: { fontSize: 11, fill: '#888' },
+              }}
+            />
+            <Tooltip
+              contentStyle={{
+                background: '#1a1a1a',
+                border: '1px solid #444',
+                borderRadius: 4,
+                fontSize: 12,
+              }}
+              labelFormatter={(val) => `${val} Hz`}
+              formatter={
+                ((value: number | undefined, name: string) => [
+                  `${(value ?? 0).toFixed(1)} dB`,
+                  name,
+                ]) as any
+              }
+            />
+
+            {visibleAxes.map((axis) => (
+              <Line
+                key={axis}
+                dataKey={axis}
+                stroke={AXIS_COLORS[axis]}
+                strokeWidth={1.5}
+                dot={false}
+                isAnimationActive={false}
+                name={axis}
+              />
+            ))}
+
+            {/* Noise floor reference lines */}
+            {noiseFloors.map(({ axis, value }) => (
+              <ReferenceLine
+                key={`floor-${axis}`}
+                y={value}
+                stroke={AXIS_COLORS[axis]}
+                strokeDasharray="5 5"
+                strokeOpacity={0.4}
+              />
+            ))}
+
+            {/* Peak markers as vertical reference lines */}
+            {visiblePeaks.map((peak, i) => (
+              <ReferenceLine
+                key={`peak-${peak.axis}-${i}`}
+                x={peak.frequency}
+                stroke={PEAK_COLORS[peak.type] || '#aaa'}
+                strokeDasharray="3 3"
+                strokeOpacity={0.6}
+                label={{
+                  value: `${PEAK_LABELS[peak.type] || peak.type} ${peak.frequency.toFixed(0)}Hz`,
+                  position: 'top',
+                  style: { fontSize: 9, fill: PEAK_COLORS[peak.type] || '#aaa' },
+                }}
+              />
+            ))}
+          </LineChart>
         </ResponsiveContainer>
       </div>
     </div>

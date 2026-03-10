@@ -2,7 +2,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { FileStorage } from './FileStorage';
 import type { MSPClient } from '../msp/MSPClient';
 import type { ProfileManager } from './ProfileManager';
-import type { ConfigurationSnapshot, SnapshotMetadata, FCInfo } from '@shared/types/common.types';
+import type { ConfigurationSnapshot, SnapshotMetadata } from '@shared/types/common.types';
 import { SnapshotError } from '../utils/errors';
 import { logger } from '../utils/logger';
 import { APP_VERSION, SNAPSHOT } from '@shared/constants';

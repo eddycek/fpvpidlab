@@ -204,6 +204,7 @@ export function useAnalysisOverview(logId: string): UseAnalysisOverviewReturn {
   // Auto-parse on mount
   useEffect(() => {
     parseLog();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const retryParse = useCallback(() => {

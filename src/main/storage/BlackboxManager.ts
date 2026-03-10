@@ -56,7 +56,7 @@ export class BlackboxManager {
       filename,
       filepath,
       size: data.length,
-      fcInfo
+      fcInfo,
     };
 
     // Update metadata index
@@ -64,7 +64,9 @@ export class BlackboxManager {
     logs.push(metadata);
     await this.saveMetadata(logs);
 
-    logger.info(`[BlackboxManager] Saved Blackbox log: ${filename} (${data.length} bytes) for profile ${profileId}`);
+    logger.info(
+      `[BlackboxManager] Saved Blackbox log: ${filename} (${data.length} bytes) for profile ${profileId}`
+    );
 
     return metadata;
   }
@@ -74,7 +76,7 @@ export class BlackboxManager {
    */
   async listLogs(profileId: string): Promise<BlackboxLogMetadata[]> {
     const allLogs = await this.loadMetadata();
-    return allLogs.filter(log => log.profileId === profileId);
+    return allLogs.filter((log) => log.profileId === profileId);
   }
 
   /**
@@ -89,7 +91,7 @@ export class BlackboxManager {
    */
   async getLog(id: string): Promise<BlackboxLogMetadata | null> {
     const logs = await this.loadMetadata();
-    return logs.find(log => log.id === id) || null;
+    return logs.find((log) => log.id === id) || null;
   }
 
   /**
@@ -97,7 +99,7 @@ export class BlackboxManager {
    */
   async deleteLog(id: string): Promise<void> {
     const logs = await this.loadMetadata();
-    const log = logs.find(l => l.id === id);
+    const log = logs.find((l) => l.id === id);
 
     if (!log) {
       throw new Error(`Blackbox log not found: ${id}`);
@@ -113,7 +115,7 @@ export class BlackboxManager {
     }
 
     // Remove from metadata
-    const updatedLogs = logs.filter(l => l.id !== id);
+    const updatedLogs = logs.filter((l) => l.id !== id);
     await this.saveMetadata(updatedLogs);
 
     logger.info(`[BlackboxManager] Deleted Blackbox log: ${id}`);
@@ -135,7 +137,7 @@ export class BlackboxManager {
 
     // Remove from metadata
     const allLogs = await this.loadMetadata();
-    const remainingLogs = allLogs.filter(l => l.profileId !== profileId);
+    const remainingLogs = allLogs.filter((l) => l.profileId !== profileId);
     await this.saveMetadata(remainingLogs);
 
     logger.info(`[BlackboxManager] Deleted ${logs.length} Blackbox logs for profile ${profileId}`);
@@ -172,14 +174,16 @@ export class BlackboxManager {
       filename,
       filepath: destPath,
       size,
-      fcInfo
+      fcInfo,
     };
 
     const logs = await this.loadMetadata();
     logs.push(metadata);
     await this.saveMetadata(logs);
 
-    logger.info(`[BlackboxManager] Registered SD card log: ${originalName} → ${filename} (${size} bytes)`);
+    logger.info(
+      `[BlackboxManager] Registered SD card log: ${originalName} → ${filename} (${size} bytes)`
+    );
 
     return metadata;
   }
@@ -202,7 +206,7 @@ export class BlackboxManager {
     try {
       const data = await fs.readFile(this.metadataFile, 'utf-8');
       return JSON.parse(data);
-    } catch (error) {
+    } catch {
       logger.warn('[BlackboxManager] Failed to load Blackbox logs metadata, returning empty array');
       return [];
     }

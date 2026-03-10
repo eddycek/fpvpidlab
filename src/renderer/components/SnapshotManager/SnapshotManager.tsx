@@ -39,7 +39,7 @@ export function SnapshotManager() {
   const toast = useToast();
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [snapshotLabel, setSnapshotLabel] = useState('');
-  const [selectedSnapshot, setSelectedSnapshot] = useState<string | null>(null);
+  const [_selectedSnapshot, setSelectedSnapshot] = useState<string | null>(null);
   const [restoreConfirmId, setRestoreConfirmId] = useState<string | null>(null);
   const [restoreBackup, setRestoreBackup] = useState(true);
   const [restoring, setRestoring] = useState(false);
@@ -62,6 +62,7 @@ export function SnapshotManager() {
     if (snapshots.length > 0 && snapshotsPage > totalSnapshotsPages) {
       setSnapshotsPage(totalSnapshotsPages);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [snapshots.length, totalSnapshotsPages]);
 
   const snapshotsPageStart = (snapshotsPage - 1) * PAGE_SIZE;

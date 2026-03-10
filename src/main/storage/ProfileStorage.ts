@@ -5,7 +5,7 @@
  */
 
 import { promises as fs } from 'fs';
-import { join, dirname } from 'path';
+import { join } from 'path';
 import type { DroneProfile } from '@shared/types/profile.types';
 import { logger } from '../utils/logger';
 
@@ -59,10 +59,7 @@ export class ProfileStorage {
       const profiles = await this.loadProfiles();
       profiles[profile.id] = profile;
 
-      await fs.writeFile(
-        this.profilesFile,
-        JSON.stringify({ profiles }, null, 2)
-      );
+      await fs.writeFile(this.profilesFile, JSON.stringify({ profiles }, null, 2));
 
       logger.info(`Profile saved: ${profile.id} (${profile.name})`);
     } catch (error) {
@@ -92,10 +89,7 @@ export class ProfileStorage {
       const profiles = await this.loadProfiles();
       delete profiles[id];
 
-      await fs.writeFile(
-        this.profilesFile,
-        JSON.stringify({ profiles }, null, 2)
-      );
+      await fs.writeFile(this.profilesFile, JSON.stringify({ profiles }, null, 2));
 
       logger.info(`Profile deleted: ${id}`);
     } catch (error) {
@@ -134,10 +128,7 @@ export class ProfileStorage {
         throw new Error(`Profile ${id} not found`);
       }
 
-      await fs.writeFile(
-        filePath,
-        JSON.stringify(profile, null, 2)
-      );
+      await fs.writeFile(filePath, JSON.stringify(profile, null, 2));
 
       logger.info(`Profile exported: ${id} to ${filePath}`);
     } catch (error) {

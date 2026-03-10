@@ -1,9 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import {
-  analyzeWindDisturbance,
-  DISTURBANCE_CALM_THRESHOLD,
-  DISTURBANCE_WINDY_THRESHOLD,
-} from './WindDisturbanceDetector';
+import { analyzeWindDisturbance, DISTURBANCE_CALM_THRESHOLD } from './WindDisturbanceDetector';
 import type { BlackboxFlightData, TimeSeries } from '@shared/types/blackbox.types';
 
 function makeSeries(length: number, fn: (i: number) => number): TimeSeries {

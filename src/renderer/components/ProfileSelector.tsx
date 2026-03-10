@@ -17,7 +17,7 @@ export function ProfileSelector() {
     updateProfile,
     deleteProfile,
     getProfile,
-    exportProfile
+    exportProfile: _exportProfile,
   } = useProfiles();
 
   const { status: connectionStatus } = useConnection();
@@ -107,10 +107,7 @@ export function ProfileSelector() {
     <div className="profile-selector">
       <div className="profile-selector-container">
         {/* Current Profile Header */}
-        <div
-          onClick={() => setExpanded(!expanded)}
-          className="profile-selector-header"
-        >
+        <div onClick={() => setExpanded(!expanded)} className="profile-selector-header">
           <div className="profile-selector-current">
             <div className="profile-selector-label">Current Drone Profile</div>
             {currentProfile ? (
@@ -137,7 +134,12 @@ export function ProfileSelector() {
               stroke="currentColor"
               viewBox="0 0 24 24"
             >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M19 9l-7 7-7-7"
+              />
             </svg>
           </div>
         </div>
@@ -145,13 +147,9 @@ export function ProfileSelector() {
         {/* Profile List */}
         {expanded && (
           <div className="profile-selector-list">
-            {loading && (
-              <div className="profile-selector-loading">Loading profiles...</div>
-            )}
+            {loading && <div className="profile-selector-loading">Loading profiles...</div>}
 
-            {error && (
-              <div className="profile-selector-error">{error}</div>
-            )}
+            {error && <div className="profile-selector-error">{error}</div>}
 
             {!loading && !error && profiles.length === 0 && (
               <div className="profile-selector-empty">
@@ -163,8 +161,18 @@ export function ProfileSelector() {
               <>
                 {connectionStatus.connected && (
                   <div className="profile-selector-lock-notice">
-                    <svg width="14" height="14" fill="currentColor" viewBox="0 0 20 20" style={{ flexShrink: 0 }}>
-                      <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+                    <svg
+                      width="14"
+                      height="14"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                      style={{ flexShrink: 0 }}
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
+                        clipRule="evenodd"
+                      />
                     </svg>
                     <span>Profile locked while FC is connected</span>
                   </div>

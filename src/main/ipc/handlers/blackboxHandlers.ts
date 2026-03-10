@@ -9,7 +9,6 @@ import type {
 } from '@shared/types/blackbox.types';
 import { logger } from '../../utils/logger';
 import { getErrorMessage } from '../../utils/errors';
-import { getMainWindow } from '../../window';
 import { BlackboxParser } from '../../blackbox/BlackboxParser';
 import { MSCProgress } from '../../msc/MSCManager';
 import type { HandlerDependencies } from './types';

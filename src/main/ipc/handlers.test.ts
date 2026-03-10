@@ -854,7 +854,7 @@ describe('IPC Handlers', () => {
 
   describe('BLACKBOX_DOWNLOAD_LOG', () => {
     it('downloads log with progress and saves metadata', async () => {
-      const { event, sentEvents } = createMockEvent();
+      const { event } = createMockEvent();
       mockMSP.downloadBlackboxLog.mockImplementation(async (onProgress: any) => {
         onProgress(50);
         onProgress(100);

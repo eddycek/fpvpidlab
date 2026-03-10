@@ -577,7 +577,7 @@ async function runFullAnalysis(logId?: string, sessionIndex: number = 0) {
     const r = pidResult.value;
     results.pid = {
       stepsDetected: r.stepsDetected,
-      axisMetrics: r.axisMetrics,
+      axisMetrics: { roll: r.roll, pitch: r.pitch, yaw: r.yaw },
       recommendations: r.recommendations,
       dataQuality: r.dataQuality,
       crossAxisCoupling: r.crossAxisCoupling,
@@ -592,12 +592,14 @@ async function runFullAnalysis(logId?: string, sessionIndex: number = 0) {
 
   if (tfResult.status === 'fulfilled') {
     const r = tfResult.value;
+    const tf = r.transferFunction;
     results.transferFunction = {
       recommendations: r.recommendations,
-      bandwidth: r.bandwidth,
-      phaseMargin: r.phaseMargin,
-      gainMargin: r.gainMargin,
-      dcGainDb: r.dcGainDb,
+      metrics: {
+        roll: tf.metrics.roll,
+        pitch: tf.metrics.pitch,
+        yaw: tf.metrics.yaw,
+      },
       dataQuality: r.dataQuality,
       analysisTimeMs: r.analysisTimeMs,
     };

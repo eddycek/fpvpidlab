@@ -44,6 +44,7 @@ export function useSnapshots() {
         setLoading(false);
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [loadSnapshots]
   ); // toast is stable
 
@@ -63,6 +64,7 @@ export function useSnapshots() {
         setLoading(false);
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [loadSnapshots]
   ); // toast is stable
 
@@ -84,6 +86,7 @@ export function useSnapshots() {
         setLoading(false);
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [loadSnapshots]
   ); // toast is stable
 

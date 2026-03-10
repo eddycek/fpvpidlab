@@ -1,16 +1,24 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import type {
   DroneProfile,
   DroneSize,
   BatteryType,
   FlightStyle,
-  ProfileUpdateInput
+  ProfileUpdateInput,
 } from '@shared/types/profile.types';
 import './ProfileWizard.css';
 
 const FLIGHT_STYLE_OPTIONS: { value: FlightStyle; label: string; description: string }[] = [
-  { value: 'smooth', label: 'Smooth', description: 'Cinematic, smooth transitions, minimal overshoot' },
-  { value: 'balanced', label: 'Balanced', description: 'General freestyle, good all-around response' },
+  {
+    value: 'smooth',
+    label: 'Smooth',
+    description: 'Cinematic, smooth transitions, minimal overshoot',
+  },
+  {
+    value: 'balanced',
+    label: 'Balanced',
+    description: 'General freestyle, good all-around response',
+  },
   { value: 'aggressive', label: 'Aggressive', description: 'Racing, maximum snap, fast tracking' },
 ];
 
@@ -82,12 +90,11 @@ export function ProfileEditModal({ profile, onSave, onCancel }: ProfileEditModal
             <label>
               Drone Size <span className="required">*</span>
             </label>
-            <select
-              value={size}
-              onChange={(e) => setSize(e.target.value as DroneSize)}
-            >
-              {sizes.map(s => (
-                <option key={s} value={s}>{s}</option>
+            <select value={size} onChange={(e) => setSize(e.target.value as DroneSize)}>
+              {sizes.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
               ))}
             </select>
           </div>
@@ -108,12 +115,11 @@ export function ProfileEditModal({ profile, onSave, onCancel }: ProfileEditModal
             <label>
               Battery <span className="required">*</span>
             </label>
-            <select
-              value={battery}
-              onChange={(e) => setBattery(e.target.value as BatteryType)}
-            >
-              {batteries.map(b => (
-                <option key={b} value={b}>{b}</option>
+            <select value={battery} onChange={(e) => setBattery(e.target.value as BatteryType)}>
+              {batteries.map((b) => (
+                <option key={b} value={b}>
+                  {b}
+                </option>
               ))}
             </select>
           </div>
@@ -149,7 +155,8 @@ export function ProfileEditModal({ profile, onSave, onCancel }: ProfileEditModal
                 onClick={() => setFlightStyle(opt.value)}
               >
                 <div className="flight-style-option-name">
-                  {opt.label}{opt.value === 'balanced' ? ' (default)' : ''}
+                  {opt.label}
+                  {opt.value === 'balanced' ? ' (default)' : ''}
                 </div>
                 <div className="flight-style-option-desc">{opt.description}</div>
               </button>

@@ -38,6 +38,7 @@ export function BlackboxStatus({ onAnalyze, readonly, refreshKey }: BlackboxStat
       return;
     }
     refreshInfo();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refreshKey]);
 
   // Keep module-level var in sync for persistence across unmounts
@@ -54,6 +55,7 @@ export function BlackboxStatus({ onAnalyze, readonly, refreshKey }: BlackboxStat
     if (logs.length > 0 && logsPage > totalLogsPages) {
       setLogsPage(totalLogsPages);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [logs.length, totalLogsPages]);
 
   const logsPageStart = (logsPage - 1) * PAGE_SIZE;

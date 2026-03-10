@@ -1,4 +1,4 @@
-import type { PowerSpectrum, AxisNoiseProfile, StepResponse } from '@shared/types/analysis.types';
+import type { AxisNoiseProfile, StepResponse } from '@shared/types/analysis.types';
 import type { CompactStepResponse } from '@shared/types/tuning-history.types';
 
 export type Axis = 'roll' | 'pitch' | 'yaw';

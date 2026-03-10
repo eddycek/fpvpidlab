@@ -10,7 +10,10 @@ export class MSPConnection extends EventEmitter {
   private port: SerialPort | null = null;
   private protocol: MSPProtocol;
   private buffer: Buffer = Buffer.alloc(0);
-  private responseQueue: Map<number, { resolve: (response: MSPResponse) => void; timeout: NodeJS.Timeout }> = new Map();
+  private responseQueue: Map<
+    number,
+    { resolve: (response: MSPResponse) => void; timeout: NodeJS.Timeout }
+  > = new Map();
   private cliMode: boolean = false;
   private cliBuffer: string = '';
   /** Whether we actually sent the FC into CLI mode during this session.
@@ -29,23 +32,26 @@ export class MSPConnection extends EventEmitter {
     }
 
     return new Promise((resolve, reject) => {
-      this.port = new SerialPort({
-        path: portPath,
-        baudRate,
-        dataBits: 8,
-        stopBits: 1,
-        parity: 'none'
-      }, (error) => {
-        if (error) {
-          reject(new ConnectionError(`Failed to open port: ${error.message}`, error));
-          return;
-        }
+      this.port = new SerialPort(
+        {
+          path: portPath,
+          baudRate,
+          dataBits: 8,
+          stopBits: 1,
+          parity: 'none',
+        },
+        (error) => {
+          if (error) {
+            reject(new ConnectionError(`Failed to open port: ${error.message}`, error));
+            return;
+          }
 
-        this.setupListeners();
-        logger.info(`Connected to ${portPath} at ${baudRate} baud`);
-        this.emit('connected');
-        resolve();
-      });
+          this.setupListeners();
+          logger.info(`Connected to ${portPath} at ${baudRate} baud`);
+          this.emit('connected');
+          resolve();
+        }
+      );
     });
   }
 
@@ -63,12 +69,15 @@ export class MSPConnection extends EventEmitter {
       try {
         await new Promise<void>((resolve) => {
           this.port!.write('exit\r\n', (error) => {
-            if (error) { resolve(); return; }
+            if (error) {
+              resolve();
+              return;
+            }
             this.port!.drain(() => resolve());
           });
         });
         // Wait for FC to start rebooting
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise((resolve) => setTimeout(resolve, 500));
       } catch {
         // Ignore — port might already be closing from reboot
       }
@@ -156,7 +165,11 @@ export class MSPConnection extends EventEmitter {
     });
   }
 
-  async sendCommand(command: number, data: Buffer = Buffer.alloc(0), timeout: number = MSP.COMMAND_TIMEOUT): Promise<MSPResponse> {
+  async sendCommand(
+    command: number,
+    data: Buffer = Buffer.alloc(0),
+    timeout: number = MSP.COMMAND_TIMEOUT
+  ): Promise<MSPResponse> {
     if (!this.isOpen()) {
       throw new ConnectionError('Port not open');
     }
@@ -166,7 +179,7 @@ export class MSPConnection extends EventEmitter {
       logger.info('Exiting CLI mode before MSP command');
       try {
         await this.exitCLI();
-      } catch (error) {
+      } catch {
         logger.warn('Failed to exit CLI mode gracefully, forcing MSP mode');
         this.cliMode = false;
         this.cliBuffer = '';

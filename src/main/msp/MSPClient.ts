@@ -7,7 +7,6 @@ import type {
   ApiVersionInfo,
   BoardInfo,
   FCInfo,
-  Configuration,
   ConnectionStatus,
 } from '@shared/types/common.types';
 import type { PIDConfiguration, FeedforwardConfiguration } from '@shared/types/pid.types';

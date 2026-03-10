@@ -10,7 +10,6 @@ import type {
   DroneProfileMetadata,
   ProfileCreationInput,
   ProfileUpdateInput,
-  PresetProfile,
 } from './profile.types';
 import type { PIDConfiguration, FeedforwardConfiguration } from './pid.types';
 import type {

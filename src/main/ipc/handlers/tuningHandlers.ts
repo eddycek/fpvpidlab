@@ -160,7 +160,8 @@ export function registerTuningHandlers(deps: HandlerDependencies): void {
                   const history = await tuningHistoryManager.getHistory(profileId);
                   sessionNumber = history.length + 1;
                 }
-                const tuningType = session.tuningType ?? 'guided';
+                const tuningType = (session.tuningType ??
+                  'guided') as keyof typeof TUNING_TYPE_LABELS;
                 const label = `Post-tuning #${sessionNumber} (${TUNING_TYPE_LABELS[tuningType]})`;
                 sendProgress({
                   stage: 'save',

@@ -8,7 +8,6 @@ import {
   CartesianGrid,
   Tooltip,
   ReferenceLine,
-  Legend,
 } from 'recharts';
 import { AxisTabs, type AxisSelection } from './AxisTabs';
 import {
@@ -33,7 +32,10 @@ const MIN_HEIGHT = 300;
 const ASPECT_RATIO = 7 / 3;
 
 export function StepResponseChart({ roll, pitch, yaw }: StepResponseChartProps) {
-  const profiles: Record<Axis, AxisStepProfile> = { roll, pitch, yaw };
+  const profiles: Record<Axis, AxisStepProfile> = useMemo(
+    () => ({ roll, pitch, yaw }),
+    [roll, pitch, yaw]
+  );
   const [selectedAxis, setSelectedAxis] = useState<AxisSelection>('roll');
   const [stepIndices, setStepIndices] = useState<Record<Axis, number>>(() => ({
     roll: findBestStep(roll.responses),
@@ -42,7 +44,7 @@ export function StepResponseChart({ roll, pitch, yaw }: StepResponseChartProps) 
   }));
 
   // For "all" mode, we need to show the selected step for each axis
-  const visibleAxes: Axis[] = selectedAxis === 'all' ? ['roll', 'pitch', 'yaw'] : [selectedAxis];
+  const _visibleAxes: Axis[] = selectedAxis === 'all' ? ['roll', 'pitch', 'yaw'] : [selectedAxis];
 
   // Get trace data and robust Y-domain for single-axis mode
   const { chartData, singleYDomain } = useMemo(() => {

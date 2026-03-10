@@ -320,7 +320,7 @@ describe('MSPProtocol', () => {
 
     it('returns only remaining for buffer with no preamble', () => {
       const buf = Buffer.from([0x01, 0x02, 0x03, 0x04]);
-      const { messages, remaining } = protocol.parseBuffer(buf);
+      const { messages } = protocol.parseBuffer(buf);
       expect(messages.length).toBe(0);
       // No preamble found, so offset stays at 0 but loop breaks
     });

@@ -50,7 +50,7 @@ export function registerAnalysisHandlers(deps: HandlerDependencies): void {
           try {
             currentSettings = await deps.mspClient.getFilterConfiguration();
             logger.info('Read current filter settings from FC');
-          } catch (e) {
+          } catch {
             logger.warn('Could not read filter settings from FC, using defaults');
           }
         }
@@ -154,7 +154,7 @@ export function registerAnalysisHandlers(deps: HandlerDependencies): void {
           try {
             currentPIDs = await deps.mspClient.getPIDConfiguration();
             logger.info('Read current PID settings from FC');
-          } catch (e) {
+          } catch {
             logger.warn('Could not read PID settings from FC, using defaults');
           }
         }

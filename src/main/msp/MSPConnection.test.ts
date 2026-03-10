@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { buildMSPv1Response, buildMSPv1ErrorResponse, buildMSPJumboResponse } from './test/mspResponseFactory';
+import { buildMSPv1Response, buildMSPv1ErrorResponse } from './test/mspResponseFactory';
 
 // Track mock port instances across test and MSPConnection
 let mockPortInstance: any = null;
@@ -52,11 +52,22 @@ vi.mock('serialport', () => {
       const buf = typeof data === 'string' ? Buffer.from(data) : data;
       this.emit('data', buf);
     }
-    injectClose() { this.isOpen = false; this.emit('close'); }
-    injectError(err: Error) { this.emit('error', err); }
-    failWrites() { this._shouldFailWrite = true; }
-    getAllWrittenBytes() { return Buffer.concat(this.writtenData); }
-    clearWritten() { this.writtenData = []; }
+    injectClose() {
+      this.isOpen = false;
+      this.emit('close');
+    }
+    injectError(err: Error) {
+      this.emit('error', err);
+    }
+    failWrites() {
+      this._shouldFailWrite = true;
+    }
+    getAllWrittenBytes() {
+      return Buffer.concat(this.writtenData);
+    }
+    clearWritten() {
+      this.writtenData = [];
+    }
   }
 
   return {
@@ -151,7 +162,7 @@ describe('MSPConnection', () => {
 
       // Enter CLI to set fcEnteredCLI flag
       const enterPromise = conn.enterCLI();
-      await new Promise(r => setTimeout(r, 20));
+      await new Promise((r) => setTimeout(r, 20));
       port.injectData('Entering CLI Mode\r\n# ');
       await enterPromise;
 
@@ -200,7 +211,7 @@ describe('MSPConnection', () => {
 
       const cmdPromise = conn.sendCommand(1); // MSP_API_VERSION
 
-      await new Promise(r => setTimeout(r, 20));
+      await new Promise((r) => setTimeout(r, 20));
       port.injectData(buildMSPv1Response(1, [0, 1, 44]));
 
       const result = await cmdPromise;
@@ -224,7 +235,7 @@ describe('MSPConnection', () => {
 
       const cmdPromise = conn.sendCommand(202);
 
-      await new Promise(r => setTimeout(r, 20));
+      await new Promise((r) => setTimeout(r, 20));
       port.injectData(buildMSPv1ErrorResponse(202));
 
       const result = await cmdPromise;
@@ -240,9 +251,9 @@ describe('MSPConnection', () => {
 
       const fullResponse = buildMSPv1Response(1, [0, 1, 44]);
 
-      await new Promise(r => setTimeout(r, 20));
+      await new Promise((r) => setTimeout(r, 20));
       port.injectData(fullResponse.subarray(0, 4));
-      await new Promise(r => setTimeout(r, 20));
+      await new Promise((r) => setTimeout(r, 20));
       port.injectData(fullResponse.subarray(4));
 
       const result = await cmdPromise;
@@ -257,7 +268,7 @@ describe('MSPConnection', () => {
       const cmd1 = conn.sendCommand(1);
       const cmd2 = conn.sendCommand(2);
 
-      await new Promise(r => setTimeout(r, 20));
+      await new Promise((r) => setTimeout(r, 20));
 
       const resp1 = buildMSPv1Response(1, [0, 1, 44]);
       const resp2 = buildMSPv1Response(2, Buffer.from('BTFL'));
@@ -276,9 +287,9 @@ describe('MSPConnection', () => {
       const unsolicitedSpy = vi.fn();
       conn.on('unsolicited', unsolicitedSpy);
 
-      await new Promise(r => setTimeout(r, 20));
+      await new Promise((r) => setTimeout(r, 20));
       port.injectData(buildMSPv1Response(99, [0x42]));
-      await new Promise(r => setTimeout(r, 20));
+      await new Promise((r) => setTimeout(r, 20));
 
       expect(unsolicitedSpy).toHaveBeenCalledTimes(1);
       expect(unsolicitedSpy.mock.calls[0][0].command).toBe(99);
@@ -290,7 +301,7 @@ describe('MSPConnection', () => {
       port.clearWritten();
 
       const cmdPromise = conn.sendCommand(112);
-      await new Promise(r => setTimeout(r, 20));
+      await new Promise((r) => setTimeout(r, 20));
       port.injectData(buildMSPv1Response(112, Buffer.alloc(30)));
       await cmdPromise;
 
@@ -298,7 +309,7 @@ describe('MSPConnection', () => {
       expect(written[0]).toBe(0x24); // '$'
       expect(written[1]).toBe(0x4d); // 'M'
       expect(written[2]).toBe(0x3c); // '<' direction to FC
-      expect(written[4]).toBe(112);  // command
+      expect(written[4]).toBe(112); // command
     });
   });
 
@@ -316,7 +327,7 @@ describe('MSPConnection', () => {
       expect(written[0]).toBe(0x24); // '$'
       expect(written[1]).toBe(0x4d); // 'M'
       expect(written[2]).toBe(0x3c); // '<'
-      expect(written[4]).toBe(68);   // command
+      expect(written[4]).toBe(68); // command
     });
 
     it('throws if port not open', async () => {
@@ -332,7 +343,7 @@ describe('MSPConnection', () => {
       const port = getPort();
 
       const enterPromise = conn.enterCLI();
-      await new Promise(r => setTimeout(r, 20));
+      await new Promise((r) => setTimeout(r, 20));
       port.injectData('CLI mode\r\n# ');
       await enterPromise;
 
@@ -349,7 +360,7 @@ describe('MSPConnection', () => {
       port.clearWritten();
 
       const enterPromise = conn.enterCLI();
-      await new Promise(r => setTimeout(r, 20));
+      await new Promise((r) => setTimeout(r, 20));
       port.injectData('# ');
       await enterPromise;
 
@@ -362,10 +373,10 @@ describe('MSPConnection', () => {
       const port = getPort();
 
       const enterPromise = conn.enterCLI();
-      await new Promise(r => setTimeout(r, 20));
+      await new Promise((r) => setTimeout(r, 20));
       // Data arrives in two chunks — prompt split across them
       port.injectData('Entering CLI Mode\r\n');
-      await new Promise(r => setTimeout(r, 10));
+      await new Promise((r) => setTimeout(r, 10));
       port.injectData('# ');
       await enterPromise;
 
@@ -377,10 +388,10 @@ describe('MSPConnection', () => {
       const port = getPort();
 
       const enterPromise = conn.enterCLI();
-      await new Promise(r => setTimeout(r, 20));
+      await new Promise((r) => setTimeout(r, 20));
       // Inject hash without trailing space — should NOT resolve
       port.injectData('Entering CLI\r\n#');
-      await new Promise(r => setTimeout(r, 50));
+      await new Promise((r) => setTimeout(r, 50));
 
       // Should still be pending — verify by injecting proper prompt
       port.injectData(' ');
@@ -394,7 +405,7 @@ describe('MSPConnection', () => {
       const port = getPort();
 
       const enterPromise = conn.enterCLI();
-      await new Promise(r => setTimeout(r, 20));
+      await new Promise((r) => setTimeout(r, 20));
       // FC sends prompt with trailing CR (some FC firmware behavior)
       port.injectData('Entering CLI Mode\r\n# \r');
       await enterPromise;
@@ -411,7 +422,7 @@ describe('MSPConnection', () => {
       const port = getPort();
 
       const enterPromise = conn.enterCLI();
-      await new Promise(r => setTimeout(r, 20));
+      await new Promise((r) => setTimeout(r, 20));
       port.injectData('Entering CLI\r\n# ');
       await enterPromise;
 
@@ -424,10 +435,10 @@ describe('MSPConnection', () => {
 
       const cmdPromise = conn.sendCLICommand('set debug_mode = GYRO_SCALED');
 
-      await new Promise(r => setTimeout(r, 20));
+      await new Promise((r) => setTimeout(r, 20));
       port.injectData('set debug_mode = GYRO_SCALED\r\n# ');
       // Wait for 100ms debounce to fire
-      await new Promise(r => setTimeout(r, 150));
+      await new Promise((r) => setTimeout(r, 150));
 
       const result = await cmdPromise;
       expect(result).toContain('debug_mode');
@@ -438,16 +449,16 @@ describe('MSPConnection', () => {
 
       const cmdPromise = conn.sendCLICommand('diff all', 2000);
 
-      await new Promise(r => setTimeout(r, 20));
+      await new Promise((r) => setTimeout(r, 20));
       // Comment lines with # that should NOT trigger prompt detection
       port.injectData('# master\r\nset debug_mode = GYRO_SCALED\r\n');
-      await new Promise(r => setTimeout(r, 20));
+      await new Promise((r) => setTimeout(r, 20));
       port.injectData('# profile 0\r\nset p_roll = 45\r\n');
-      await new Promise(r => setTimeout(r, 20));
+      await new Promise((r) => setTimeout(r, 20));
       // Actual CLI prompt — buffer ends with \n# (with space)
       port.injectData('\n# ');
       // Wait for debounce
-      await new Promise(r => setTimeout(r, 150));
+      await new Promise((r) => setTimeout(r, 150));
 
       const result = await cmdPromise;
       expect(result).toContain('debug_mode');
@@ -459,14 +470,14 @@ describe('MSPConnection', () => {
 
       const cmdPromise = conn.sendCLICommand('diff all', 2000);
 
-      await new Promise(r => setTimeout(r, 20));
+      await new Promise((r) => setTimeout(r, 20));
       port.injectData('set a = 1\r\n');
-      await new Promise(r => setTimeout(r, 10));
+      await new Promise((r) => setTimeout(r, 10));
       port.injectData('set b = 2\r\n');
-      await new Promise(r => setTimeout(r, 10));
+      await new Promise((r) => setTimeout(r, 10));
       port.injectData('set c = 3\r\n# ');
       // Wait for debounce
-      await new Promise(r => setTimeout(r, 150));
+      await new Promise((r) => setTimeout(r, 150));
 
       const result = await cmdPromise;
       expect(result).toContain('set a = 1');
@@ -479,22 +490,22 @@ describe('MSPConnection', () => {
 
       const cmdPromise = conn.sendCLICommand('diff all', 2000);
 
-      await new Promise(r => setTimeout(r, 20));
+      await new Promise((r) => setTimeout(r, 20));
       port.injectData('set gyro_lpf1 = 200\r\n');
-      await new Promise(r => setTimeout(r, 10));
+      await new Promise((r) => setTimeout(r, 10));
       // Chunk boundary: "# " arrives alone (looks like prompt)
       port.injectData('# ');
-      await new Promise(r => setTimeout(r, 30));
+      await new Promise((r) => setTimeout(r, 30));
       // But before debounce fires (100ms), rest of header arrives
       port.injectData('master\r\nset dterm_lpf1 = 150\r\n');
-      await new Promise(r => setTimeout(r, 10));
+      await new Promise((r) => setTimeout(r, 10));
       // More data
       port.injectData('# profile 0\r\nset p_roll = 45\r\n');
-      await new Promise(r => setTimeout(r, 10));
+      await new Promise((r) => setTimeout(r, 10));
       // Real prompt
       port.injectData('\n# ');
       // Wait for debounce
-      await new Promise(r => setTimeout(r, 150));
+      await new Promise((r) => setTimeout(r, 150));
 
       const result = await cmdPromise;
       // Must contain ALL data — not truncated at "# master"
@@ -507,25 +518,25 @@ describe('MSPConnection', () => {
       const port = await enterCLIMode();
 
       let resolved = false;
-      const cmdPromise = conn.sendCLICommand('diff all', 2000).then(result => {
+      const cmdPromise = conn.sendCLICommand('diff all', 2000).then((result) => {
         resolved = true;
         return result;
       });
 
-      await new Promise(r => setTimeout(r, 20));
+      await new Promise((r) => setTimeout(r, 20));
       // First "# " — starts debounce timer
       port.injectData('set a = 1\r\n# ');
-      await new Promise(r => setTimeout(r, 50));
+      await new Promise((r) => setTimeout(r, 50));
       // Not yet resolved (debounce is 100ms)
       expect(resolved).toBe(false);
       // More data arrives — cancels debounce, no longer matches prompt
       port.injectData('profile 0\r\nset b = 2\r\n');
-      await new Promise(r => setTimeout(r, 150));
+      await new Promise((r) => setTimeout(r, 150));
       // Still not resolved — buffer no longer ends with "# "
       expect(resolved).toBe(false);
       // Real prompt
       port.injectData('\n# ');
-      await new Promise(r => setTimeout(r, 150));
+      await new Promise((r) => setTimeout(r, 150));
 
       const result = await cmdPromise;
       expect(result).toContain('set a = 1');
@@ -538,10 +549,10 @@ describe('MSPConnection', () => {
     });
 
     it('times out if prompt never received', async () => {
-      const port = await enterCLIMode();
-      await expect(
-        conn.sendCLICommand('set something = 1', 50)
-      ).rejects.toThrow('CLI command timed out');
+      await enterCLIMode();
+      await expect(conn.sendCLICommand('set something = 1', 50)).rejects.toThrow(
+        'CLI command timed out'
+      );
     }, 1000);
 
     it('cleans up debounce timer on timeout', async () => {
@@ -549,11 +560,11 @@ describe('MSPConnection', () => {
 
       // Start a command that will time out with a pending debounce
       const cmdPromise = conn.sendCLICommand('diff all', 200);
-      await new Promise(r => setTimeout(r, 20));
+      await new Promise((r) => setTimeout(r, 20));
       // Inject potential prompt to start debounce
       port.injectData('partial\r\n# ');
       // Inject more data before debounce fires to cancel it
-      await new Promise(r => setTimeout(r, 30));
+      await new Promise((r) => setTimeout(r, 30));
       port.injectData('master\r\n');
       // Let it time out — no real prompt ever arrives
       await expect(cmdPromise).rejects.toThrow('CLI command timed out');
@@ -564,11 +575,11 @@ describe('MSPConnection', () => {
 
       const cmdPromise = conn.sendCLICommand('set debug_mode = GYRO_SCALED');
 
-      await new Promise(r => setTimeout(r, 20));
+      await new Promise((r) => setTimeout(r, 20));
       // FC sends prompt with trailing CR
       port.injectData('set debug_mode = GYRO_SCALED\r\n# \r');
       // Wait for debounce
-      await new Promise(r => setTimeout(r, 150));
+      await new Promise((r) => setTimeout(r, 150));
 
       const result = await cmdPromise;
       expect(result).toContain('debug_mode');
@@ -583,7 +594,7 @@ describe('MSPConnection', () => {
       const port = getPort();
 
       const enterPromise = conn.enterCLI();
-      await new Promise(r => setTimeout(r, 20));
+      await new Promise((r) => setTimeout(r, 20));
       port.injectData('# ');
       await enterPromise;
 
@@ -607,7 +618,7 @@ describe('MSPConnection', () => {
       const port = getPort();
 
       const enterPromise = conn.enterCLI();
-      await new Promise(r => setTimeout(r, 20));
+      await new Promise((r) => setTimeout(r, 20));
       port.injectData('# ');
       await enterPromise;
 
@@ -625,7 +636,7 @@ describe('MSPConnection', () => {
       const port = getPort();
 
       const enterPromise = conn.enterCLI();
-      await new Promise(r => setTimeout(r, 20));
+      await new Promise((r) => setTimeout(r, 20));
       port.injectData('# ');
       await enterPromise;
 
@@ -659,7 +670,7 @@ describe('MSPConnection', () => {
       const port = getPort();
 
       const enterPromise = conn.enterCLI();
-      await new Promise(r => setTimeout(r, 20));
+      await new Promise((r) => setTimeout(r, 20));
       port.injectData('# ');
       await enterPromise;
 
@@ -712,7 +723,7 @@ describe('MSPConnection', () => {
       const port = getPort();
 
       const cmdPromise = conn.sendCommand(1);
-      await new Promise(r => setTimeout(r, 20));
+      await new Promise((r) => setTimeout(r, 20));
       port.injectData(buildMSPv1Response(1, [0, 1, 44]));
       const result = await cmdPromise;
 
@@ -727,14 +738,14 @@ describe('MSPConnection', () => {
       conn.on('cli-data', cliDataSpy);
 
       const enterPromise = conn.enterCLI();
-      await new Promise(r => setTimeout(r, 20));
+      await new Promise((r) => setTimeout(r, 20));
       port.injectData('# ');
       await enterPromise;
 
       cliDataSpy.mockClear();
 
       port.injectData('set motor_pwm_rate = 8000\r\n');
-      await new Promise(r => setTimeout(r, 10));
+      await new Promise((r) => setTimeout(r, 10));
 
       expect(cliDataSpy).toHaveBeenCalled();
       expect(cliDataSpy.mock.calls[0][0]).toContain('motor_pwm_rate');

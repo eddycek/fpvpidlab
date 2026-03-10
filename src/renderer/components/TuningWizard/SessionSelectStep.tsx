@@ -23,6 +23,7 @@ export function SessionSelectStep({
     if (!sessions && !parsing && !parseError) {
       parseLog();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   if (parsing) {
@@ -91,9 +92,7 @@ export function SessionSelectStep({
             }}
           >
             <div className="session-item-info">
-              <span className="session-item-title">
-                Session {session.index + 1}
-              </span>
+              <span className="session-item-title">Session {session.index + 1}</span>
               <span className="session-item-meta">
                 <span>{session.flightData.durationSeconds.toFixed(1)}s</span>
                 <span>{session.flightData.frameCount.toLocaleString()} frames</span>

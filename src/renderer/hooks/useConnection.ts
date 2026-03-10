@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import type { PortInfo, ConnectionStatus } from '@shared/types/common.types';
 import { useToast } from './useToast';
 
@@ -70,6 +70,7 @@ export function useConnection() {
     });
 
     return unsubscribe;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // toast functions are stable, no need in dependencies
 
   const scanPorts = useCallback(async () => {
@@ -85,6 +86,7 @@ export function useConnection() {
     } finally {
       setLoading(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // toast is stable
 
   const connect = useCallback(async (portPath: string) => {
@@ -99,6 +101,7 @@ export function useConnection() {
     } finally {
       setLoading(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // toast is stable
 
   const disconnect = useCallback(async () => {
@@ -117,6 +120,7 @@ export function useConnection() {
     } finally {
       setLoading(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // toast is stable
 
   return {
@@ -126,6 +130,6 @@ export function useConnection() {
     error,
     scanPorts,
     connect,
-    disconnect
+    disconnect,
   };
 }

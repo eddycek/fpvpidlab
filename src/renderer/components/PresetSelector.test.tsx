@@ -95,7 +95,7 @@ describe('PresetSelector', () => {
   });
 
   it('applies "selected" CSS class to selected preset', () => {
-    const { container } = render(
+    const { container: _container } = render(
       <PresetSelector selectedPresetId="tiny-whoop" onSelect={mockOnSelect} />
     );
 
@@ -104,7 +104,7 @@ describe('PresetSelector', () => {
   });
 
   it('does not apply "selected" class to unselected presets', () => {
-    const { container } = render(
+    const { container: _container } = render(
       <PresetSelector selectedPresetId="tiny-whoop" onSelect={mockOnSelect} />
     );
 
@@ -113,7 +113,7 @@ describe('PresetSelector', () => {
   });
 
   it('shows radio indicator dot for selected preset', () => {
-    const { container } = render(
+    const { container: _container } = render(
       <PresetSelector selectedPresetId="5inch-freestyle" onSelect={mockOnSelect} />
     );
 
@@ -123,7 +123,7 @@ describe('PresetSelector', () => {
   });
 
   it('does not show radio indicator dot for unselected presets', () => {
-    const { container } = render(
+    const { container: _container } = render(
       <PresetSelector selectedPresetId="tiny-whoop" onSelect={mockOnSelect} />
     );
 

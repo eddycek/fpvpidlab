@@ -17,6 +17,7 @@ function TestComponent({ onMount }: { onMount: (helpers: ReturnType<typeof useTo
 
   React.useEffect(() => {
     onMount(toast);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return null;
@@ -56,7 +57,11 @@ describe('ToastContainer', () => {
 
     render(
       <ToastProvider>
-        <TestComponent onMount={(helpers) => { toastHelpers = helpers; }} />
+        <TestComponent
+          onMount={(helpers) => {
+            toastHelpers = helpers;
+          }}
+        />
         <ToastContainer />
       </ToastProvider>
     );
@@ -78,7 +83,11 @@ describe('ToastContainer', () => {
 
     render(
       <ToastProvider>
-        <TestComponent onMount={(helpers) => { toastHelpers = helpers; }} />
+        <TestComponent
+          onMount={(helpers) => {
+            toastHelpers = helpers;
+          }}
+        />
         <ToastContainer />
       </ToastProvider>
     );
@@ -100,7 +109,11 @@ describe('ToastContainer', () => {
 
     render(
       <ToastProvider>
-        <TestComponent onMount={(helpers) => { toastHelpers = helpers; }} />
+        <TestComponent
+          onMount={(helpers) => {
+            toastHelpers = helpers;
+          }}
+        />
         <ToastContainer />
       </ToastProvider>
     );

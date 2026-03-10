@@ -23,17 +23,20 @@ describe('useToast', () => {
   });
 
   it('success() calls addToast with type="success" and duration', () => {
-    const mockAddToast = vi.fn();
+    const _mockAddToast = vi.fn();
     const wrapper = ({ children }: { children: React.ReactNode }) => (
       <ToastProvider>{children}</ToastProvider>
     );
 
-    const { result } = renderHook(() => {
-      const toast = useToast();
-      // Mock the context's addToast by accessing internals
-      // This is a limitation - we'll verify behavior indirectly
-      return toast;
-    }, { wrapper });
+    const { result } = renderHook(
+      () => {
+        const toast = useToast();
+        // Mock the context's addToast by accessing internals
+        // This is a limitation - we'll verify behavior indirectly
+        return toast;
+      },
+      { wrapper }
+    );
 
     // Call success and verify it doesn't throw
     expect(() => {

@@ -25,57 +25,54 @@ export function ToastProvider({ children }: ToastProviderProps) {
     setToasts((prev) => prev.filter((toast) => toast.id !== id));
   }, []);
 
-  const addToast = useCallback((toast: Omit<Toast, 'id'>): string => {
-    // Check for duplicate - if same message and type already exists, don't add
-    const hasDuplicate = timersRef.current.size > 0 && Array.from(timersRef.current.keys()).some((existingId) => {
-      // This is a simple check - in production you'd want to store messages separately
-      return false; // We'll check in setToasts instead
-    });
+  const addToast = useCallback(
+    (toast: Omit<Toast, 'id'>): string => {
+      const id = uuidv4();
+      const newToast: Toast = {
+        id,
+        ...toast,
+        dismissible: toast.dismissible ?? true,
+      };
 
-    const id = uuidv4();
-    const newToast: Toast = {
-      id,
-      ...toast,
-      dismissible: toast.dismissible ?? true
-    };
+      setToasts((prev) => {
+        // Check if duplicate already exists (same type and message)
+        const duplicate = prev.find(
+          (t) => t.type === newToast.type && t.message === newToast.message
+        );
 
-    setToasts((prev) => {
-      // Check if duplicate already exists (same type and message)
-      const duplicate = prev.find(
-        (t) => t.type === newToast.type && t.message === newToast.message
-      );
+        if (duplicate) {
+          // Duplicate exists, don't add new toast
+          return prev;
+        }
 
-      if (duplicate) {
-        // Duplicate exists, don't add new toast
-        return prev;
-      }
-
-      const updated = [...prev, newToast];
-      // FIFO removal if exceeds limit
-      if (updated.length > MAX_TOASTS) {
-        const removedToast = updated.shift();
-        if (removedToast) {
-          // Clear timer for removed toast
-          const timer = timersRef.current.get(removedToast.id);
-          if (timer) {
-            clearTimeout(timer);
-            timersRef.current.delete(removedToast.id);
+        const updated = [...prev, newToast];
+        // FIFO removal if exceeds limit
+        if (updated.length > MAX_TOASTS) {
+          const removedToast = updated.shift();
+          if (removedToast) {
+            // Clear timer for removed toast
+            const timer = timersRef.current.get(removedToast.id);
+            if (timer) {
+              clearTimeout(timer);
+              timersRef.current.delete(removedToast.id);
+            }
           }
         }
+        return updated;
+      });
+
+      // Setup auto-dismiss timer if duration provided
+      if (toast.duration !== undefined) {
+        const timer = setTimeout(() => {
+          removeToast(id);
+        }, toast.duration);
+        timersRef.current.set(id, timer);
       }
-      return updated;
-    });
 
-    // Setup auto-dismiss timer if duration provided
-    if (toast.duration !== undefined) {
-      const timer = setTimeout(() => {
-        removeToast(id);
-      }, toast.duration);
-      timersRef.current.set(id, timer);
-    }
-
-    return id;
-  }, [removeToast]);
+      return id;
+    },
+    [removeToast]
+  );
 
   const clearToasts = useCallback(() => {
     // Clear all timers
@@ -86,9 +83,10 @@ export function ToastProvider({ children }: ToastProviderProps) {
 
   // Cleanup all timers on unmount
   useEffect(() => {
+    const timers = timersRef.current;
     return () => {
-      timersRef.current.forEach((timer) => clearTimeout(timer));
-      timersRef.current.clear();
+      timers.forEach((timer) => clearTimeout(timer));
+      timers.clear();
     };
   }, []);
 
@@ -96,12 +94,8 @@ export function ToastProvider({ children }: ToastProviderProps) {
     toasts,
     addToast,
     removeToast,
-    clearToasts
+    clearToasts,
   };
 
-  return (
-    <ToastContext.Provider value={value}>
-      {children}
-    </ToastContext.Provider>
-  );
+  return <ToastContext.Provider value={value}>{children}</ToastContext.Provider>;
 }

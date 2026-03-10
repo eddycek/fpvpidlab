@@ -255,7 +255,7 @@ describe('SnapshotManager', () => {
   });
 
   it('prevents deleting profile baseline snapshot', async () => {
-    const profile = await profileManager.createProfile({
+    await profileManager.createProfile({
       fcSerialNumber: 'SN-PB',
       fcInfo: mockFCInfo,
       name: 'Test',
@@ -277,7 +277,7 @@ describe('SnapshotManager', () => {
   // ─── listSnapshots ───────────────────────────────────────────
 
   it('lists snapshots filtered by current profile', async () => {
-    const p1 = await profileManager.createProfile({
+    await profileManager.createProfile({
       fcSerialNumber: 'SN-P1',
       fcInfo: mockFCInfo,
       name: 'Drone 1',
@@ -288,7 +288,7 @@ describe('SnapshotManager', () => {
     const snap1 = await manager.createSnapshot('Snap A', 'manual');
 
     // Create second profile and switch to it
-    const p2 = await profileManager.createProfile({
+    await profileManager.createProfile({
       fcSerialNumber: 'SN-P2',
       fcInfo: mockFCInfo,
       name: 'Drone 2',

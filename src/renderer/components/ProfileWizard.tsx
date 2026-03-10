@@ -1,12 +1,12 @@
 import { useState } from 'react';
-import { createPortal } from 'react-dom';
+
 import { PresetSelector } from './PresetSelector';
 import { SIZE_DEFAULTS, PRESET_PROFILES } from '@shared/constants';
 import type {
   DroneSize,
   BatteryType,
   FlightStyle,
-  ProfileCreationInput
+  ProfileCreationInput,
 } from '@shared/types/profile.types';
 import type { FCInfo } from '@shared/types/common.types';
 import './ProfileWizard.css';
@@ -14,7 +14,11 @@ import './ProfileWizard.css';
 interface ProfileWizardProps {
   fcSerial: string;
   fcInfo: FCInfo;
-  onComplete: (input: ProfileCreationInput | { presetId: string; customName?: string; flightStyle?: FlightStyle }) => void;
+  onComplete: (
+    input:
+      | ProfileCreationInput
+      | { presetId: string; customName?: string; flightStyle?: FlightStyle }
+  ) => void;
 }
 
 type WizardStep = 'method' | 'preset' | 'basic' | 'review';
@@ -112,16 +116,13 @@ export function ProfileWizard({ fcSerial, fcInfo, onComplete }: ProfileWizardPro
         <div className="profile-wizard-header">
           <h2>Create Drone Profile</h2>
           <p>
-            New flight controller detected: <span className="fc-name">{fcInfo.boardName || 'Unknown'}</span>
+            New flight controller detected:{' '}
+            <span className="fc-name">{fcInfo.boardName || 'Unknown'}</span>
           </p>
         </div>
 
         {/* Steps */}
-        {step === 'method' && (
-          <MethodStep
-            onSelect={handleMethodSelect}
-          />
-        )}
+        {step === 'method' && <MethodStep onSelect={handleMethodSelect} />}
 
         {step === 'preset' && (
           <PresetStep
@@ -187,9 +188,7 @@ export function ProfileWizard({ fcSerial, fcInfo, onComplete }: ProfileWizardPro
 }
 
 // Method selection step
-function MethodStep({ onSelect }: {
-  onSelect: (method: CreationMethod) => void;
-}) {
+function MethodStep({ onSelect }: { onSelect: (method: CreationMethod) => void }) {
   return (
     <div>
       <div className="method-options">
@@ -219,7 +218,7 @@ function PresetStep({
   onNameChange,
   onBack,
   onContinue,
-  canContinue
+  canContinue,
 }: {
   selectedPresetId: string | null;
   customName: string;
@@ -231,10 +230,7 @@ function PresetStep({
 }) {
   return (
     <div>
-      <PresetSelector
-        selectedPresetId={selectedPresetId}
-        onSelect={onPresetSelect}
-      />
+      <PresetSelector selectedPresetId={selectedPresetId} onSelect={onPresetSelect} />
 
       {selectedPresetId && (
         <div className="wizard-form-group">
@@ -265,8 +261,16 @@ function PresetStep({
 }
 
 const FLIGHT_STYLE_OPTIONS: { value: FlightStyle; label: string; description: string }[] = [
-  { value: 'smooth', label: 'Smooth', description: 'Cinematic, smooth transitions, minimal overshoot' },
-  { value: 'balanced', label: 'Balanced', description: 'General freestyle, good all-around response' },
+  {
+    value: 'smooth',
+    label: 'Smooth',
+    description: 'Cinematic, smooth transitions, minimal overshoot',
+  },
+  {
+    value: 'balanced',
+    label: 'Balanced',
+    description: 'General freestyle, good all-around response',
+  },
   { value: 'aggressive', label: 'Aggressive', description: 'Racing, maximum snap, fast tracking' },
 ];
 
@@ -289,7 +293,8 @@ function FlightStyleSelector({
             onClick={() => onChange(opt.value)}
           >
             <div className="flight-style-option-name">
-              {opt.label}{opt.value === 'balanced' ? ' (default)' : ''}
+              {opt.label}
+              {opt.value === 'balanced' ? ' (default)' : ''}
             </div>
             <div className="flight-style-option-desc">{opt.description}</div>
           </button>
@@ -322,7 +327,7 @@ function BasicStep({
   onFlightStyleChange,
   onBack,
   onContinue,
-  canContinue
+  canContinue,
 }: {
   name: string;
   size: DroneSize;
@@ -366,12 +371,11 @@ function BasicStep({
           <label>
             Drone Size <span className="required">*</span>
           </label>
-          <select
-            value={size}
-            onChange={(e) => onSizeChange(e.target.value as DroneSize)}
-          >
-            {sizes.map(s => (
-              <option key={s} value={s}>{s}</option>
+          <select value={size} onChange={(e) => onSizeChange(e.target.value as DroneSize)}>
+            {sizes.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
             ))}
           </select>
         </div>
@@ -392,12 +396,11 @@ function BasicStep({
           <label>
             Battery <span className="required">*</span>
           </label>
-          <select
-            value={battery}
-            onChange={(e) => onBatteryChange(e.target.value as BatteryType)}
-          >
-            {batteries.map(b => (
-              <option key={b} value={b}>{b}</option>
+          <select value={battery} onChange={(e) => onBatteryChange(e.target.value as BatteryType)}>
+            {batteries.map((b) => (
+              <option key={b} value={b}>
+                {b}
+              </option>
             ))}
           </select>
         </div>
@@ -470,7 +473,7 @@ function ReviewStep({
   notes,
   flightStyle,
   onBack,
-  onCreate
+  onCreate,
 }: {
   method: CreationMethod;
   presetId: string | null;
@@ -487,9 +490,7 @@ function ReviewStep({
   onCreate: () => void;
 }) {
   const preset = presetId ? PRESET_PROFILES[presetId as keyof typeof PRESET_PROFILES] : null;
-  const displayName = method === 'preset'
-    ? (presetCustomName || preset?.name || '')
-    : name;
+  const displayName = method === 'preset' ? presetCustomName || preset?.name || '' : name;
 
   return (
     <div>

@@ -127,9 +127,9 @@ describe('chartUtils', () => {
   describe('findBestStep', () => {
     it('returns index of step with highest score', () => {
       const responses = [
-        makeResponse(5, 0),    // score: 5
-        makeResponse(20, 3),   // score: 35 (best)
-        makeResponse(10, 1),   // score: 15
+        makeResponse(5, 0), // score: 5
+        makeResponse(20, 3), // score: 35 (best)
+        makeResponse(10, 1), // score: 15
       ];
 
       expect(findBestStep(responses)).toBe(1);
@@ -145,8 +145,8 @@ describe('chartUtils', () => {
 
     it('skips responses without trace when scoring', () => {
       const responses = [
-        makeResponse(5, 0, false),   // no trace, falls through
-        makeResponse(20, 3, true),   // has trace, scored
+        makeResponse(5, 0, false), // no trace, falls through
+        makeResponse(20, 3, true), // has trace, scored
       ];
 
       expect(findBestStep(responses)).toBe(1);
@@ -154,19 +154,16 @@ describe('chartUtils', () => {
 
     it('prefers valid steps over degenerate ones', () => {
       const responses = [
-        makeResponse(808, 0, true, 0),  // degenerate: 0ms rise, 808% overshoot
-        makeResponse(15, 1, true),       // valid: moderate overshoot
-        makeResponse(600, 2, true),      // degenerate: 600% overshoot
+        makeResponse(808, 0, true, 0), // degenerate: 0ms rise, 808% overshoot
+        makeResponse(15, 1, true), // valid: moderate overshoot
+        makeResponse(600, 2, true), // degenerate: 600% overshoot
       ];
 
       expect(findBestStep(responses)).toBe(1);
     });
 
     it('falls back to degenerate step if all are degenerate', () => {
-      const responses = [
-        makeResponse(808, 0, true, 0),
-        makeResponse(600, 1, true, 0),
-      ];
+      const responses = [makeResponse(808, 0, true, 0), makeResponse(600, 1, true, 0)];
 
       // Should still return a valid index (not -1)
       expect(findBestStep(responses)).toBeGreaterThanOrEqual(0);
@@ -203,9 +200,9 @@ describe('chartUtils', () => {
     it('preserves legitimate step response range', () => {
       // Simulate step: 0 for first half, 300 for second half, with overshoot to 400
       const values: number[] = [];
-      for (let i = 0; i < 500; i++) values.push(0);       // baseline
-      for (let i = 0; i < 50; i++) values.push(400);       // overshoot
-      for (let i = 0; i < 450; i++) values.push(300);      // steady state
+      for (let i = 0; i < 500; i++) values.push(0); // baseline
+      for (let i = 0; i < 50; i++) values.push(400); // overshoot
+      for (let i = 0; i < 450; i++) values.push(300); // steady state
 
       const [lo, hi] = computeRobustYDomain(values);
       // Should capture the full 0-400 range (overshoot is legitimate)
@@ -217,7 +214,7 @@ describe('chartUtils', () => {
       const values = Array.from({ length: 500 }, () => 0);
       values[250] = -10000; // corrupt gyro spike
 
-      const [lo, hi] = computeRobustYDomain(values);
+      const [lo, _hi] = computeRobustYDomain(values);
       // Should not stretch to -10000
       expect(lo).toBeGreaterThan(-500);
     });
