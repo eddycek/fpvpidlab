@@ -152,5 +152,18 @@
   },
   "enabledPlugins": {
     "code-review@claude-plugins-official": true
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/tuning-logic-check.sh"
+          }
+        ]
+      }
+    ]
   }
 }

@@ -15,6 +15,10 @@
  *   GET /logs?n=100     — specify number of lines
  *   GET /console        — renderer console messages (captured via webContents)
  *   GET /msp            — MSP connection details, CLI mode, FC info
+ *   GET /tuning-history — completed tuning session records for current profile
+ *   GET /tuning-session — active tuning session state
+ *   GET /snapshots      — configuration snapshots for current profile
+ *   GET /blackbox-logs  — list downloaded blackbox logs for current profile
  *   GET /health         — simple health check
  */
 
@@ -109,11 +113,34 @@ export function startDebugServer(port: number = DEFAULT_PORT): void {
         case '/msp':
           return json(res, await getMSPState());
 
+        case '/tuning-history':
+          return json(res, await getTuningHistory());
+
+        case '/tuning-session':
+          return json(res, await getTuningSession());
+
+        case '/snapshots':
+          return json(res, await getSnapshots());
+
+        case '/blackbox-logs':
+          return json(res, await getBlackboxLogs());
+
         default:
           res.statusCode = 404;
           return json(res, {
             error: `Unknown endpoint: ${path}`,
-            endpoints: ['/health', '/state', '/screenshot', '/logs', '/console', '/msp'],
+            endpoints: [
+              '/health',
+              '/state',
+              '/screenshot',
+              '/logs',
+              '/console',
+              '/msp',
+              '/tuning-history',
+              '/tuning-session',
+              '/snapshots',
+              '/blackbox-logs',
+            ],
           });
       }
     } catch (err: any) {
@@ -295,6 +322,109 @@ async function getMSPState() {
   }
 
   return result;
+}
+
+async function getTuningHistory() {
+  if (!deps) return { error: 'Dependencies not initialized' };
+
+  const { tuningHistoryManager, profileManager } = deps;
+  const currentProfile = profileManager?.getCurrentProfile?.() ?? null;
+  if (!currentProfile) return { error: 'No active profile', records: [] };
+
+  try {
+    const records = await tuningHistoryManager.getHistory(currentProfile.id);
+    return {
+      profileId: currentProfile.id,
+      profileName: currentProfile.name,
+      totalSessions: records.length,
+      records: records.map((r: any) => ({
+        id: r.id,
+        type: r.type,
+        completedAt: r.completedAt,
+        phase: r.phase,
+        qualityScore: r.qualityScore,
+        filterMetrics: r.filterMetrics,
+        pidMetrics: r.pidMetrics,
+        appliedChanges: r.appliedChanges,
+        dataQuality: r.dataQuality,
+      })),
+    };
+  } catch (err: any) {
+    return { error: err.message, records: [] };
+  }
+}
+
+async function getTuningSession() {
+  if (!deps) return { error: 'Dependencies not initialized' };
+
+  const { tuningSessionManager, profileManager } = deps;
+  const currentProfile = profileManager?.getCurrentProfile?.() ?? null;
+  if (!currentProfile) return { error: 'No active profile', session: null };
+
+  try {
+    const session = await tuningSessionManager.getSession(currentProfile.id);
+    return {
+      profileId: currentProfile.id,
+      profileName: currentProfile.name,
+      session,
+    };
+  } catch (err: any) {
+    return { error: err.message, session: null };
+  }
+}
+
+async function getSnapshots() {
+  if (!deps) return { error: 'Dependencies not initialized' };
+
+  const { snapshotManager, profileManager } = deps;
+  const currentProfile = profileManager?.getCurrentProfile?.() ?? null;
+  if (!currentProfile) return { error: 'No active profile', snapshots: [] };
+
+  try {
+    const snapshots = await snapshotManager.listSnapshots();
+    return {
+      profileId: currentProfile.id,
+      profileName: currentProfile.name,
+      totalSnapshots: snapshots.length,
+      snapshots: snapshots.map((s: any) => ({
+        id: s.id,
+        label: s.label,
+        type: s.type,
+        timestamp: s.timestamp,
+        cliDiffPreview: s.cliDiff ? s.cliDiff.substring(0, 500) : null,
+      })),
+    };
+  } catch (err: any) {
+    return { error: err.message, snapshots: [] };
+  }
+}
+
+async function getBlackboxLogs() {
+  if (!deps) return { error: 'Dependencies not initialized' };
+
+  const { blackboxManager, profileManager } = deps;
+  const currentProfile = profileManager?.getCurrentProfile?.() ?? null;
+  if (!currentProfile) return { error: 'No active profile', logs: [] };
+
+  try {
+    const logs = await blackboxManager.listLogs(currentProfile.id);
+    return {
+      profileId: currentProfile.id,
+      profileName: currentProfile.name,
+      totalLogs: logs.length,
+      logsDir: blackboxManager.getLogsDir(),
+      logs: logs.map((l: any) => ({
+        id: l.id,
+        filename: l.filename,
+        filepath: l.filepath,
+        size: l.size,
+        timestamp: l.timestamp,
+        sessionCount: l.sessionCount,
+      })),
+    };
+  } catch (err: any) {
+    return { error: err.message, logs: [] };
+  }
 }
 
 // ── Helpers ─────────────────────────────────────────────────────────
