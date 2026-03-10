@@ -638,7 +638,7 @@ Design docs follow a lifecycle: **Proposed → Complete**. See `docs/README.md` 
 
 ### Autonomous Repo Operations
 Claude has **full autonomous access** exclusively to `eddycek/pidlab` repo:
-- Push, force push, merge — no confirmation needed
+- **NEVER push directly to main** — always create a feature branch, open a PR, then merge with `gh pr merge --admin`
 - PR create, merge (with `--admin` flag to bypass branch protection), close
 - All gh CLI operations allowed
 
