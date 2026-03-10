@@ -16,12 +16,6 @@ import type { DroneSize, FlightStyle } from '@shared/types/profile.types';
 import type { TransferFunctionMetrics } from './TransferFunctionEstimator';
 import {
   PID_STYLE_THRESHOLDS,
-  P_GAIN_MIN,
-  P_GAIN_MAX,
-  D_GAIN_MIN,
-  D_GAIN_MAX,
-  I_GAIN_MIN,
-  I_GAIN_MAX,
   DAMPING_RATIO_MIN,
   DAMPING_RATIO_MAX,
   DAMPING_RATIO_DEADZONE,

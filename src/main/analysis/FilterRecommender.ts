@@ -28,7 +28,6 @@ import {
   PROPWASH_GYRO_LPF1_FLOOR_HZ,
   PROPWASH_FLOOR_BYPASS_DB,
   GYRO_LPF2_DISABLE_THRESHOLD_DB,
-  DTERM_LPF2_DISABLE_THRESHOLD_DB,
 } from './constants';
 
 /** Detect whether RPM filter is active from settings */
@@ -64,12 +63,7 @@ export function recommend(
     recommendDynamicNotchForRPM(noise, current, recommendations);
   }
 
-  // 5. Motor harmonic diagnostic when RPM filter is active
-  if (rpmActive) {
-    recommendMotorHarmonicDiagnostic(noise, recommendations);
-  }
-
-  // 6. LPF2 recommendations (disable when clean + RPM, enable when noisy)
+  // 5. LPF2 recommendations (disable when clean + RPM, enable when noisy)
   recommendLpf2Adjustments(noise, current, recommendations, rpmActive);
 
   // Deduplicate: if multiple rules recommend the same setting, keep the more aggressive one
@@ -467,34 +461,6 @@ function recommendDynamicNotchForRPM(
       reason:
         'Strong frame resonance detected. Keeping the dynamic notch Q at 300 (wider bandwidth) ' +
         'ensures the notch can effectively track and suppress the resonance.',
-      impact: 'noise',
-      confidence: 'medium',
-    });
-  }
-}
-
-/**
- * When RPM filter is active but motor harmonic peaks are still detected,
- * add a diagnostic warning — likely indicates motor_poles misconfiguration
- * or ESC telemetry issues.
- */
-function recommendMotorHarmonicDiagnostic(noise: NoiseProfile, out: FilterRecommendation[]): void {
-  const allPeaks = [...noise.roll.peaks, ...noise.pitch.peaks, ...noise.yaw.peaks];
-
-  const motorHarmonics = allPeaks.filter(
-    (p) => p.type === 'motor_harmonic' && p.amplitude >= RESONANCE_ACTION_THRESHOLD_DB
-  );
-
-  if (motorHarmonics.length > 0) {
-    const freq = Math.round(motorHarmonics[0].frequency);
-    out.push({
-      setting: 'rpm_filter_diagnostic',
-      currentValue: 0,
-      recommendedValue: 0,
-      reason:
-        `Motor harmonic noise detected at ${freq} Hz despite RPM filter being active. ` +
-        'This may indicate incorrect motor_poles setting or ESC telemetry issues. ' +
-        'Check that motor_poles matches your motors (typically 14 for 5" props) and that bidirectional DShot is working correctly.',
       impact: 'noise',
       confidence: 'medium',
     });
