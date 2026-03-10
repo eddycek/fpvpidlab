@@ -37,6 +37,10 @@ Analyze current tuning progress and give expert advice.
 2. If running, gather data:
    - `curl -s http://127.0.0.1:9300/state` — connection, profile, tuning session phase
    - `curl -s http://127.0.0.1:9300/msp` — current PID and filter values on FC
+   - `curl -s http://127.0.0.1:9300/tuning-history` — completed tuning sessions with metrics
+   - `curl -s http://127.0.0.1:9300/tuning-session` — active tuning session state
+   - `curl -s http://127.0.0.1:9300/snapshots` — configuration snapshots
+   - `curl -s http://127.0.0.1:9300/analyze` — run full analysis on latest BBL log (returns noise spectrum, step response metrics, transfer function, all recommendations)
    - `curl -s "http://127.0.0.1:9300/logs?n=50"` — recent app activity
 3. Read tuning history if available (check userData path from /state)
 4. Assess:
