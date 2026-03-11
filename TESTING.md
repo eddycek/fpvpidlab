@@ -163,7 +163,7 @@ npm run test:ui           # Visual interface with DOM snapshots
 
 ## Test Inventory
 
-**Total: 2368 unit tests across 114 files + 26 Playwright E2E tests across 5 spec files** (last verified: March 10, 2026)
+**Total: 2368 unit tests across 114 files + 26 Playwright E2E tests across 5 spec files** (last verified: March 11, 2026)
 
 ### UI Components
 
@@ -298,7 +298,7 @@ npm run test:ui           # Visual interface with DOM snapshots
 | `analysis/FFTCompute.test.ts` | 20 | Hanning window, Welch's method, sine detection |
 | `analysis/SegmentSelector.test.ts` | 29 | Hover detection, throttle sweep detection, throttle normalization |
 | `analysis/NoiseAnalyzer.test.ts` | 25 | Peak detection, classification, noise floor |
-| `analysis/FilterRecommender.test.ts` | 57 | Noise-based targets, convergence, safety bounds, RPM-aware bounds, dynamic notch, motor diagnostic, propwash floor, medium noise handling, notch-aware resonance, LPF2 recommendations, conditional Q |
+| `analysis/FilterRecommender.test.ts` | 55 | Noise-based targets, convergence, safety bounds, RPM-aware bounds, dynamic notch, propwash floor, medium noise handling, notch-aware resonance, LPF2 recommendations, conditional Q |
 | `analysis/DataQualityScorer.test.ts` | 39 | Filter/PID data quality scoring, tier mapping, warnings, confidence adjustment, TF data quality, low coherence warning |
 | `analysis/FilterAnalyzer.test.ts` | 19 | End-to-end pipeline, progress reporting, segment fallback warnings, RPM context propagation, data quality scoring, throttle spectrogram, group delay |
 | `analysis/ThrottleSpectrogramAnalyzer.test.ts` | 17 | Throttle-dependent spectrogram analysis, frequency-throttle mapping, noise source tracking |

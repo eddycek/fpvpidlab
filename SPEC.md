@@ -59,7 +59,7 @@ High-level user journey:
 | 2 | Configure Blackbox logging for analysis (high logging rate, correct debug mode); ensure prerequisite settings | :white_check_mark: Blackbox info read + diagnostics (debug_mode, logging rate warnings). One-click "Fix Settings" in FCInfoDisplay + pre-flight warning in TuningStatusBanner → CLI commands → save & reboot. |
 | 3 | Filter tuning: throttle-sweep test flight; retrieve log; run noise analysis; propose safe filter adjustments; apply | :white_check_mark: Full pipeline with Deep Tune two-flight workflow, post-erase guidance, FFT analysis, interactive spectrum charts, auto-apply via CLI. |
 | 4 | PID tuning: stick snap test flight; retrieve log; analyze step responses; apply P/D recommendations | :white_check_mark: Step response analysis, interactive step response charts, auto-apply via MSP, optional verification hover with before/after noise comparison. D sweep multi-log comparison deferred. |
-| 5 | Restore other parameters (FeedForward, I, dynamic damping if used); store tuned snapshot; test-fly; rollback if needed | :construction: Snapshot restore/rollback :white_check_mark:. FF detection + FF-aware PID analysis + MSP read :white_check_mark:. FF write-back via CLI apply :white_check_mark: (PR #116). I write-back tuning :x:. |
+| 5 | Restore other parameters (FeedForward, I, dynamic damping if used); store tuned snapshot; test-fly; rollback if needed | :construction: Snapshot restore/rollback :white_check_mark:. FF detection + FF-aware PID analysis + MSP read :white_check_mark:. FF write-back via CLI apply :white_check_mark:. I write-back tuning :x:. |
 
 ---
 
@@ -108,7 +108,7 @@ High-level user journey:
 | Flight style-aware PID thresholds (smooth/balanced/aggressive) | :white_check_mark: | Per-profile FlightStyle selector, style-based PID_STYLE_THRESHOLDS map, preset defaults, UI context display |
 | D sweep multi-log comparison (vary D, compare response quality) | :fast_forward: | Deferred — requires multi-flight iterative workflow. |
 | Master gain step: scale P/D together; detect onset of oscillation | :fast_forward: | Deferred — requires multi-flight iterative workflow. |
-| Restore and tune secondary parameters (FF, I, anti-gravity, etc.) | :construction: | FF detection from BBL headers, FF-aware PID recommendations (skip P/D when FF-dominated), MSP_PID_ADVANCED read, FF config display in FC Info. FF write-back via CLI apply stage (PR #116) :white_check_mark:. I write-back not yet implemented. |
+| Restore and tune secondary parameters (FF, I, anti-gravity, etc.) | :construction: | FF detection from BBL headers, FF-aware PID recommendations (skip P/D when FF-dominated), MSP_PID_ADVANCED read, FF config display in FC Info. FF write-back via CLI apply stage :white_check_mark:. I write-back not yet implemented. |
 | Write final PIDs to FC; save; snapshot + diff vs previous | :white_check_mark: | Auto-apply PIDs via MSP + filters via CLI. Pre-tuning safety snapshot. Save & reboot. |
 
 ---
@@ -264,16 +264,16 @@ High-level user journey:
 - FC diagnostics (GYRO_SCALED check, logging rate verification, one-click fix)
 - CLI disconnect/reconnect fix (exit reboot handling)
 - Dashboard layout (side-by-side Connection + Profile panels)
-- Feedforward awareness: FF detection from BBL headers, FF-dominated overshoot classification, FF-aware PID recommendations (PRs #55–#60)
-- MSP_PID_ADVANCED read: feedforward configuration via MSP command 94 (PR #61)
-- Feedforward display in FC Info panel: boost, per-axis gains, smoothing, jitter, transition, max rate limit (PR #62)
-- RPM filter awareness: RPM state detection via MSP/BBL headers, RPM-aware filter bounds, dynamic notch optimization (PRs #66–#70)
-- Flight style preferences: Smooth/Balanced/Aggressive selector in profiles, style-based PID thresholds, preset defaults, UI context display (PRs #71–#78)
-- BF version policy: min 4.3 (API 1.44), version gate on connect, version-aware debug mode (PR #79)
-- Comprehensive testing plan: 9-phase plan adding 464 tests. PRs #85–#88. See [docs/COMPREHENSIVE_TESTING_PLAN.md](./docs/COMPREHENSIVE_TESTING_PLAN.md).
-- Verification flight: optional hover after PID apply for before/after noise comparison (PRs #89–#92)
-- Navigation breadcrumb in AnalysisOverview, snapshot/analysis UX fixes (PRs #93–#95)
-- Tuning history & comparison: session archive per profile, completion summary with noise spectrum overlay, applied changes table, PID metrics, expandable history panel (PRs #96–#99)
+- Feedforward awareness: FF detection from BBL headers, FF-dominated overshoot classification, FF-aware PID recommendations
+- MSP_PID_ADVANCED read: feedforward configuration via MSP command 94
+- Feedforward display in FC Info panel: boost, per-axis gains, smoothing, jitter, transition, max rate limit
+- RPM filter awareness: RPM state detection via MSP/BBL headers, RPM-aware filter bounds, dynamic notch optimization
+- Flight style preferences: Smooth/Balanced/Aggressive selector in profiles, style-based PID thresholds, preset defaults, UI context display
+- BF version policy: min 4.3 (API 1.44), version gate on connect, version-aware debug mode
+- Comprehensive testing plan: 9-phase plan adding 464 tests. See [docs/COMPREHENSIVE_TESTING_PLAN.md](./docs/COMPREHENSIVE_TESTING_PLAN.md).
+- Verification flight: optional hover after PID apply for before/after noise comparison
+- Navigation breadcrumb in AnalysisOverview, snapshot/analysis UX fixes
+- Tuning history & comparison: session archive per profile, completion summary with noise spectrum overlay, applied changes table, PID metrics, expandable history panel
 
 ### Phase 5: Complete Manual Testing & UX Polish :x:
 **Status:** Not started
@@ -291,7 +291,7 @@ End-to-end manual testing with real hardware to validate the entire tuning workf
 - Cross-platform smoke test (macOS primary, Windows/Linux basic)
 
 ### Phase 6: CI/CD & Cross-Platform Releases :white_check_mark:
-**Status:** Complete (PRs #109–#120)
+**Status:** Complete
 
 Automated build pipeline producing installable applications for all platforms.
 
@@ -307,9 +307,9 @@ Automated build pipeline producing installable applications for all platforms.
 - TypeScript strict type checking in CI (zero errors enforced)
 - React ErrorBoundary for crash recovery
 - IPC handler modularization (split monolithic 1500-line file into 11 domain modules)
-- Data quality scoring: 0-100 quality score for flight data, confidence adjustment, quality warnings (PR #119)
-- Flight quality score with trend chart: visual quality tracking across tuning sessions in history panel (PR #120)
-- Feedforward write-back via CLI apply stage (PR #116)
+- Data quality scoring: 0-100 quality score for flight data, confidence adjustment, quality warnings
+- Flight quality score with trend chart: visual quality tracking across tuning sessions in history panel
+- Feedforward write-back via CLI apply stage
 
 **Remaining (deferred):**
 - Code signing (macOS notarization, Windows Authenticode)
@@ -351,7 +351,7 @@ Automated end-to-end tests running in CI pipeline against a real FC connected to
 
 ## Progress Summary
 
-**Last Updated:** March 10, 2026 | **Tests:** 2368 unit tests across 114 files + 26 Playwright E2E tests | **PRs Merged:** #1–#221
+**Last Updated:** March 11, 2026 | **Tests:** 2368 unit tests across 114 files + 26 Playwright E2E tests | **PRs Merged:** #1–#224
 
 | Phase | Status | Notes |
 |-------|--------|-------|
@@ -371,9 +371,7 @@ Automated end-to-end tests running in CI pipeline against a real FC connected to
 |------|---------|-------|
 | D sweep multi-log comparison | 8 | Requires multi-flight iterative workflow |
 | Master gain step (P/D scaling) | 8 | Requires multi-flight iterative workflow |
-| FF/I/secondary parameter tuning | 8 | FF detection + FF-aware PID recommendations + MSP read done. FF write-back via CLI apply stage done (PR #116). I write-back not yet implemented. |
-| ~~RPM filtering validation~~ | ~~7~~ | ✅ Done — RPM-aware bounds, dynamic notch optimization (PRs #63-#69) |
-| ~~FF write-back~~ | ~~8~~ | ✅ Done — Feedforward write-back via CLI apply stage (PR #116). I write-back remaining. |
+| FF/I/secondary parameter tuning | 8 | FF detection + FF-aware PID recommendations + MSP read done. FF write-back via CLI apply stage done. I write-back not yet implemented. |
 | UI tooltips for technical terms | 9 | Nice-to-have UX enhancement |
 | Auto-configure BB logging settings | 4 | Would streamline pre-flight setup |
 | AI-powered tuning (optional) | 2 | Post-MVP, user-supplied API key |

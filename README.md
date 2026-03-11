@@ -11,7 +11,7 @@ PIDlab reads your Blackbox log, runs signal processing (FFT noise analysis, step
 - **Safety-first** — automatic pre-tuning and post-tuning snapshots with contextual labels, all values clamped to proven safe bounds
 - **Multi-quad profiles** — auto-detects each FC by serial number, stores configs and tuning history per quad
 - **Flight style adaptation** — Smooth (cinematic), Balanced (freestyle), Aggressive (racing) thresholds
-- **25 analysis modules** — FFT, step response, Wiener deconvolution, Bode plots, prop wash detection, D-term effectiveness, cross-axis coupling, throttle spectrograms, per-band transfer function, group delay estimation, feedforward analysis, slider mapping, dynamic lowpass, Bayesian PID optimizer, mechanical health, wind disturbance
+- **24 analysis modules** — FFT, step response, Wiener deconvolution, Bode plots, prop wash detection, D-term effectiveness, cross-axis coupling, throttle spectrograms, per-band transfer function, group delay estimation, feedforward analysis, slider mapping, dynamic lowpass, Bayesian PID optimizer, mechanical health, wind disturbance
 - **Works offline** — demo mode with simulated FC for testing without hardware
 
 **How it works:** Connect FC via USB → Erase flash → Fly → Download log → PIDlab analyzes and applies optimized settings → Done.
@@ -47,8 +47,6 @@ Connecting with BF 4.2 or earlier will show an error and auto-disconnect. See [B
 - **Phase 4:** ✅ Complete - Stateful Deep Tune workflow
 - **Phase 6:** ✅ Complete - CI/CD with GitHub Actions (tests on PR, cross-platform releases on tag)
 
-See [SPEC.md](./SPEC.md) for detailed phase tracking and test counts.
-
 ## Features
 
 ### Connection & Profiles
@@ -77,7 +75,7 @@ See [SPEC.md](./SPEC.md) for detailed phase tracking and test counts.
 - Noise-floor-based filter cutoff targeting with linear interpolation
 - Medium noise handling: 20 Hz deadzone with low-confidence recommendations (avoids recommendation churn in the -50 to -30 dB range)
 - Notch-aware resonance filtering: peaks within dyn_notch range are excluded from LPF recommendations (avoids redundant lowpass when notch already handles the peak)
-- RPM filter awareness: widens safety bounds (gyro LPF1 up to 500 Hz), optimizes dynamic notch (count/Q), diagnoses motor harmonic anomalies
+- RPM filter awareness: widens safety bounds (gyro LPF1 up to 500 Hz), optimizes dynamic notch (count/Q)
 - Conditional dynamic notch Q: keeps Q=300 (wide) when strong frame resonance detected, Q=500 (narrow) otherwise
 - LPF2 recommendations: disable when RPM active + clean signal (< -45 dB), enable when noisy (≥ -30 dB) without RPM
 - Propwash floor protection (never pushes gyro LPF1 below 100 Hz)
@@ -322,7 +320,7 @@ pidlab/
 │   │   │   ├── commands.ts      # MSP command definitions
 │   │   │   └── types.ts         # MSP type definitions
 │   │   ├── blackbox/            # BBL binary log parser (6 modules, 245 tests)
-│   │   ├── analysis/            # Signal processing & tuning engine (25 modules)
+│   │   ├── analysis/            # Signal processing & tuning engine (24 modules)
 │   │   │   ├── FFTCompute.ts              # Welch's method, Hanning window
 │   │   │   ├── SegmentSelector.ts         # Hover/sweep segment detection
 │   │   │   ├── NoiseAnalyzer.ts           # Peak detection, noise classification
@@ -459,10 +457,9 @@ pidlab/
 └── docs/                        # Design documents (see docs/README.md for index)
     ├── README.md                          # Document index
     ├── PID_TUNING_KNOWLEDGE.md            # FPV tuning knowledge base (for /tuning-advisor skill)
-    ├── FLASH_TUNE_RECOMMENDATION_PARITY.md # Active — unified pipeline, quality score parity
-    ├── TUNING_PRECISION_IMPROVEMENTS.md   # Active — 4/15 improvements done
-    ├── UX_IMPROVEMENT_IDEAS.md            # Active — 4/7 ideas done
-    └── complete/                          # Completed design docs (14 historical records)
+    ├── TUNING_PRECISION_IMPROVEMENTS.md   # Active — research-based tuning improvements
+    ├── UX_IMPROVEMENT_IDEAS.md            # Active — UX improvement backlog
+    └── complete/                          # Completed design docs (15 historical records)
 ```
 
 ## Usage
@@ -729,12 +726,11 @@ The -10 dB and -70 dB anchor points are calibrated from real Blackbox logs acros
 | **LPF2 disable (D-term)** | Noise < -45 dB | Disable D-term LPF2 | Medium | Clean signal: D-term LPF2 latency unnecessary |
 | **LPF2 enable (gyro)** | No RPM AND noise ≥ -30 dB | Enable gyro LPF2 | Medium | Noisy without RPM: extra filtering protects motors |
 | **LPF2 enable (D-term)** | Noise ≥ -30 dB AND LPF2 disabled | Enable D-term LPF2 | Medium | High noise needs additional D-term protection |
-| **RPM motor diagnostic** | RPM filter active AND motor harmonics still detected (≥ 12 dB) | Warning: check motor_poles / ESC telemetry | Medium | Motor harmonics should not exist with working RPM filter |
 | **Dynamic lowpass (gyro)** | Throttle spectrogram noise increases ≥ 6 dB from low to high throttle AND Pearson correlation ≥ 0.6 AND gyro LPF1 > 0 | Enable `gyro_lpf1_dyn_min_hz` (current × 0.6) and `gyro_lpf1_dyn_max_hz` (current × 1.4) | Medium | Throttle-ramped cutoff: more filtering at high throttle, less latency at cruise |
 | **Dynamic lowpass (D-term)** | Same throttle-noise trigger as gyro AND D-term LPF1 > 0 | Enable `dterm_lpf1_dyn_min_hz` (current × 0.6) and `dterm_lpf1_dyn_max_hz` (current × 1.4) | Medium | D amplifies high-frequency noise — dynamic filtering reduces motor heating at high throttle while preserving stick feel at cruise |
 | **Deduplication** | Multiple rules target same setting | Keep more aggressive value, upgrade confidence | — | Ensures a single coherent recommendation per setting |
 
-**RPM filter awareness:** When the RPM filter is active (detected via MSP or BBL headers), the recommender widens safety bounds because motor noise is already handled by the 36 narrow notch filters tracking motor frequencies. It also recommends dynamic notch optimization (count 3→1, Q 300→500) since only frame resonances remain. If motor harmonics are still detected with RPM active, a diagnostic warns about possible `motor_poles` misconfiguration or ESC telemetry issues.
+**RPM filter awareness:** When the RPM filter is active (detected via MSP or BBL headers), the recommender widens safety bounds because motor noise is already handled by the 36 narrow notch filters tracking motor frequencies. It also recommends dynamic notch optimization (count 3→1, Q 300→500) since only frame resonances remain.
 
 #### Filter Methodology Sources
 
@@ -849,7 +845,7 @@ All recommendations are anchored to the PID values from the Blackbox log header 
 
 **Transfer Function Rules (Wiener deconvolution — primary source for Flash Tune, supplementary for Deep Tune when TF data available):**
 
-The transfer function approach is based on [Plasmatree PID-Analyzer](https://github.com/Plasmatree/PID-Analyzer) by Florian Melsheimer (2018). PIDlab estimates the closed-loop transfer function H(f) from setpoint→gyro data via cross-spectral density: `H(f) = S_xy(f) / (S_xx(f) + ε)`, where ε is a noise-floor-based regularization term. A synthetic step response is derived by inverse-FFT of H(f) followed by cumulative integration (impulse → step). Classical control stability metrics (bandwidth, phase margin, gain margin) are extracted from the Bode plot representation. Since the unified pipeline (PR #203), TF rules run alongside step-response rules in a single `recommendPID()` call — both contribute recommendations which are then subject to the same post-processing (D-term effectiveness gating, prop wash integration, data quality adjustment).
+The transfer function approach is based on [Plasmatree PID-Analyzer](https://github.com/Plasmatree/PID-Analyzer) by Florian Melsheimer (2018). PIDlab estimates the closed-loop transfer function H(f) from setpoint→gyro data via cross-spectral density: `H(f) = S_xy(f) / (S_xx(f) + ε)`, where ε is a noise-floor-based regularization term. A synthetic step response is derived by inverse-FFT of H(f) followed by cumulative integration (impulse → step). Classical control stability metrics (bandwidth, phase margin, gain margin) are extracted from the Bode plot representation. Both Deep Tune and Flash Tune share the same unified recommendation pipeline. TF rules run alongside step-response rules in a single `recommendPID()` call — both contribute recommendations which are then subject to the same post-processing (D-term effectiveness gating, prop wash integration, data quality adjustment).
 
 | Rule | Condition | Action | Step Size | Base Confidence |
 |------|-----------|--------|-----------|-----------------|

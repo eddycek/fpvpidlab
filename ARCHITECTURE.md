@@ -1,6 +1,6 @@
 # Architecture Overview
 
-**Last Updated:** March 10, 2026 | **Phase 4 Complete, Phase 6 Complete** | **2370 unit tests, 114 files + 26 Playwright E2E tests**
+**Last Updated:** March 11, 2026 | **Phase 4 Complete, Phase 6 Complete** | **2368 unit tests, 114 files + 26 Playwright E2E tests**
 
 ---
 
@@ -57,8 +57,8 @@
 │  │  ┌───┴──────────┐  ┌─────────────────┐  ┌──────────────────┐      │  │
 │  │  │MSPConnection │  │ BlackboxParser  │  │ Analysis Engine │      │  │
 │  │  │ + CLI Mode   │  │ (6 modules,     │  │ FFT + Step Resp │      │  │
-│  │  │ + fcEntered  │  │  227 tests)     │  │ (19 modules,    │      │  │
-│  │  │   CLI flag   │  │                 │  │  528 tests)     │      │  │
+│  │  │ + fcEntered  │  │  227 tests)     │  │ (24 modules,    │      │  │
+│  │  │   CLI flag   │  │                 │  │  661 tests)     │      │  │
 │  │  └───┬──────────┘  └─────────────────┘  └──────────────────┘      │  │
 │  │      │                                                             │  │
 │  │  ┌───┴──────────┐                                                  │  │
@@ -284,7 +284,7 @@ Two independent analysis pipelines: **filter tuning** (FFT noise analysis) and *
 | `FFTCompute.ts` | 171 | 20 | Welch's method, Hanning window |
 | `SegmentSelector.ts` | 195 | 27 | Hover + throttle sweep detection |
 | `NoiseAnalyzer.ts` | 246 | 25 | Peak detection, noise classification |
-| `FilterRecommender.ts` | 330 | 57 | Noise-based filter targets, RPM-aware bounds, propwash floor, medium noise, notch-aware resonance, LPF2 |
+| `FilterRecommender.ts` | 627 | 55 | Noise-based filter targets, RPM-aware bounds, propwash floor, medium noise, notch-aware resonance, LPF2 |
 | `FilterAnalyzer.ts` | 206 | 19 | Filter analysis orchestrator (data quality, throttle spectrogram, group delay) |
 | `ThrottleSpectrogramAnalyzer.ts` | — | 19 | Throttle-dependent spectrogram analysis |
 | `GroupDelayEstimator.ts` | — | 23 | Group delay estimation, filter latency measurement |
@@ -335,7 +335,6 @@ Safety bounds (RPM-aware):
 Dead zone: 5 Hz minimum change to recommend
 Resonance: if prominent peak (>12 dB) is below current cutoff → lower cutoff to peak - 20 Hz
 RPM active: recommend dyn_notch_count=1, dyn_notch_q=500 (frame resonance only)
-RPM diagnostic: motor harmonics with RPM active → warn about motor_poles/ESC issues
 ```
 
 RPM filter state is detected from `MSP_FILTER_CONFIG` (bytes 43-44) or BBL raw headers as fallback. The `rpmFilterActive` flag propagates through to `FilterAnalysisResult` and the UI.
@@ -824,7 +823,7 @@ Hardware error (FC timeout, USB disconnect)
 | Area | Files | Tests |
 |------|-------|-------|
 | Blackbox Parser | 9 | 245 |
-| FFT Analysis (+ Data Quality + Spectrogram + Delay) | 8 | 228 |
+| FFT Analysis (+ Data Quality + Spectrogram + Delay) | 8 | 226 |
 | Step Response + PID + TF + CrossAxis + PropWash + DTerm + Bayesian | 10 | 310 |
 | Header Validation + Constants | 2 | 31 |
 | MSP Protocol & Client | 4 | 173 |
