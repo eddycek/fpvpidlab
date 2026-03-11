@@ -57,7 +57,7 @@ High-level user journey:
 |------|-------------|--------|
 | 1 | Connect drone over USB; read Betaflight version/target; create baseline backup snapshot | :white_check_mark: MSP connect + FC info + auto-baseline snapshot + smart reconnect detection |
 | 2 | Configure Blackbox logging for analysis (high logging rate, correct debug mode); ensure prerequisite settings | :white_check_mark: Blackbox info read + diagnostics (debug_mode, logging rate warnings). One-click "Fix Settings" in FCInfoDisplay + pre-flight warning in TuningStatusBanner → CLI commands → save & reboot. |
-| 3 | Filter tuning: throttle-sweep test flight; retrieve log; run noise analysis; propose safe filter adjustments; apply | :white_check_mark: Full pipeline with Deep Tune two-flight workflow, post-erase guidance, FFT analysis, interactive spectrum charts, auto-apply via CLI. |
+| 3 | Filter tuning: throttle-sweep test flight; retrieve log; run noise analysis; propose safe filter adjustments; apply | :white_check_mark: Full pipeline with Filter Tune workflow, post-erase guidance, FFT analysis, interactive spectrum charts, auto-apply via CLI. |
 | 4 | PID tuning: stick snap test flight; retrieve log; analyze step responses; apply P/D recommendations | :white_check_mark: Step response analysis, interactive step response charts, auto-apply via MSP, optional verification hover with before/after noise comparison. D sweep multi-log comparison deferred. |
 | 5 | Restore other parameters (FeedForward, I, dynamic damping if used); store tuned snapshot; test-fly; rollback if needed | :construction: Snapshot restore/rollback :white_check_mark:. FF detection + FF-aware PID analysis + MSP read :white_check_mark:. FF write-back via CLI apply :white_check_mark:. I write-back tuning :x:. |
 
@@ -117,7 +117,7 @@ High-level user journey:
 
 | Requirement | Status | Notes |
 |-------------|--------|-------|
-| Wizard flow with progress | :white_check_mark: | Mode-aware wizard (filter/pid) with progress indicator + two-flight status banner (10 phases) |
+| Wizard flow with progress | :white_check_mark: | Mode-aware wizard (filter/pid/quick) with unified 4-step progress indicator + status banner (16 phases across 3 modes) |
 | Beginner language; tooltips for terms; advanced details toggle | :construction: | Recommendation reasons are beginner-friendly. Flight guides done. UI tooltips not yet built. |
 | Clear flight instructions with checklists and visual hints | :white_check_mark: | FlightGuideContent with 6 phases + 5 tips. TuningWorkflowModal for preparation. Post-erase guidance. |
 | Robust error handling: inconclusive logs, missing data, parsing errors | :white_check_mark: | Parser corruption recovery, analysis fallback to full flight, IPC error responses, toast notifications |
@@ -153,7 +153,7 @@ High-level user journey:
 | `blackbox-parser` | decode logs | :white_check_mark: | `src/main/blackbox/` — 6 modules, 245 tests (incl. fuzz + real-flight regression) |
 | `analysis-filter` | FFT, noise floor, peaks, filter recommendations | :white_check_mark: | `src/main/analysis/` — 5 modules, 129 tests (convergent noise-based targets, RPM-aware, data quality scoring) |
 | `analysis-pid` | step response extraction, scoring, recommendations | :white_check_mark: | `src/main/analysis/` — 4 modules, 97 tests (flight PID anchoring, convergent, FF-aware, data quality scoring) |
-| `tuning-orchestrator` | state machine + safety constraints | :white_check_mark: | TuningSessionManager (10-phase state machine) + apply handlers + restore handler |
+| `tuning-orchestrator` | state machine + safety constraints | :white_check_mark: | TuningSessionManager (16-phase state machine, 3 modes: Filter Tune, PID Tune, Flash Tune) + apply handlers + restore handler |
 | `ui-wizard` | screens + explanations + charts | :white_check_mark: | TuningWizard (mode-aware) + AnalysisOverview + TuningStatusBanner + interactive charts |
 
 ### Persistence
@@ -179,7 +179,7 @@ High-level user journey:
 | Consideration | Status | Notes |
 |---------------|--------|-------|
 | Market pain is real: many pilots struggle with tuning | N/A | Validated by spec |
-| Differentiator: end-to-end tuning workflow + automated recommendations + rollback + beginner explanations | :white_check_mark: | Full end-to-end pipeline with Deep Tune (two-flight) and Flash Tune (single-flight) workflows |
+| Differentiator: end-to-end tuning workflow + automated recommendations + rollback + beginner explanations | :white_check_mark: | Full end-to-end pipeline with Filter Tune, PID Tune, and Flash Tune workflows |
 | Monetization paths (later): open-core or freemium | :fast_forward: | Post-MVP |
 | MVP should be fully usable offline without accounts | :white_check_mark: | No accounts, no network, fully local |
 
@@ -195,7 +195,7 @@ High-level user journey:
 | Blackbox log import/download + parsing | :white_check_mark: | Complete (245 parser tests incl. fuzz) |
 | Filter analysis + apply changes | :white_check_mark: | Complete with interactive charts |
 | PID analysis (P/D balance) + apply changes | :white_check_mark: | Complete with interactive charts. Master gain deferred. |
-| Tutorial screens for required test flights | :white_check_mark: | Deep Tune workflow with status banner, flight guides, post-erase guidance |
+| Tutorial screens for required test flights | :white_check_mark: | Filter Tune / PID Tune / Flash Tune workflows with status banner, flight guides, post-erase guidance |
 | Export session report (PDF/HTML) | :fast_forward: | Deferred to future iteration |
 
 ---
@@ -251,13 +251,14 @@ High-level user journey:
 - Mode-aware wizard (filter-only / pid-only step routing)
 - Read-only AnalysisOverview (single-page view without tuning session)
 - Flight guide content (6 phases + 5 tips per flight type)
-- TuningWorkflowModal (two-flight workflow preparation)
+- TuningWorkflowModal (tuning workflow preparation)
 
-### Phase 4: Stateful Two-Flight Tuning Workflow :white_check_mark:
-**Status:** Complete | **PRs:** #31–#99 | **Tests:** 1520+ across 82+ files
+### Phase 4: Stateful Tuning Workflow :white_check_mark:
+**Status:** Complete | **PRs:** #31–#99, #235–#236 | **Tests:** 1520+ across 82+ files
 
-- TuningSessionManager (10-phase state machine, per-profile persistence)
-- TuningStatusBanner (dashboard banner with step indicator, action buttons)
+- TuningSessionManager (16-phase state machine across 3 modes: Filter Tune, PID Tune, Flash Tune; per-profile persistence)
+- TuningStatusBanner (dashboard banner with unified 4-step indicator for all modes, action buttons)
+- Mode-aware verification: spectrogram comparison (Filter Tune), step response comparison (PID Tune), noise spectrum overlay (Flash Tune)
 - Smart reconnect detection (auto-advance when flight data detected)
 - Post-erase guidance (flash erased notification with flight guide link)
 - BlackboxStatus readonly mode during active tuning sessions
@@ -271,7 +272,7 @@ High-level user journey:
 - Flight style preferences: Smooth/Balanced/Aggressive selector in profiles, style-based PID thresholds, preset defaults, UI context display
 - BF version policy: min 4.3 (API 1.44), version gate on connect, version-aware debug mode
 - Comprehensive testing plan: 9-phase plan adding 464 tests. See [docs/COMPREHENSIVE_TESTING_PLAN.md](./docs/COMPREHENSIVE_TESTING_PLAN.md).
-- Verification flight: optional hover after PID apply for before/after noise comparison
+- Verification flight: optional per-mode verification (Filter Tune: throttle sweep, PID Tune: stick snaps, Flash Tune: hover)
 - Navigation breadcrumb in AnalysisOverview, snapshot/analysis UX fixes
 - Tuning history & comparison: session archive per profile, completion summary with noise spectrum overlay, applied changes table, PID metrics, expandable history panel
 
@@ -324,11 +325,12 @@ Automated Playwright E2E tests that launch the real Electron app in demo mode (m
 **Completed:**
 - Playwright E2E infrastructure: `e2e/electron-app.ts` fixture with `launchDemoApp()`, screenshot helpers, isolated `E2E_USER_DATA_DIR`
 - 4 smoke tests: app launch, auto-connect, dashboard elements
-- 11 Deep Tune cycle tests: complete filter + PID cycle with wizard, apply, skip verification, dismiss, history check
+- 7 Filter Tune cycle tests: complete filter-only cycle with wizard, apply, skip verification, dismiss, history check
+- 7 PID Tune cycle tests: complete PID-only cycle with wizard, apply, skip verification, dismiss, history check
 - 7 Flash Tune cycle tests: single-flight Flash Tune cycle with parallel analysis, apply all, history check
 - 5-cycle history generator: `npm run demo:generate-history` for populating tuning history with progressive quality scores
 - `advancePastVerification()` fix: keeps mock FC flight type cycle in sync when verification is skipped across multiple cycles
-- Total: 26 Playwright E2E tests across 5 spec files (22 in normal runs + generators/stress)
+- Total: 29 Playwright E2E tests across 6 spec files (25 in normal runs + generators/stress)
 
 #### 7b: Real FC E2E :x:
 Automated end-to-end tests running in CI pipeline against a real FC connected to a dedicated machine.
@@ -351,7 +353,7 @@ Automated end-to-end tests running in CI pipeline against a real FC connected to
 
 ## Progress Summary
 
-**Last Updated:** March 11, 2026 | **Tests:** 2403 unit tests across 116 files + 26 Playwright E2E tests | **PRs Merged:** #1–#233
+**Last Updated:** March 11, 2026 | **Tests:** 2421 unit tests across 118 files + ~29 Playwright E2E tests | **PRs Merged:** #1–#236
 
 | Phase | Status | Notes |
 |-------|--------|-------|
@@ -359,10 +361,10 @@ Automated end-to-end tests running in CI pipeline against a real FC connected to
 | Phase 2: Blackbox Analysis & Tuning | **100%** :white_check_mark: | Parser, FFT, step response, auto-apply, rollback |
 | Phase 2.5: UX Polish | **100%** :white_check_mark: | Charts, diff view, toast |
 | Phase 3: Mode-Aware Analysis | **100%** :white_check_mark: | Wizard modes, read-only analysis, flight guides |
-| Phase 4: Two-Flight Workflow | **100%** :white_check_mark: | Session state machine, smart reconnect, status banner, verification flight, tuning history |
+| Phase 4: Tuning Workflow | **100%** :white_check_mark: | Session state machine (Filter Tune + PID Tune + Flash Tune), smart reconnect, status banner, mode-aware verification, tuning history |
 | Phase 5: Manual Testing & UX Polish | **0%** :x: | Next up |
 | Phase 6: CI/CD & Releases | **100%** :white_check_mark: | CI pipeline, cross-platform releases, ESLint/Prettier, ErrorBoundary, handler split, data quality, flight quality score |
-| Phase 7a: Demo E2E (Playwright) | **100%** :white_check_mark: | 26 Playwright tests (demo mode, Deep Tune + Flash Tune + generators) |
+| Phase 7a: Demo E2E (Playwright) | **100%** :white_check_mark: | ~29 Playwright tests (demo mode, Filter Tune + PID Tune + Flash Tune + generators) |
 | Phase 7b: Real FC E2E | **0%** :x: | After Phase 5 |
 
 ### Remaining Spec Items (deferred to future iterations)
