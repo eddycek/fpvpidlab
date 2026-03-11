@@ -6,7 +6,7 @@ PIDlab reads your Blackbox log, analyzes the data (FFT noise spectrum, step resp
 
 **What makes it different:**
 - **Computed recommendations** — filter cutoffs and PID values derived from measured flight data, not just graphs
-- **Three tuning modes** — Filter Tune (1-2 flights, filter analysis), PID Tune (1-2 flights, PID analysis), or Flash Tune (any single flight, Wiener deconvolution à la [Plasmatree](https://github.com/Plasmatree/PID-Analyzer))
+- **Three tuning modes** — Filter Tune (2 flights, filter analysis + verification), PID Tune (2 flights, PID analysis + verification), or Flash Tune (2 flights, Wiener deconvolution + verification, à la [Plasmatree](https://github.com/Plasmatree/PID-Analyzer))
 - **Convergent** — re-analyzing the same log always produces the same result, no recommendation drift
 - **Safety-first** — automatic pre/post-tuning snapshots, all values clamped to proven safe bounds
 - **Multi-quad profiles** — auto-detects each FC by serial number, stores configs and history per quad
@@ -134,26 +134,26 @@ Inspired by [Plasmatree PID-Analyzer](https://github.com/Plasmatree/PID-Analyzer
 
 ### Filter Tune
 
-Filter-only tuning — 1 flight for analysis, optional verification flight.
+Filter-only tuning — 2 flights: analysis + mandatory verification.
 
 **Flight (Filters):** Hover + throttle sweeps. FFT identifies noise sources (frame resonance, motor harmonics, electrical noise) and computes optimal filter cutoffs. RPM-filter-aware quads get wider safety bounds.
 
 - 6-phase state machine (filter_flight_pending → filter_log_ready → filter_analysis → filter_applied → filter_verification_pending → completed) with per-profile persistence
 - Smart reconnect: auto-advances to log_ready when flash data detected after FC reboot
 - Post-erase flight guide with throttle sweep instructions
-- Optional verification throttle sweep flight — before/after spectrogram comparison
+- Mandatory verification throttle sweep flight — before/after spectrogram comparison
 - Tuning completion summary with applied changes and noise metrics
 
 ### PID Tune
 
-PID-only tuning — 1 flight for analysis, optional verification flight.
+PID-only tuning — 2 flights: analysis + mandatory verification.
 
 **Flight (PIDs):** Sharp stick snaps on each axis with 500 ms holds. The step detector measures each response: rise time, overshoot, settling time, latency, ringing, and steady-state error. Time-domain measurement gives the most precise results.
 
 - 6-phase state machine (pid_flight_pending → pid_log_ready → pid_analysis → pid_applied → pid_verification_pending → completed) with per-profile persistence
 - Smart reconnect: auto-advances to log_ready when flash data detected after FC reboot
 - Post-erase flight guide with stick snap instructions
-- Optional verification stick snap flight — before/after step response comparison
+- Mandatory verification stick snap flight — before/after step response comparison
 - Tuning completion summary with applied changes and PID response data
 
 ### Flash Tune (Single Flight)
@@ -184,6 +184,8 @@ The fast approach — analyzes any single flight (freestyle, cruise, hover) usin
 - Spectrogram comparison chart (side-by-side before/after throttle spectrograms for Filter Tune verification)
 - Step response comparison (before/after PID metrics for PID Tune verification)
 - Axis tabs (Roll/Pitch/Yaw/All) for all chart types
+- Chart titles with descriptive subtitles explaining what each visualization shows
+- Metric tooltips on hover for all analysis values (noise floor, overshoot, rise time, bandwidth, etc.)
 
 ## Tech Stack
 
@@ -284,7 +286,7 @@ npm run rebuild                      # Rebuild native modules (serialport)
 
 All UI changes must include tests. Tests automatically run before commits. Coverage thresholds enforced: 80% lines/functions/statements, 75% branches.
 
-**Unit tests:** 2421 tests across 118 files — MSP protocol, storage managers, IPC handlers, UI components, hooks, BBL parser fuzz, analysis pipeline validation.
+**Unit tests:** 2418 tests across 118 files — MSP protocol, storage managers, IPC handlers, UI components, hooks, BBL parser fuzz, analysis pipeline validation.
 
 **Playwright E2E:** 29 tests across 6 spec files — launches real Electron app in demo mode, walks through complete tuning cycles (Filter Tune, PID Tune, Flash Tune, and stress-test edge cases).
 
@@ -509,7 +511,7 @@ Click **Start Tuning Session** and select **Filter Tune** (recommended starting 
    - Auto-parses the log and runs FFT noise analysis
    - Shows noise spectrum, detected peaks, and filter recommendations
    - Review recommendations, then click **Apply Filters** (applies via CLI + reboots FC)
-6. **Optional verification** — Fly another throttle sweep flight; the app compares before/after spectrograms side-by-side
+6. **Verification flight** — Click "Erase & Verify", fly another throttle sweep, download and analyze; the app compares before/after spectrograms side-by-side
 
 ### 3b. PID Tune
 
@@ -522,7 +524,7 @@ Click **Start Tuning Session** and select **PID Tune**. Same 4-step layout: Prep
    - Detects step inputs, measures response metrics (overshoot, rise time, settling)
    - Shows step response charts and PID recommendations
    - Click **Apply PIDs** to apply changes
-5. **Optional verification** — Fly another stick snap flight; the app compares before/after step response metrics
+5. **Verification flight** — Click "Erase & Verify", fly another stick snap flight, download and analyze; the app compares before/after step response metrics
 
 The session shows a **completion summary** with all applied changes and tuning metrics. You can start a new tuning cycle to iterate further. Past sessions are archived in the **Tuning History** panel on the dashboard.
 
@@ -537,7 +539,7 @@ Click **Start Tuning Session** and select **Flash Tune**:
    - **Wiener deconvolution** for PID recommendations — estimates the transfer function from setpoint→gyro data and synthesizes a step response
 4. **Review Bode plot** — Magnitude + phase curves with bandwidth, gain margin, and phase margin markers
 5. **Apply all** — Combined filter + PID changes in one click
-6. **Optional verification** — Hover flight for before/after noise comparison
+6. **Verification flight** — Click "Erase & Verify", hover flight, download and analyze for before/after noise comparison
 
 Based on the [Plasmatree PID-Analyzer](https://github.com/Plasmatree/PID-Analyzer) technique by Florian Melsheimer (2018). Normal stick inputs contain enough broadband energy to recover the transfer function from any flight.
 

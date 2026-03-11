@@ -1,6 +1,6 @@
 # Architecture Overview
 
-**Last Updated:** March 11, 2026 | **Phase 4 Complete, Phase 6 Complete** | **2421 unit tests, 118 files + 29 Playwright E2E tests**
+**Last Updated:** March 12, 2026 | **Phase 4 Complete, Phase 6 Complete** | **2418 unit tests, 118 files + 29 Playwright E2E tests**
 
 ---
 
@@ -703,7 +703,8 @@ filter_verification_      pid_verification_                    │
   - Flash Tune: noise comparison chart (before/after spectrum overlay with dB delta)
 - Applied filter and PID changes tables
 - PID step response metrics per axis
-- "Start New Tuning Cycle" and "Dismiss" actions
+- Smart suggestion buttons: context-aware "Start New Tuning Cycle" with pre-selected mode based on verification results
+- "Dismiss" action to close completion summary
 
 **TuningHistoryPanel** shows archived past sessions:
 - Expandable cards with date, change count summary, noise level
@@ -814,7 +815,7 @@ Hardware error (FC timeout, USB disconnect)
 
 ## Testing Strategy
 
-**2421 unit tests across 118 files + 29 Playwright E2E tests**. See [TESTING.md](./TESTING.md) for complete inventory.
+**2418 unit tests across 118 files + 29 Playwright E2E tests**. See [TESTING.md](./TESTING.md) for complete inventory.
 
 | Area | Files | Tests |
 |------|-------|-------|
@@ -826,7 +827,7 @@ Hardware error (FC timeout, USB disconnect)
 | MSC (Mass Storage) | 2 | 43 |
 | Storage Managers | 7 | 127 |
 | IPC Handlers | 1 | 109 |
-| UI Components + Charts + Contexts | 46 | 685 |
+| UI Components + Charts + Contexts | 46 | 682 |
 | React Hooks + Utils | 14 | 171 |
 | Shared Constants & Utils | 4 | 85 |
 | E2E Workflows (Vitest) | 1 | 30 |

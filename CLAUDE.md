@@ -291,7 +291,7 @@ Rates flight data quality 0-100 before generating recommendations. Integrated in
 
 ### Stateful Tuning Session
 
-Three tuning modes: **Filter Tune** (1-2 flights, filter analysis), **PID Tune** (1-2 flights, PID analysis), and **Flash Tune** (1-flight, combined analysis via Wiener deconvolution).
+Three tuning modes: **Filter Tune** (2 flights: analysis + verification), **PID Tune** (2 flights: analysis + verification), and **Flash Tune** (2 flights: analysis + verification). Verification is mandatory.
 
 **TuningType**: `'filter' | 'pid' | 'quick'`
 
@@ -305,7 +305,7 @@ Three tuning modes: **Filter Tune** (1-2 flights, filter analysis), **PID Tune**
 - **useTuningSession hook**: Manages session lifecycle with IPC and event subscription
 - **TuningStatusBanner**: Dashboard banner showing current phase, 4-step indicator (Prepare → Flight → Tune → Verify), action buttons
 - **TuningMode**: `'filter' | 'pid' | 'quick'` — wizard components adapt UI/flow per mode
-- **Verification flow**: Filter Tune: throttle sweep → spectrogram comparison. PID Tune: stick snaps → step response comparison. Flash Tune: hover → noise comparison. Or "Skip & Complete" to skip.
+- **Verification flow** (mandatory): After apply, user clicks "Erase & Verify" → fly verification flight → download → analyze verification → completed. Filter Tune: throttle sweep → spectrogram comparison. PID Tune: stick snaps → step response comparison. Flash Tune: hover → noise comparison.
 - **Archive on completion**: When phase transitions to `completed`, session is archived to `TuningHistoryManager` before becoming dismissable
 - IPC: `TUNING_GET_SESSION`, `TUNING_START_SESSION`, `TUNING_UPDATE_PHASE`, `TUNING_RESET_SESSION`, `TUNING_GET_HISTORY`, `TUNING_UPDATE_VERIFICATION`, `TUNING_UPDATE_HISTORY_VERIFICATION` + `EVENT_TUNING_SESSION_CHANGED`
 - Design doc: `docs/TUNING_WORKFLOW_REVISION.md`
@@ -543,6 +543,7 @@ Renderer components subscribe to events:
 - `src/shared/constants.ts` - MSP codes, Betaflight vendor IDs, preset profiles, size defaults
 - `src/shared/types/*.types.ts` - Shared type definitions (common, profile, pid, blackbox, analysis)
 - `src/shared/constants/flightGuide.ts` - Flight guide phases, tips, and tuning workflow steps
+- `src/shared/constants/metricTooltips.ts` - Centralized chart descriptions and metric tooltip strings (CHART_DESCRIPTIONS, METRIC_TOOLTIPS)
 - `src/main/analysis/constants.ts` - FFT thresholds, peak detection, safety bounds, propwash floor, damping ratio, I-term bounds, adaptive window, QUAD_SIZE_BOUNDS, BANDWIDTH_LOW_HZ_BY_STYLE, LPF2 thresholds, RINGING_MIN_AMPLITUDE_FRACTION (tunable)
 - `vitest.config.ts` - Test configuration with jsdom environment
 
