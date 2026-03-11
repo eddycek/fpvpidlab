@@ -3,6 +3,7 @@ import type { TuningSession } from '@shared/types/tuning.types';
 import type { TransferFunctionMetricsSummary } from '@shared/types/tuning-history.types';
 import { computeTuneQualityScore, TIER_LABELS } from '@shared/utils/tuneQualityScore';
 import { TUNING_TYPE, TUNING_TYPE_LABELS } from '@shared/constants';
+import { METRIC_TOOLTIPS } from '@shared/constants/metricTooltips';
 import { NoiseComparisonChart } from './NoiseComparisonChart';
 import { SpectrogramComparisonChart } from './SpectrogramComparisonChart';
 import { StepResponseComparison } from './StepResponseComparison';
@@ -70,6 +71,7 @@ interface TuningCompletionSummaryProps {
   session: TuningSession;
   onDismiss: () => void;
   onStartNew: () => void;
+  onStartPidTune?: () => void;
   onReanalyzeVerification?: () => void;
 }
 
@@ -108,6 +110,7 @@ export function TuningCompletionSummary({
   session,
   onDismiss,
   onStartNew,
+  onStartPidTune,
   onReanalyzeVerification,
 }: TuningCompletionSummaryProps) {
   const isFilterTune = session.tuningType === TUNING_TYPE.FILTER || !session.tuningType;
@@ -137,10 +140,6 @@ export function TuningCompletionSummary({
       session.transferFunctionMetrics,
     ]
   );
-
-  const verificationHint = isPidTune
-    ? 'Fly a verification flight next time to see a step response comparison.'
-    : 'Fly a verification flight next time to see a noise comparison chart.';
 
   return (
     <div className="completion-summary">
@@ -266,9 +265,15 @@ export function TuningCompletionSummary({
               return (
                 <div key={axis} className="completion-pid-axis">
                   <strong>{axis[0].toUpperCase() + axis.slice(1)}</strong>
-                  <span>Overshoot: {m.meanOvershoot.toFixed(1)}%</span>
-                  <span>Rise: {m.meanRiseTimeMs.toFixed(0)}ms</span>
-                  <span>Settling: {m.meanSettlingTimeMs.toFixed(0)}ms</span>
+                  <span title={METRIC_TOOLTIPS.overshoot}>
+                    Overshoot: {m.meanOvershoot.toFixed(1)}%
+                  </span>
+                  <span title={METRIC_TOOLTIPS.riseTime}>
+                    Rise: {m.meanRiseTimeMs.toFixed(0)}ms
+                  </span>
+                  <span title={METRIC_TOOLTIPS.settlingTime}>
+                    Settling: {m.meanSettlingTimeMs.toFixed(0)}ms
+                  </span>
                 </div>
               );
             })}
@@ -276,15 +281,63 @@ export function TuningCompletionSummary({
         </div>
       )}
 
-      {!hasAnyVerification && <p className="completion-hint">{verificationHint}</p>}
-
       <div className="completion-actions">
-        <button className="wizard-btn wizard-btn-primary" onClick={onStartNew}>
-          Start New Tuning Cycle
-        </button>
-        <button className="wizard-btn wizard-btn-secondary" onClick={onDismiss}>
-          Dismiss
-        </button>
+        {isFilterTune && (
+          <>
+            {score && score.overall >= 60 ? (
+              <>
+                {onStartPidTune && (
+                  <button className="wizard-btn wizard-btn-primary" onClick={onStartPidTune}>
+                    Start PID Tune
+                  </button>
+                )}
+                <button
+                  className={`wizard-btn ${onStartPidTune ? 'wizard-btn-secondary' : 'wizard-btn-primary'}`}
+                  onClick={onDismiss}
+                >
+                  Dismiss
+                </button>
+              </>
+            ) : (
+              <>
+                <button className="wizard-btn wizard-btn-primary" onClick={onStartNew}>
+                  Repeat Filter Tune
+                </button>
+                <button className="wizard-btn wizard-btn-secondary" onClick={onDismiss}>
+                  Dismiss
+                </button>
+              </>
+            )}
+          </>
+        )}
+        {isPidTune && (
+          <>
+            {score && score.overall >= 60 ? (
+              <button className="wizard-btn wizard-btn-primary" onClick={onDismiss}>
+                Dismiss
+              </button>
+            ) : (
+              <>
+                <button className="wizard-btn wizard-btn-primary" onClick={onStartNew}>
+                  Repeat PID Tune
+                </button>
+                <button className="wizard-btn wizard-btn-secondary" onClick={onDismiss}>
+                  Dismiss
+                </button>
+              </>
+            )}
+          </>
+        )}
+        {isFlashTune && (
+          <>
+            <button className="wizard-btn wizard-btn-primary" onClick={onStartNew}>
+              Start New Tuning Cycle
+            </button>
+            <button className="wizard-btn wizard-btn-secondary" onClick={onDismiss}>
+              Dismiss
+            </button>
+          </>
+        )}
       </div>
     </div>
   );

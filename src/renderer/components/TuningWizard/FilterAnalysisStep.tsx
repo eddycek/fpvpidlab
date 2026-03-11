@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { RecommendationCard } from './RecommendationCard';
 import { SpectrumChart } from './charts/SpectrumChart';
 import { ThrottleSpectrogramChart } from './charts/ThrottleSpectrogramChart';
 import type { FilterAnalysisResult, AnalysisProgress } from '@shared/types/analysis.types';
 import type { TuningMode } from '@shared/types/tuning.types';
 import { TUNING_MODE } from '@shared/constants';
+import { CHART_DESCRIPTIONS, METRIC_TOOLTIPS } from '@shared/constants/metricTooltips';
 
 interface FilterAnalysisStepProps {
   filterResult: FilterAnalysisResult | null;
@@ -42,8 +43,6 @@ export function FilterAnalysisStep({
   const continueLabel =
     mode === TUNING_MODE.FILTER ? 'Continue to Summary' : 'Continue to PID Analysis';
   const skipLabel = mode === TUNING_MODE.FILTER ? 'Skip to Summary' : 'Skip to PIDs';
-  const [noiseDetailsOpen, setNoiseDetailsOpen] = useState(true);
-  const [spectrogramOpen, setSpectrogramOpen] = useState(true);
 
   if (filterAnalyzing) {
     return (
@@ -166,92 +165,69 @@ export function FilterAnalysisStep({
           </div>
         )}
 
-        <button
-          className="noise-details-toggle"
-          onClick={() => setNoiseDetailsOpen(!noiseDetailsOpen)}
-        >
-          {noiseDetailsOpen ? 'Hide noise details' : 'Show noise details'}
-        </button>
-
-        {noiseDetailsOpen && (
-          <div className="noise-details">
-            <p className="chart-description">
-              Frequency spectrum of gyro noise during stable hover. Peaks indicate noise sources
-              &mdash; <strong>motor harmonics</strong> (propeller vibrations),{' '}
-              <strong>frame resonance</strong> (structural vibrations), or{' '}
-              <strong>electrical</strong> noise. A flat, low spectrum means a clean build. Tall
-              peaks may need filter adjustments.
-            </p>
-            <p className="chart-legend">
-              <span className="chart-legend-item">
-                <span className="chart-legend-line" style={{ borderColor: '#ff6b6b' }} /> Roll
-              </span>
-              <span className="chart-legend-item">
-                <span className="chart-legend-line" style={{ borderColor: '#51cf66' }} /> Pitch
-              </span>
-              <span className="chart-legend-item">
-                <span className="chart-legend-line" style={{ borderColor: '#4dabf7' }} /> Yaw
-              </span>
-              <span className="chart-legend-item">
-                <span className="chart-legend-line chart-legend-line--dashed" /> Noise floor
-              </span>
-              <span className="chart-legend-item">
-                <span
-                  className="chart-legend-line chart-legend-line--dashed"
-                  style={{ borderColor: '#ffd43b' }}
-                />{' '}
-                Peak marker
-              </span>
-            </p>
-            <SpectrumChart noise={filterResult.noise} />
-            <div className="axis-summary">
-              {(['roll', 'pitch', 'yaw'] as const).map((axis) => {
-                const profile = filterResult.noise[axis];
-                return (
-                  <div key={axis} className="axis-summary-card">
-                    <div className="axis-summary-card-title">{axis}</div>
-                    <div className="axis-summary-card-stat">
-                      <span>Noise floor: </span>
-                      {profile.noiseFloorDb.toFixed(0)} dB
-                    </div>
-                    <div className="axis-summary-card-stat">
-                      <span>Peaks: </span>
-                      {profile.peaks.length}
-                    </div>
-                    {profile.peaks.map((peak, i) => (
-                      <div key={i} className="axis-summary-card-stat">
-                        <span>{peak.frequency.toFixed(0)} Hz </span>
-                        <span className={`noise-peak-badge ${peak.type}`}>
-                          {PEAK_TYPE_LABELS[peak.type] || peak.type}
-                        </span>
-                      </div>
-                    ))}
+        <div className="noise-details">
+          <h4 className="chart-title">Noise Spectrum</h4>
+          <p className="chart-description">{CHART_DESCRIPTIONS.noiseSpectrum}</p>
+          <p className="chart-legend">
+            <span className="chart-legend-item">
+              <span className="chart-legend-line" style={{ borderColor: '#ff6b6b' }} /> Roll
+            </span>
+            <span className="chart-legend-item">
+              <span className="chart-legend-line" style={{ borderColor: '#51cf66' }} /> Pitch
+            </span>
+            <span className="chart-legend-item">
+              <span className="chart-legend-line" style={{ borderColor: '#4dabf7' }} /> Yaw
+            </span>
+            <span className="chart-legend-item">
+              <span className="chart-legend-line chart-legend-line--dashed" /> Noise floor
+            </span>
+            <span className="chart-legend-item">
+              <span
+                className="chart-legend-line chart-legend-line--dashed"
+                style={{ borderColor: '#ffd43b' }}
+              />{' '}
+              Peak marker
+            </span>
+          </p>
+          <SpectrumChart noise={filterResult.noise} />
+          <div className="axis-summary">
+            {(['roll', 'pitch', 'yaw'] as const).map((axis) => {
+              const profile = filterResult.noise[axis];
+              return (
+                <div key={axis} className="axis-summary-card">
+                  <div className="axis-summary-card-title">{axis}</div>
+                  <div className="axis-summary-card-stat" title={METRIC_TOOLTIPS.noiseFloor}>
+                    <span>Noise floor: </span>
+                    {profile.noiseFloorDb.toFixed(0)} dB
                   </div>
-                );
-              })}
-            </div>
+                  <div className="axis-summary-card-stat">
+                    <span>Peaks: </span>
+                    {profile.peaks.length}
+                  </div>
+                  {profile.peaks.map((peak, i) => (
+                    <div
+                      key={i}
+                      className="axis-summary-card-stat"
+                      title={METRIC_TOOLTIPS.peakFrequency}
+                    >
+                      <span>{peak.frequency.toFixed(0)} Hz </span>
+                      <span className={`noise-peak-badge ${peak.type}`}>
+                        {PEAK_TYPE_LABELS[peak.type] || peak.type}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              );
+            })}
           </div>
-        )}
+        </div>
 
         {filterResult.throttleSpectrogram && filterResult.throttleSpectrogram.bandsWithData > 0 && (
-          <>
-            <button
-              className="noise-details-toggle"
-              onClick={() => setSpectrogramOpen(!spectrogramOpen)}
-            >
-              {spectrogramOpen ? 'Hide throttle spectrogram' : 'Show throttle spectrogram'}
-            </button>
-            {spectrogramOpen && (
-              <div className="noise-details">
-                <p className="chart-description">
-                  Noise spectrum across throttle levels. Bright spots indicate noise that changes
-                  with throttle &mdash; typically motor harmonics. Dark/uniform areas mean clean
-                  noise at that throttle range.
-                </p>
-                <ThrottleSpectrogramChart data={filterResult.throttleSpectrogram} />
-              </div>
-            )}
-          </>
+          <div className="noise-details">
+            <h4 className="chart-title">Throttle Spectrogram</h4>
+            <p className="chart-description">{CHART_DESCRIPTIONS.throttleSpectrogram}</p>
+            <ThrottleSpectrogramChart data={filterResult.throttleSpectrogram} />
+          </div>
         )}
 
         {filterResult.recommendations.length > 0 ? (

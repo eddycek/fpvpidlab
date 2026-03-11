@@ -367,14 +367,6 @@ function AppContent() {
           setErasing(false);
         }
         break;
-      case 'skip_verification':
-        try {
-          setErasedForPhase(null);
-          await tuning.updatePhase(TUNING_PHASE.COMPLETED);
-        } catch (err) {
-          toast.error(err instanceof Error ? err.message : 'Failed to complete session');
-        }
-        break;
       case 'analyze_verification': {
         const verLogId = tuning.session?.verificationLogId;
         if (!verLogId) {
@@ -631,6 +623,14 @@ function AppContent() {
                   session={tuning.session}
                   onDismiss={() => handleTuningAction('dismiss')}
                   onStartNew={() => handleTuningAction('start_new_cycle')}
+                  onStartPidTune={async () => {
+                    try {
+                      setErasedForPhase(null);
+                      await tuning.startSession(TUNING_TYPE.PID);
+                    } catch (err) {
+                      toast.error(err instanceof Error ? err.message : 'Failed to start PID Tune');
+                    }
+                  }}
                   onReanalyzeVerification={handleReanalyzeVerification}
                 />
               )}

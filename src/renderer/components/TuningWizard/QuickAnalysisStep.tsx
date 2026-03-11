@@ -3,9 +3,9 @@ import type { FilterAnalysisResult, PIDAnalysisResult } from '@shared/types/anal
 import type { AnalysisProgress } from '@shared/types/analysis.types';
 import { RecommendationCard } from './RecommendationCard';
 import { SpectrumChart } from './charts/SpectrumChart';
-import { ThrottleSpectrogramChart } from './charts/ThrottleSpectrogramChart';
 import { TFStepResponseChart } from './charts/TFStepResponseChart';
 import { BodePlot } from './charts/BodePlot';
+import { CHART_DESCRIPTIONS, METRIC_TOOLTIPS } from '@shared/constants/metricTooltips';
 
 const PEAK_TYPE_LABELS: Record<string, string> = {
   motor_harmonic: 'Motor',
@@ -40,8 +40,6 @@ export function QuickAnalysisStep({
   onContinue,
 }: QuickAnalysisStepProps) {
   const autoRunRef = useRef(false);
-  const [noiseDetailsOpen, setNoiseDetailsOpen] = useState(true);
-  const [spectrogramOpen, setSpectrogramOpen] = useState(true);
   const [bodeOpen, setBodeOpen] = useState(false);
 
   // Auto-run on mount
@@ -95,76 +93,55 @@ export function QuickAnalysisStep({
               <h4>Filter Recommendations</h4>
               <p className="summary-section-subtitle">{filterResult.summary}</p>
 
-              <button
-                className="noise-details-toggle"
-                onClick={() => setNoiseDetailsOpen(!noiseDetailsOpen)}
-              >
-                {noiseDetailsOpen ? 'Hide noise spectrum' : 'Show noise spectrum'}
-              </button>
-
-              {noiseDetailsOpen && (
-                <div className="noise-details">
-                  <p className="chart-legend">
-                    <span className="chart-legend-item">
-                      <span className="chart-legend-line" style={{ borderColor: '#ff6b6b' }} /> Roll
-                    </span>
-                    <span className="chart-legend-item">
-                      <span className="chart-legend-line" style={{ borderColor: '#51cf66' }} />{' '}
-                      Pitch
-                    </span>
-                    <span className="chart-legend-item">
-                      <span className="chart-legend-line" style={{ borderColor: '#4dabf7' }} /> Yaw
-                    </span>
-                    <span className="chart-legend-item">
-                      <span className="chart-legend-line chart-legend-line--dashed" /> Noise floor
-                    </span>
-                  </p>
-                  <SpectrumChart noise={filterResult.noise} />
-                  <div className="axis-summary">
-                    {(['roll', 'pitch', 'yaw'] as const).map((axis) => {
-                      const profile = filterResult.noise[axis];
-                      return (
-                        <div key={axis} className="axis-summary-card">
-                          <div className="axis-summary-card-title">{axis}</div>
-                          <div className="axis-summary-card-stat">
-                            <span>Noise floor: </span>
-                            {profile.noiseFloorDb.toFixed(0)} dB
-                          </div>
-                          <div className="axis-summary-card-stat">
-                            <span>Peaks: </span>
-                            {profile.peaks.length}
-                          </div>
-                          {profile.peaks.map((peak, i) => (
-                            <div key={i} className="axis-summary-card-stat">
-                              <span>{peak.frequency.toFixed(0)} Hz </span>
-                              <span className={`noise-peak-badge ${peak.type}`}>
-                                {PEAK_TYPE_LABELS[peak.type] || peak.type}
-                              </span>
-                            </div>
-                          ))}
+              <div className="noise-details">
+                <h4 className="chart-title">Noise Spectrum</h4>
+                <p className="chart-description">{CHART_DESCRIPTIONS.noiseSpectrum}</p>
+                <p className="chart-legend">
+                  <span className="chart-legend-item">
+                    <span className="chart-legend-line" style={{ borderColor: '#ff6b6b' }} /> Roll
+                  </span>
+                  <span className="chart-legend-item">
+                    <span className="chart-legend-line" style={{ borderColor: '#51cf66' }} /> Pitch
+                  </span>
+                  <span className="chart-legend-item">
+                    <span className="chart-legend-line" style={{ borderColor: '#4dabf7' }} /> Yaw
+                  </span>
+                  <span className="chart-legend-item">
+                    <span className="chart-legend-line chart-legend-line--dashed" /> Noise floor
+                  </span>
+                </p>
+                <SpectrumChart noise={filterResult.noise} />
+                <div className="axis-summary">
+                  {(['roll', 'pitch', 'yaw'] as const).map((axis) => {
+                    const profile = filterResult.noise[axis];
+                    return (
+                      <div key={axis} className="axis-summary-card">
+                        <div className="axis-summary-card-title">{axis}</div>
+                        <div className="axis-summary-card-stat" title={METRIC_TOOLTIPS.noiseFloor}>
+                          <span>Noise floor: </span>
+                          {profile.noiseFloorDb.toFixed(0)} dB
                         </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {filterResult.throttleSpectrogram &&
-                filterResult.throttleSpectrogram.bandsWithData > 0 && (
-                  <>
-                    <button
-                      className="noise-details-toggle"
-                      onClick={() => setSpectrogramOpen(!spectrogramOpen)}
-                    >
-                      {spectrogramOpen ? 'Hide throttle spectrogram' : 'Show throttle spectrogram'}
-                    </button>
-                    {spectrogramOpen && (
-                      <div className="noise-details">
-                        <ThrottleSpectrogramChart data={filterResult.throttleSpectrogram} />
+                        <div className="axis-summary-card-stat">
+                          <span>Peaks: </span>
+                          {profile.peaks.length}
+                        </div>
+                        {profile.peaks.map((peak, i) => (
+                          <div
+                            key={i}
+                            className="axis-summary-card-stat"
+                            title={METRIC_TOOLTIPS.peakFrequency}
+                          >
+                            <span>{peak.frequency.toFixed(0)} Hz </span>
+                            <span className={`noise-peak-badge ${peak.type}`}>
+                              {PEAK_TYPE_LABELS[peak.type] || peak.type}
+                            </span>
+                          </div>
+                        ))}
                       </div>
-                    )}
-                  </>
-                )}
+                    );
+                  })}
+                </div>
+              </div>
 
               {filterRecs.length === 0 && (
                 <p className="analysis-no-recs">No filter changes recommended.</p>
@@ -192,9 +169,13 @@ export function QuickAnalysisStep({
               <p className="summary-section-subtitle">{tfResult.summary}</p>
 
               {tfResult.transferFunction?.syntheticStepResponse && (
-                <TFStepResponseChart
-                  stepResponse={tfResult.transferFunction.syntheticStepResponse}
-                />
+                <>
+                  <h4 className="chart-title">Transfer Function Step Response</h4>
+                  <p className="chart-description">{CHART_DESCRIPTIONS.tfStepResponse}</p>
+                  <TFStepResponseChart
+                    stepResponse={tfResult.transferFunction.syntheticStepResponse}
+                  />
+                </>
               )}
 
               <button className="noise-details-toggle" onClick={() => setBodeOpen(!bodeOpen)}>
@@ -202,25 +183,29 @@ export function QuickAnalysisStep({
               </button>
 
               {bodeOpen && tfResult.transferFunction && (
-                <BodePlot
-                  bode={{
-                    roll: {
-                      frequencies: tfResult.transferFunction.roll.frequencies,
-                      magnitude: tfResult.transferFunction.roll.magnitude,
-                      phase: tfResult.transferFunction.roll.phase,
-                    },
-                    pitch: {
-                      frequencies: tfResult.transferFunction.pitch.frequencies,
-                      magnitude: tfResult.transferFunction.pitch.magnitude,
-                      phase: tfResult.transferFunction.pitch.phase,
-                    },
-                    yaw: {
-                      frequencies: tfResult.transferFunction.yaw.frequencies,
-                      magnitude: tfResult.transferFunction.yaw.magnitude,
-                      phase: tfResult.transferFunction.yaw.phase,
-                    },
-                  }}
-                />
+                <>
+                  <h4 className="chart-title">Bode Plot (Frequency Response)</h4>
+                  <p className="chart-description">{CHART_DESCRIPTIONS.bodePlot}</p>
+                  <BodePlot
+                    bode={{
+                      roll: {
+                        frequencies: tfResult.transferFunction.roll.frequencies,
+                        magnitude: tfResult.transferFunction.roll.magnitude,
+                        phase: tfResult.transferFunction.roll.phase,
+                      },
+                      pitch: {
+                        frequencies: tfResult.transferFunction.pitch.frequencies,
+                        magnitude: tfResult.transferFunction.pitch.magnitude,
+                        phase: tfResult.transferFunction.pitch.phase,
+                      },
+                      yaw: {
+                        frequencies: tfResult.transferFunction.yaw.frequencies,
+                        magnitude: tfResult.transferFunction.yaw.magnitude,
+                        phase: tfResult.transferFunction.yaw.phase,
+                      },
+                    }}
+                  />
+                </>
               )}
 
               {tfRecs.length === 0 && (

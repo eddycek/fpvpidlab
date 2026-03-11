@@ -228,13 +228,12 @@ describe('TuningStatusBanner', () => {
     expect(screen.getByText('Skip Erase')).toBeInTheDocument();
   });
 
-  it('shows filter_applied UI with Erase & Verify and Skip buttons', async () => {
+  it('shows filter_applied UI with Erase & Verify button', async () => {
     const user = userEvent.setup();
     renderBanner({ ...baseSession, phase: TUNING_PHASE.FILTER_APPLIED });
 
     expect(screen.getByText(/Filters applied/)).toBeInTheDocument();
     expect(screen.getByText('Erase & Verify')).toBeInTheDocument();
-    expect(screen.getByText('Skip & Complete')).toBeInTheDocument();
 
     await user.click(screen.getByText('Erase & Verify'));
     expect(onAction).toHaveBeenCalledWith('prepare_verification');
@@ -363,7 +362,7 @@ describe('TuningStatusBanner', () => {
     expect(screen.getByRole('button', { name: /Downloading/ })).toBeDisabled();
   });
 
-  it('shows pid_applied UI with Erase & Verify and Skip buttons', async () => {
+  it('shows pid_applied UI with Erase & Verify button', async () => {
     const user = userEvent.setup();
     renderBanner({
       ...baseSession,
@@ -373,7 +372,6 @@ describe('TuningStatusBanner', () => {
 
     expect(screen.getByText(/PIDs applied/)).toBeInTheDocument();
     expect(screen.getByText('Erase & Verify')).toBeInTheDocument();
-    expect(screen.getByText('Skip & Complete')).toBeInTheDocument();
 
     await user.click(screen.getByText('Erase & Verify'));
     expect(onAction).toHaveBeenCalledWith('prepare_verification');
@@ -385,7 +383,6 @@ describe('TuningStatusBanner', () => {
 
     expect(screen.getByText(/Download the verification log/)).toBeInTheDocument();
     expect(screen.getByText('Download Log')).toBeInTheDocument();
-    expect(screen.getByText('Skip & Complete')).toBeInTheDocument();
 
     await user.click(screen.getByText('Download Log'));
     expect(onAction).toHaveBeenCalledWith('download_log');
@@ -404,14 +401,6 @@ describe('TuningStatusBanner', () => {
 
     await user.click(screen.getByText('Analyze Verification'));
     expect(onAction).toHaveBeenCalledWith('analyze_verification');
-  });
-
-  it('calls skip_verification from verification_pending', async () => {
-    const user = userEvent.setup();
-    renderBanner({ ...baseSession, phase: TUNING_PHASE.VERIFICATION_PENDING });
-
-    await user.click(screen.getByText('Skip & Complete'));
-    expect(onAction).toHaveBeenCalledWith('skip_verification');
   });
 
   // Blackbox settings pre-flight warning tests
@@ -519,7 +508,6 @@ describe('TuningStatusBanner', () => {
       screen.getByText(/Flash erased! Disconnect and fly throttle sweeps/)
     ).toBeInTheDocument();
     expect(screen.getByText('View Flight Guide')).toBeInTheDocument();
-    expect(screen.getByText('Skip & Complete')).toBeInTheDocument();
     expect(screen.queryByText('Download Log')).not.toBeInTheDocument();
   });
 
@@ -567,7 +555,6 @@ describe('TuningStatusBanner', () => {
 
     expect(screen.getByText('Download Log')).toBeInTheDocument();
     expect(screen.getByText('Import File')).toBeInTheDocument();
-    expect(screen.getByText('Skip & Complete')).toBeInTheDocument();
   });
 
   it('fires import_log action when Import File is clicked', async () => {

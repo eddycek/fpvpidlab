@@ -72,49 +72,19 @@ async function runDeepCycle(cycleNum: number): Promise<void> {
     .waitFor({ state: 'visible', timeout: WAIT });
   await demo.clickButton('Close Wizard');
 
-  // PID phase
-  const continueBtn = page.getByRole('button', { name: 'Continue' });
-  const eraseBtn = page.getByRole('button', { name: 'Erase Flash' });
-  await expect(continueBtn.or(eraseBtn)).toBeVisible({ timeout: WAIT });
-  if (await continueBtn.isVisible().catch(() => false)) {
-    await continueBtn.click();
-  } else {
-    await eraseBtn.click();
-  }
+  // Verification flight
+  await page
+    .getByRole('button', { name: 'Erase & Verify' })
+    .waitFor({ state: 'visible', timeout: WAIT });
+  await demo.clickButton('Erase & Verify');
 
-  await demo.waitForText('PID flight done', WAIT);
+  await demo.waitForText('Download Log', WAIT);
   await demo.clickButton('Download Log');
-  await demo.waitForText('Open PID Wizard', WAIT);
-  await demo.clickButton('Open PID Wizard');
-  await demo.clickButton('Run PID Analysis');
-  await page
-    .getByRole('button', { name: /Continue to Summary/i })
-    .waitFor({ state: 'visible', timeout: ANALYSIS_WAIT });
-  await demo.clickButton(/Continue to Summary/i);
 
-  const applyPIDsBtn = page.getByRole('button', { name: 'Apply PIDs' });
-  const noPIDChangesBtn = page.getByRole('button', { name: 'Continue (No Changes)' });
-  await applyPIDsBtn.or(noPIDChangesBtn).waitFor({ state: 'visible', timeout: WAIT });
+  await demo.waitForText('Analyze Verification', WAIT);
+  await demo.clickButton('Analyze Verification');
 
-  if (await noPIDChangesBtn.isVisible().catch(() => false)) {
-    await noPIDChangesBtn.click();
-  } else {
-    await applyPIDsBtn.click();
-    const pidApplyBtns = page.getByRole('button', { name: 'Apply Changes' });
-    await pidApplyBtns.last().waitFor({ state: 'visible', timeout: 5_000 });
-    await pidApplyBtns.last().click();
-  }
-  await page
-    .getByRole('button', { name: 'Close Wizard' })
-    .waitFor({ state: 'visible', timeout: WAIT });
-  await demo.clickButton('Close Wizard');
-
-  // Skip verification
-  await page
-    .getByRole('button', { name: 'Skip & Complete' })
-    .waitFor({ state: 'visible', timeout: WAIT });
-  await demo.clickButton('Skip & Complete');
-  await demo.waitForText(/Filter Tune Complete/i, 15_000);
+  await demo.waitForText(/Filter Tune Complete/i, ANALYSIS_WAIT);
 
   await demo.screenshot(`stress-cycle-${cycleNum}-filter-complete`);
 
@@ -169,11 +139,19 @@ async function runFlashCycle(cycleNum: number): Promise<void> {
     .waitFor({ state: 'visible', timeout: WAIT });
   await demo.clickButton('Close Wizard');
 
+  // Verification flight
   await page
-    .getByRole('button', { name: 'Skip & Complete' })
+    .getByRole('button', { name: 'Erase & Verify' })
     .waitFor({ state: 'visible', timeout: WAIT });
-  await demo.clickButton('Skip & Complete');
-  await demo.waitForText(/Flash Tune Complete/i, 15_000);
+  await demo.clickButton('Erase & Verify');
+
+  await demo.waitForText('Download Log', WAIT);
+  await demo.clickButton('Download Log');
+
+  await demo.waitForText('Analyze Verification', WAIT);
+  await demo.clickButton('Analyze Verification');
+
+  await demo.waitForText(/Flash Tune Complete/i, ANALYSIS_WAIT);
 
   await demo.screenshot(`stress-cycle-${cycleNum}-flash-complete`);
 

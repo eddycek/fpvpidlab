@@ -606,12 +606,19 @@
   margin: 0 0 8px 0;
 }
 
-/* Chart descriptions and legends */
+/* Chart titles, descriptions and legends */
+.chart-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary, #ddd);
+  margin: 16px 0 2px;
+}
+
 .chart-description {
   font-size: 12px;
   color: var(--text-secondary, #aaa);
   line-height: 1.5;
-  margin: 8px 0 4px;
+  margin: 4px 0 4px;
 }
 
 .chart-description strong {

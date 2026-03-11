@@ -75,14 +75,21 @@ async function runFilterCycle(cycleNum: number): Promise<void> {
     .waitFor({ state: 'visible', timeout: WAIT });
   await demo.clickButton('Close Wizard');
 
-  console.log(`  Cycle ${cycleNum}: filters handled, completing...`);
+  console.log(`  Cycle ${cycleNum}: filters handled, running verification...`);
 
-  // 3. Skip verification → complete → dismiss
+  // 3. Verification flight → analyze → complete → dismiss
   await page
-    .getByRole('button', { name: 'Skip & Complete' })
+    .getByRole('button', { name: 'Erase & Verify' })
     .waitFor({ state: 'visible', timeout: WAIT });
-  await demo.clickButton('Skip & Complete');
-  await demo.waitForText(/Filter Tune Complete/i, 15_000);
+  await demo.clickButton('Erase & Verify');
+
+  await demo.waitForText('Download Log', WAIT);
+  await demo.clickButton('Download Log');
+
+  await demo.waitForText('Analyze Verification', WAIT);
+  await demo.clickButton('Analyze Verification');
+
+  await demo.waitForText(/Filter Tune Complete/i, ANALYSIS_WAIT);
 
   await demo.screenshot(`history-cycle-${cycleNum}-filter-complete`);
 
@@ -140,14 +147,21 @@ async function runPIDCycle(cycleNum: number): Promise<void> {
     .waitFor({ state: 'visible', timeout: WAIT });
   await demo.clickButton('Close Wizard');
 
-  console.log(`  Cycle ${cycleNum}: PIDs handled, completing...`);
+  console.log(`  Cycle ${cycleNum}: PIDs handled, running verification...`);
 
-  // 3. Skip verification → complete → dismiss
+  // 3. Verification flight → analyze → complete → dismiss
   await page
-    .getByRole('button', { name: 'Skip & Complete' })
+    .getByRole('button', { name: 'Erase & Verify' })
     .waitFor({ state: 'visible', timeout: WAIT });
-  await demo.clickButton('Skip & Complete');
-  await demo.waitForText(/PID Tune Complete/i, 15_000);
+  await demo.clickButton('Erase & Verify');
+
+  await demo.waitForText('Download Log', WAIT);
+  await demo.clickButton('Download Log');
+
+  await demo.waitForText('Analyze Verification', WAIT);
+  await demo.clickButton('Analyze Verification');
+
+  await demo.waitForText(/PID Tune Complete/i, ANALYSIS_WAIT);
 
   await demo.screenshot(`history-cycle-${cycleNum}-pid-complete`);
 
@@ -208,14 +222,21 @@ async function runQuickCycle(cycleNum: number): Promise<void> {
     .waitFor({ state: 'visible', timeout: WAIT });
   await demo.clickButton('Close Wizard');
 
-  console.log(`  Cycle ${cycleNum}: all changes handled, completing...`);
+  console.log(`  Cycle ${cycleNum}: all changes handled, running verification...`);
 
-  // 3. Skip verification → complete → dismiss
+  // 3. Verification flight → analyze → complete → dismiss
   await page
-    .getByRole('button', { name: 'Skip & Complete' })
+    .getByRole('button', { name: 'Erase & Verify' })
     .waitFor({ state: 'visible', timeout: WAIT });
-  await demo.clickButton('Skip & Complete');
-  await demo.waitForText(/Flash Tune Complete/i, 15_000);
+  await demo.clickButton('Erase & Verify');
+
+  await demo.waitForText('Download Log', WAIT);
+  await demo.clickButton('Download Log');
+
+  await demo.waitForText('Analyze Verification', WAIT);
+  await demo.clickButton('Analyze Verification');
+
+  await demo.waitForText(/Flash Tune Complete/i, ANALYSIS_WAIT);
 
   await demo.screenshot(`history-cycle-${cycleNum}-quick-complete`);
 

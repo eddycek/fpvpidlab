@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import type { CompletedTuningRecord } from '@shared/types/tuning-history.types';
 import { TUNING_TYPE } from '@shared/constants';
+import { CHART_DESCRIPTIONS, METRIC_TOOLTIPS } from '@shared/constants/metricTooltips';
 import { computeTuneQualityScore } from '@shared/utils/tuneQualityScore';
 import { NoiseComparisonChart } from './NoiseComparisonChart';
 import { SpectrogramComparisonChart } from './SpectrogramComparisonChart';
@@ -142,20 +143,30 @@ export function TuningSessionDetail({ record, onReanalyzeVerification }: TuningS
       {!hasFilterComparison && record.filterMetrics && (
         <div className="completion-noise-numeric">
           <div className="completion-noise-stats">
-            <span>Noise: {record.filterMetrics.noiseLevel}</span>
+            <span title={METRIC_TOOLTIPS.noiseLevel}>Noise: {record.filterMetrics.noiseLevel}</span>
             <span className="completion-meta-sep">{'\u2022'}</span>
-            <span>Roll {record.filterMetrics.roll.noiseFloorDb.toFixed(0)} dB</span>
+            <span title={METRIC_TOOLTIPS.noiseFloor}>
+              Roll {record.filterMetrics.roll.noiseFloorDb.toFixed(0)} dB
+            </span>
             <span className="completion-meta-sep">{'\u2022'}</span>
-            <span>Pitch {record.filterMetrics.pitch.noiseFloorDb.toFixed(0)} dB</span>
+            <span title={METRIC_TOOLTIPS.noiseFloor}>
+              Pitch {record.filterMetrics.pitch.noiseFloorDb.toFixed(0)} dB
+            </span>
             <span className="completion-meta-sep">{'\u2022'}</span>
-            <span>Yaw {record.filterMetrics.yaw.noiseFloorDb.toFixed(0)} dB</span>
+            <span title={METRIC_TOOLTIPS.noiseFloor}>
+              Yaw {record.filterMetrics.yaw.noiseFloorDb.toFixed(0)} dB
+            </span>
           </div>
         </div>
       )}
 
       {/* Filter Tune only: single spectrogram (no verification) */}
       {isFilterTune && !hasFilterComparison && record.filterMetrics?.throttleSpectrogram && (
-        <ThrottleSpectrogramChart compactData={record.filterMetrics.throttleSpectrogram} />
+        <>
+          <h4 className="chart-title">Throttle Spectrogram</h4>
+          <p className="chart-description">{CHART_DESCRIPTIONS.throttleSpectrogram}</p>
+          <ThrottleSpectrogramChart compactData={record.filterMetrics.throttleSpectrogram} />
+        </>
       )}
 
       <div className="completion-changes-row">
@@ -184,9 +195,15 @@ export function TuningSessionDetail({ record, onReanalyzeVerification }: TuningS
               return (
                 <div key={axis} className="completion-pid-axis">
                   <strong>{axis[0].toUpperCase() + axis.slice(1)}</strong>
-                  <span>Overshoot: {m.meanOvershoot.toFixed(1)}%</span>
-                  <span>Rise: {m.meanRiseTimeMs.toFixed(0)}ms</span>
-                  <span>Settling: {m.meanSettlingTimeMs.toFixed(0)}ms</span>
+                  <span title={METRIC_TOOLTIPS.overshoot}>
+                    Overshoot: {m.meanOvershoot.toFixed(1)}%
+                  </span>
+                  <span title={METRIC_TOOLTIPS.riseTime}>
+                    Rise: {m.meanRiseTimeMs.toFixed(0)}ms
+                  </span>
+                  <span title={METRIC_TOOLTIPS.settlingTime}>
+                    Settling: {m.meanSettlingTimeMs.toFixed(0)}ms
+                  </span>
                 </div>
               );
             })}

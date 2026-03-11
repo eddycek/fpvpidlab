@@ -5,6 +5,7 @@ import { ThrottleSpectrogramChart } from '../TuningWizard/charts/ThrottleSpectro
 import { StepResponseChart } from '../TuningWizard/charts/StepResponseChart';
 import { TFStepResponseChart } from '../TuningWizard/charts/TFStepResponseChart';
 import { BodePlot } from '../TuningWizard/charts/BodePlot';
+import { CHART_DESCRIPTIONS, METRIC_TOOLTIPS } from '@shared/constants/metricTooltips';
 import './AnalysisOverview.css';
 
 /** Strip recommendation sentences from analysis summaries (diagnostic-only view). */
@@ -304,13 +305,8 @@ export function AnalysisOverview({ logId, logName, onExit }: AnalysisOverviewPro
           )}
 
           <div className="noise-details">
-            <p className="chart-description">
-              Frequency spectrum of gyro noise during stable hover. Peaks indicate noise sources
-              &mdash; <strong>motor harmonics</strong> (propeller vibrations),{' '}
-              <strong>frame resonance</strong> (structural vibrations), or{' '}
-              <strong>electrical</strong> noise. A flat, low spectrum means a clean build. Tall
-              peaks may need filter adjustments.
-            </p>
+            <h4 className="chart-title">Noise Spectrum</h4>
+            <p className="chart-description">{CHART_DESCRIPTIONS.noiseSpectrum}</p>
             <p className="chart-legend">
               <span className="chart-legend-item">
                 <span className="chart-legend-line" style={{ borderColor: '#ff6b6b' }} /> Roll
@@ -339,7 +335,7 @@ export function AnalysisOverview({ logId, logName, onExit }: AnalysisOverviewPro
                 return (
                   <div key={axis} className="axis-summary-card">
                     <div className="axis-summary-card-title">{axis}</div>
-                    <div className="axis-summary-card-stat">
+                    <div className="axis-summary-card-stat" title={METRIC_TOOLTIPS.noiseFloor}>
                       <span>Noise floor: </span>
                       {profile.noiseFloorDb.toFixed(0)} dB
                     </div>
@@ -348,7 +344,11 @@ export function AnalysisOverview({ logId, logName, onExit }: AnalysisOverviewPro
                       {profile.peaks.length}
                     </div>
                     {profile.peaks.map((peak, i) => (
-                      <div key={i} className="axis-summary-card-stat">
+                      <div
+                        key={i}
+                        className="axis-summary-card-stat"
+                        title={METRIC_TOOLTIPS.peakFrequency}
+                      >
                         <span>{peak.frequency.toFixed(0)} Hz </span>
                         <span className={`noise-peak-badge ${peak.type}`}>
                           {PEAK_TYPE_LABELS[peak.type] || peak.type}
@@ -364,10 +364,8 @@ export function AnalysisOverview({ logId, logName, onExit }: AnalysisOverviewPro
           {overview.filterResult.throttleSpectrogram &&
             overview.filterResult.throttleSpectrogram.bandsWithData > 0 && (
               <div style={{ marginTop: 16 }}>
-                <p className="chart-description">
-                  Noise intensity across throttle levels. Bright spots indicate throttle-dependent
-                  noise sources.
-                </p>
+                <h4 className="chart-title">Throttle Spectrogram</h4>
+                <p className="chart-description">{CHART_DESCRIPTIONS.throttleSpectrogram}</p>
                 <ThrottleSpectrogramChart data={overview.filterResult.throttleSpectrogram} />
               </div>
             )}
@@ -515,19 +513,19 @@ export function AnalysisOverview({ logId, logName, onExit }: AnalysisOverviewPro
                   return (
                     <div key={axis} className="axis-summary-card">
                       <div className="axis-summary-card-title">{axis}</div>
-                      <div className="axis-summary-card-stat">
+                      <div className="axis-summary-card-stat" title={METRIC_TOOLTIPS.overshoot}>
                         <span>Overshoot: </span>
                         {profile.meanOvershoot.toFixed(1)}%
                       </div>
-                      <div className="axis-summary-card-stat">
+                      <div className="axis-summary-card-stat" title={METRIC_TOOLTIPS.riseTime}>
                         <span>Rise: </span>
                         {profile.meanRiseTimeMs.toFixed(0)} ms
                       </div>
-                      <div className="axis-summary-card-stat">
+                      <div className="axis-summary-card-stat" title={METRIC_TOOLTIPS.settlingTime}>
                         <span>Settling: </span>
                         {profile.meanSettlingTimeMs.toFixed(0)} ms
                       </div>
-                      <div className="axis-summary-card-stat">
+                      <div className="axis-summary-card-stat" title={METRIC_TOOLTIPS.latency}>
                         <span>Latency: </span>
                         {profile.meanLatencyMs.toFixed(0)} ms
                       </div>
@@ -538,12 +536,8 @@ export function AnalysisOverview({ logId, logName, onExit }: AnalysisOverviewPro
 
               {hasTraces && (
                 <>
-                  <p className="chart-description">
-                    How the quad responds to stick inputs (step response). The{' '}
-                    <strong>dashed white line</strong> is the commanded rate (setpoint) and the{' '}
-                    <strong>colored line</strong> is the actual gyro response. Ideally, the gyro
-                    should follow the setpoint quickly with minimal overshoot and no oscillation.
-                  </p>
+                  <h4 className="chart-title">Step Response</h4>
+                  <p className="chart-description">{CHART_DESCRIPTIONS.stepResponse}</p>
                   <p className="chart-legend">
                     <span className="chart-legend-item">
                       <span

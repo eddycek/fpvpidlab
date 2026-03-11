@@ -304,7 +304,7 @@ export class MockMSPClient extends EventEmitter {
 
   /**
    * Advance past a skipped verification flight.
-   * Called when user clicks "Skip & Complete" instead of doing the verification flight.
+   * Called internally when verification is skipped programmatically.
    * Ensures the flight type cycle stays in sync for the next tuning session.
    */
   advancePastVerification(): void {

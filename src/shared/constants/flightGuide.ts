@@ -150,7 +150,7 @@ export const VERIFICATION_FLIGHT_TIPS: string[] = [
   'Stay at the same altitude (2–5 meters) for comparable data',
   'Keep movements gentle — this is a noise measurement, not acro',
   'After downloading, the app overlays before/after spectra automatically',
-  'If noise improved, you are done. If not, consider another tuning cycle',
+  'Verification is required to score your tune quality',
 ];
 
 // ---- Filter Verification Guide (throttle sweep to compare spectrogram before/after) ----
@@ -328,8 +328,8 @@ export const TUNING_WORKFLOW: WorkflowStep[] = [
     description: 'Download the log. Run the PID Wizard. Apply changes.',
   },
   {
-    title: 'Optional: Verification hover',
+    title: 'Verification flight',
     description:
-      'Erase flash, fly a gentle 30–60 second hover with throttle sweeps (same as filter flight). Reconnect, download the log, and click Analyze. The app overlays before/after noise spectra so you can see the improvement. You can skip this step.',
+      'Erase flash, fly a verification flight (same pattern as the analysis flight). Reconnect, download the log, and click Analyze. The app compares before/after data to score your tune quality.',
   },
 ];

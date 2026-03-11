@@ -546,7 +546,7 @@ describe('TuningWizard', () => {
     expect(screen.getByText('3 segments analyzed')).toBeInTheDocument();
   });
 
-  it('FilterAnalysisStep noise details toggle works', async () => {
+  it('FilterAnalysisStep noise details are always visible', async () => {
     vi.mocked(window.betaflight.parseBlackboxLog).mockResolvedValue(mockSingleSessionResult);
     vi.mocked(window.betaflight.analyzeFilters).mockResolvedValue(mockFilterResult);
 
@@ -555,18 +555,9 @@ describe('TuningWizard', () => {
 
     await navigateToFilterResults(user);
 
-    // Initially expanded (default open)
-    expect(screen.getByText('Hide noise details')).toBeInTheDocument();
+    // Noise details are always visible (no toggle)
     expect(screen.getByText('-40 dB', { exact: false })).toBeInTheDocument();
     expect(screen.getByText('Frame')).toBeInTheDocument();
-
-    // Click to collapse
-    await user.click(screen.getByText('Hide noise details'));
-
-    await waitFor(() => {
-      expect(screen.getByText('Show noise details')).toBeInTheDocument();
-      expect(screen.queryByText('-40 dB', { exact: false })).not.toBeInTheDocument();
-    });
   });
 
   it('PIDAnalysisStep shows latency in axis cards', async () => {
@@ -826,7 +817,7 @@ describe('TuningWizard', () => {
     });
   });
 
-  it('PIDAnalysisStep shows step response chart default-open when traces available', async () => {
+  it('PIDAnalysisStep shows step response chart when traces available', async () => {
     vi.mocked(window.betaflight.parseBlackboxLog).mockResolvedValue(mockSingleSessionResult);
     vi.mocked(window.betaflight.analyzeFilters).mockResolvedValue(mockFilterResult);
     vi.mocked(window.betaflight.analyzePID).mockResolvedValue(mockPIDResult);
@@ -837,28 +828,8 @@ describe('TuningWizard', () => {
     await navigateToPIDResults(user);
 
     await waitFor(() => {
-      // Chart default open
-      expect(screen.getByText('Hide step response charts')).toBeInTheDocument();
       const svg = container.querySelector('.step-response-chart svg');
       expect(svg).toBeTruthy();
-    });
-  });
-
-  it('PIDAnalysisStep collapses step response chart on toggle', async () => {
-    vi.mocked(window.betaflight.parseBlackboxLog).mockResolvedValue(mockSingleSessionResult);
-    vi.mocked(window.betaflight.analyzeFilters).mockResolvedValue(mockFilterResult);
-    vi.mocked(window.betaflight.analyzePID).mockResolvedValue(mockPIDResult);
-
-    const user = userEvent.setup();
-    const { container } = render(<TuningWizard logId="test-log-1" onExit={onExit} />);
-
-    await navigateToPIDResults(user);
-    await user.click(screen.getByText('Hide step response charts'));
-
-    await waitFor(() => {
-      expect(screen.getByText('Show step response charts')).toBeInTheDocument();
-      const svg = container.querySelector('.step-response-chart svg');
-      expect(svg).toBeNull();
     });
   });
 

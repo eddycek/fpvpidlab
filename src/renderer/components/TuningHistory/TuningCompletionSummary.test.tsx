@@ -122,18 +122,6 @@ describe('TuningCompletionSummary', () => {
     expect(screen.queryByText('Noise Comparison')).not.toBeInTheDocument();
   });
 
-  it('shows hint about verification when skipped', () => {
-    render(
-      <TuningCompletionSummary
-        session={baseSession}
-        onDismiss={onDismiss}
-        onStartNew={onStartNew}
-      />
-    );
-
-    expect(screen.getByText(/Fly a verification flight/)).toBeInTheDocument();
-  });
-
   it('does not show hint when verification available', () => {
     const session = { ...baseSession, verificationMetrics };
     render(
@@ -187,11 +175,34 @@ describe('TuningCompletionSummary', () => {
     expect(onDismiss).toHaveBeenCalled();
   });
 
-  it('calls onStartNew when Start New clicked', async () => {
+  it('Filter Tune good score shows Start PID Tune button', async () => {
     const user = userEvent.setup();
+    const onStartPidTune = vi.fn();
     render(
       <TuningCompletionSummary
         session={baseSession}
+        onDismiss={onDismiss}
+        onStartNew={onStartNew}
+        onStartPidTune={onStartPidTune}
+      />
+    );
+
+    await user.click(screen.getByText('Start PID Tune'));
+    expect(onStartPidTune).toHaveBeenCalled();
+  });
+
+  it('Flash Tune shows Start New Tuning Cycle button', async () => {
+    const user = userEvent.setup();
+    const quickSession: TuningSession = {
+      ...baseSession,
+      tuningType: TUNING_TYPE.FLASH,
+      quickLogId: 'log-q1',
+      filterLogId: undefined,
+      pidLogId: undefined,
+    };
+    render(
+      <TuningCompletionSummary
+        session={quickSession}
         onDismiss={onDismiss}
         onStartNew={onStartNew}
       />
@@ -346,21 +357,6 @@ describe('TuningCompletionSummary', () => {
     expect(screen.getByText('Step Response Comparison')).toBeInTheDocument();
     // Should NOT show the "before PID changes" raw metrics section
     expect(screen.queryByText(/before PID changes/)).not.toBeInTheDocument();
-  });
-
-  it('shows PID-specific verification hint for PID Tune without verification', () => {
-    const pidSession: TuningSession = {
-      ...baseSession,
-      tuningType: TUNING_TYPE.PID,
-      filterLogId: undefined,
-      filterMetrics: undefined,
-      appliedFilterChanges: [],
-    };
-    render(
-      <TuningCompletionSummary session={pidSession} onDismiss={onDismiss} onStartNew={onStartNew} />
-    );
-
-    expect(screen.getByText(/step response comparison/)).toBeInTheDocument();
   });
 
   it('does not show spectrogram for Flash Tune', () => {

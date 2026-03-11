@@ -18,7 +18,6 @@ export type TuningAction =
   | 'open_pid_wizard'
   | 'start_new_cycle'
   | 'complete_session'
-  | 'skip_verification'
   | 'prepare_verification'
   | 'analyze_verification'
   | 'open_quick_wizard'
@@ -146,18 +145,18 @@ function getVerificationText(session: TuningSession): string {
       ? 'Verification log ready. Analyze to compare noise before and after tuning.'
       : 'Verification log ready. Analyze to compare step response before and after tuning.';
   }
-  return 'Download the verification log, or skip verification.';
+  return 'Download the verification log to complete your tune.';
 }
 
 function getAppliedText(session: TuningSession, isSDCard: boolean): string {
   const verifyLabel = isSDCard ? 'Erase Logs & Verify' : 'Erase & Verify';
   if (session.tuningType === TUNING_TYPE.FILTER) {
-    return `Filters applied! Fly another throttle sweep to verify, or skip. (${verifyLabel})`;
+    return `Filters applied! Fly another throttle sweep to verify your changes. (${verifyLabel})`;
   }
   if (session.tuningType === TUNING_TYPE.PID) {
-    return `PIDs applied! Fly stick snaps again to verify, or skip. (${verifyLabel})`;
+    return `PIDs applied! Fly stick snaps again to verify your changes. (${verifyLabel})`;
   }
-  return 'All changes applied! Fly a short hover to verify noise improvement, or skip.';
+  return `All changes applied! Fly a verification flight to score your tune. (${verifyLabel})`;
 }
 
 export function TuningStatusBanner({
@@ -269,46 +268,29 @@ export function TuningStatusBanner({
           <button className="wizard-btn wizard-btn-primary" onClick={() => onViewGuide(guideMode)}>
             View Flight Guide
           </button>
-          {isVerification && (
-            <button
-              className="wizard-btn wizard-btn-secondary"
-              onClick={() => onAction('skip_verification')}
-            >
-              Skip & Complete
-            </button>
-          )}
         </>
       );
     }
 
-    // Applied phases: Prepare Verification + Skip
+    // Applied phases: Prepare Verification
     if (isApplied) {
       return (
-        <>
-          <button
-            className="wizard-btn wizard-btn-primary"
-            onClick={() => onAction('prepare_verification')}
-            disabled={erasing}
-          >
-            {erasing ? (
-              <>
-                <span className="spinner" />
-                Preparing...
-              </>
-            ) : isSDCard ? (
-              'Erase Logs & Verify'
-            ) : (
-              'Erase & Verify'
-            )}
-          </button>
-          <button
-            className="wizard-btn wizard-btn-secondary"
-            onClick={() => onAction('skip_verification')}
-            disabled={erasing}
-          >
-            Skip & Complete
-          </button>
-        </>
+        <button
+          className="wizard-btn wizard-btn-primary"
+          onClick={() => onAction('prepare_verification')}
+          disabled={erasing}
+        >
+          {erasing ? (
+            <>
+              <span className="spinner" />
+              Preparing...
+            </>
+          ) : isSDCard ? (
+            'Erase Logs & Verify'
+          ) : (
+            'Erase & Verify'
+          )}
+        </button>
       );
     }
 
@@ -330,13 +312,6 @@ export function TuningStatusBanner({
               ) : (
                 'Analyze Verification'
               )}
-            </button>
-            <button
-              className="wizard-btn wizard-btn-secondary"
-              onClick={() => onAction('skip_verification')}
-              disabled={analyzingVerification}
-            >
-              Skip & Complete
             </button>
           </>
         );
@@ -363,13 +338,6 @@ export function TuningStatusBanner({
             disabled={downloading}
           >
             Import File
-          </button>
-          <button
-            className="wizard-btn wizard-btn-secondary"
-            onClick={() => onAction('skip_verification')}
-            disabled={downloading}
-          >
-            Skip & Complete
           </button>
         </>
       );

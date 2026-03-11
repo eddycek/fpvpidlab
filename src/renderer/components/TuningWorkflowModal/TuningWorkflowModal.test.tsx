@@ -129,7 +129,7 @@ describe('TuningWorkflowModal', () => {
       expect(screen.queryByText('Erase Blackbox data again')).not.toBeInTheDocument();
       expect(screen.queryByText('Fly: PID test flight')).not.toBeInTheDocument();
       expect(screen.queryByText('Analyze & apply PIDs')).not.toBeInTheDocument();
-      expect(screen.queryByText('Optional: Verification hover')).not.toBeInTheDocument();
+      expect(screen.queryByText('Verification flight')).not.toBeInTheDocument();
     });
 
     it('shows only filter flight guide section', () => {
@@ -163,7 +163,7 @@ describe('TuningWorkflowModal', () => {
       expect(screen.queryByText('Create a backup')).not.toBeInTheDocument();
       expect(screen.queryByText('Fly: Filter test flight')).not.toBeInTheDocument();
       expect(screen.queryByText('Analyze & apply filters')).not.toBeInTheDocument();
-      expect(screen.queryByText('Optional: Verification hover')).not.toBeInTheDocument();
+      expect(screen.queryByText('Verification flight')).not.toBeInTheDocument();
     });
 
     it('shows only PID flight guide section', () => {

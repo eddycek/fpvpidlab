@@ -3,7 +3,7 @@
  *
  * Walks through one complete PID Tune cycle:
  *   Start (PID) → Erase → (auto-flight) → Download → PID Wizard → Apply →
- *   Skip verification → Complete → Dismiss
+ *   Erase & Verify → (verification flight) → Download → Analyze → Complete → Dismiss
  *
  * Then verifies the tuning history shows the completed session.
  */
@@ -91,16 +91,24 @@ test.describe.serial('PID Tune cycle', () => {
     await demo.clickButton('Close Wizard');
   });
 
-  test('skip verification and complete', async () => {
-    // After pid apply + reboot, dashboard shows pid_applied with "Skip & Complete"
+  test('run verification flight and complete', async () => {
+    // After pid apply + reboot, dashboard shows pid_applied with "Erase & Verify"
     await demo.page
-      .getByRole('button', { name: 'Skip & Complete' })
+      .getByRole('button', { name: 'Erase & Verify' })
       .waitFor({ state: 'visible', timeout: 30_000 });
 
-    await demo.clickButton('Skip & Complete');
+    await demo.clickButton('Erase & Verify');
 
-    // Session should be completed — TuningCompletionSummary shows "PID Tune Complete"
-    await demo.waitForText(/PID Tune Complete/i, 15_000);
+    // Erase + auto-flight → reconnect with verification data → verification_pending
+    await demo.waitForText('Download Log', 20_000);
+    await demo.clickButton('Download Log');
+
+    // Download completes → "Analyze Verification" button appears
+    await demo.waitForText('Analyze Verification', 20_000);
+    await demo.clickButton('Analyze Verification');
+
+    // VerificationSessionModal auto-analyzes single-session log → session completes
+    await demo.waitForText(/PID Tune Complete/i, 30_000);
     await demo.screenshot('pid-08-tuning-complete');
   });
 

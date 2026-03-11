@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { RecommendationCard } from './RecommendationCard';
 import { StepResponseChart } from './charts/StepResponseChart';
 import type { PIDAnalysisResult, AnalysisProgress } from '@shared/types/analysis.types';
 import type { FlightStyle } from '@shared/types/profile.types';
+import { CHART_DESCRIPTIONS, METRIC_TOOLTIPS } from '@shared/constants/metricTooltips';
 
 const FLIGHT_STYLE_LABELS: Record<FlightStyle, string> = {
   smooth: 'Smooth',
@@ -34,8 +35,6 @@ export function PIDAnalysisStep({
   runPIDAnalysis,
   onContinue,
 }: PIDAnalysisStepProps) {
-  const [chartOpen, setChartOpen] = useState(true);
-
   // Check if any trace data exists
   const hasTraces = pidResult
     ? ['roll', 'pitch', 'yaw'].some((axis) =>
@@ -89,7 +88,7 @@ export function PIDAnalysisStep({
         <h3>PID Analysis Results</h3>
         <p>{pidResult.summary}</p>
         <div className="analysis-meta">
-          <span className="analysis-meta-pill">
+          <span className="analysis-meta-pill" title={METRIC_TOOLTIPS.stepsDetected}>
             {pidResult.stepsDetected} step{pidResult.stepsDetected !== 1 ? 's' : ''} detected
           </span>
           {pidResult.flightStyle && (
@@ -174,19 +173,19 @@ export function PIDAnalysisStep({
             return (
               <div key={axis} className="axis-summary-card">
                 <div className="axis-summary-card-title">{axis}</div>
-                <div className="axis-summary-card-stat">
+                <div className="axis-summary-card-stat" title={METRIC_TOOLTIPS.overshoot}>
                   <span>Overshoot: </span>
                   {profile.meanOvershoot.toFixed(1)}%
                 </div>
-                <div className="axis-summary-card-stat">
+                <div className="axis-summary-card-stat" title={METRIC_TOOLTIPS.riseTime}>
                   <span>Rise: </span>
                   {profile.meanRiseTimeMs.toFixed(0)} ms
                 </div>
-                <div className="axis-summary-card-stat">
+                <div className="axis-summary-card-stat" title={METRIC_TOOLTIPS.settlingTime}>
                   <span>Settling: </span>
                   {profile.meanSettlingTimeMs.toFixed(0)} ms
                 </div>
-                <div className="axis-summary-card-stat">
+                <div className="axis-summary-card-stat" title={METRIC_TOOLTIPS.latency}>
                   <span>Latency: </span>
                   {profile.meanLatencyMs.toFixed(0)} ms
                 </div>
@@ -197,43 +196,27 @@ export function PIDAnalysisStep({
 
         {hasTraces && (
           <>
-            <button className="noise-details-toggle" onClick={() => setChartOpen(!chartOpen)}>
-              {chartOpen ? 'Hide step response charts' : 'Show step response charts'}
-            </button>
-
-            {chartOpen && (
-              <>
-                <p className="chart-description">
-                  How the quad responds to stick inputs (step response). The{' '}
-                  <strong>dashed white line</strong> is the commanded rate (setpoint) and the{' '}
-                  <strong>colored line</strong> is the actual gyro response. Ideally, the gyro
-                  should follow the setpoint quickly with minimal overshoot and no oscillation.
-                </p>
-                <p className="chart-legend">
-                  <span className="chart-legend-item">
-                    <span
-                      className="chart-legend-line chart-legend-line--dashed"
-                      style={{ borderColor: '#fff' }}
-                    />{' '}
-                    Setpoint
-                  </span>
-                  <span className="chart-legend-item">
-                    <span className="chart-legend-line" style={{ borderColor: '#ff6b6b' }} /> Roll
-                  </span>
-                  <span className="chart-legend-item">
-                    <span className="chart-legend-line" style={{ borderColor: '#51cf66' }} /> Pitch
-                  </span>
-                  <span className="chart-legend-item">
-                    <span className="chart-legend-line" style={{ borderColor: '#4dabf7' }} /> Yaw
-                  </span>
-                </p>
-                <StepResponseChart
-                  roll={pidResult.roll}
-                  pitch={pidResult.pitch}
-                  yaw={pidResult.yaw}
-                />
-              </>
-            )}
+            <h4 className="chart-title">Step Response</h4>
+            <p className="chart-description">{CHART_DESCRIPTIONS.stepResponse}</p>
+            <p className="chart-legend">
+              <span className="chart-legend-item">
+                <span
+                  className="chart-legend-line chart-legend-line--dashed"
+                  style={{ borderColor: '#fff' }}
+                />{' '}
+                Setpoint
+              </span>
+              <span className="chart-legend-item">
+                <span className="chart-legend-line" style={{ borderColor: '#ff6b6b' }} /> Roll
+              </span>
+              <span className="chart-legend-item">
+                <span className="chart-legend-line" style={{ borderColor: '#51cf66' }} /> Pitch
+              </span>
+              <span className="chart-legend-item">
+                <span className="chart-legend-line" style={{ borderColor: '#4dabf7' }} /> Yaw
+              </span>
+            </p>
+            <StepResponseChart roll={pidResult.roll} pitch={pidResult.pitch} yaw={pidResult.yaw} />
           </>
         )}
 
