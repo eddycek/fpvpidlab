@@ -97,7 +97,7 @@ npm run rebuild
 - React application with hooks-based state management
 - No direct IPC access - uses `window.betaflight` API only
 - Event subscriptions via `onConnectionChanged`, `onProfileChanged`, `onNewFCDetected`
-- Tuning wizard: `src/renderer/components/TuningWizard/` (Deep Tune flow, mode='filter'/'pid' only)
+- Tuning wizard: `src/renderer/components/TuningWizard/` (Filter Tune, PID Tune, Flash Tune flows)
 - Analysis overview: `src/renderer/components/AnalysisOverview/` (read-only single-page analysis)
 
 ### Multi-Drone Profile System
@@ -166,7 +166,7 @@ IPC handlers are split into domain modules under `src/main/ipc/handlers/`:
 | `pidHandlers.ts` | 3 | PID get/set/save |
 | `blackboxHandlers.ts` | 9 | Info, download, list, delete, erase, folder, test, parse, import |
 | `analysisHandlers.ts` | 3 | Filter, PID, and transfer function analysis |
-| `tuningHandlers.ts` | 8 | Apply, session CRUD (deep + flash), history, update verification, update history verification |
+| `tuningHandlers.ts` | 8 | Apply, session CRUD (filter + pid + flash), history, update verification, update history verification |
 | `index.ts` | — | DI container, `registerIPCHandlers()` |
 
 **Request-Response Pattern**:
@@ -287,23 +287,25 @@ Rates flight data quality 0-100 before generating recommendations. Integrated in
 - Quality warnings: `few_segments`, `short_hover_time`, `narrow_throttle_coverage`, `few_steps_per_axis`, `missing_axis_coverage`, `low_step_magnitude`, `low_coherence`
 - UI: quality pill in FilterAnalysisStep, PIDAnalysisStep, AnalysisOverview
 - History: compact `dataQuality` in `FilterMetricsSummary` / `PIDMetricsSummary`
-- **Flight quality score** (`src/shared/utils/tuneQualityScore.ts`): Composite 0-100 score with type-aware components. Deep Tune: noise floor, tracking RMS, overshoot (step response), settling time (4 components). Flash Tune: noise floor, overshoot (TF synthetic step response), phase margin, bandwidth (4 components). When both step data AND TF are present, 6 components are available. Optional Noise Delta component when verification present. Points redistributed evenly among available components. Displayed as badge in TuningCompletionSummary and TuningHistoryPanel. Trend chart (QualityTrendChart) shows progression across sessions.
+- **Flight quality score** (`src/shared/utils/tuneQualityScore.ts`): Composite 0-100 score with type-aware components. Filter Tune: noise floor. PID Tune: tracking RMS, overshoot (step response), settling time. Flash Tune: noise floor, overshoot (TF synthetic step response), phase margin, bandwidth. When both step data AND TF are present, 6 components are available. Optional Noise Delta component when verification present. Points redistributed evenly among available components. Displayed as badge in TuningCompletionSummary and TuningHistoryPanel. Trend chart (QualityTrendChart) shows progression across sessions.
 
 ### Stateful Tuning Session
 
-Two tuning modes: **Deep Tune** (2-flight, filters then PIDs) and **Flash Tune** (1-flight, combined analysis via Wiener deconvolution).
+Three tuning modes: **Filter Tune** (1-2 flights, filter analysis), **PID Tune** (1-2 flights, PID analysis), and **Flash Tune** (1-flight, combined analysis via Wiener deconvolution).
 
-**TuningType**: `'guided' | 'quick'` (internal values) — displayed as "Deep Tune" / "Flash Tune" via `TUNING_TYPE_LABELS`
+**TuningType**: `'filter' | 'pid' | 'quick'`
 
-**Deep Tune State Machine** (`TuningPhase`): filter_flight_pending → filter_log_ready → filter_analysis → filter_applied → pid_flight_pending → pid_log_ready → pid_analysis → pid_applied → verification_pending → completed
+**Filter Tune State Machine**: filter_flight_pending → filter_log_ready → filter_analysis → filter_applied → filter_verification_pending → completed
 
-**Flash Tune State Machine** (`TuningPhase`): quick_flight_pending → quick_log_ready → quick_analysis → quick_applied → verification_pending → completed
+**PID Tune State Machine**: pid_flight_pending → pid_log_ready → pid_analysis → pid_applied → pid_verification_pending → completed
+
+**Flash Tune State Machine**: quick_flight_pending → quick_log_ready → quick_analysis → quick_applied → verification_pending → completed
 
 - **TuningSessionManager** (`src/main/storage/`): CRUD for per-profile session files at `{userData}/data/tuning/{profileId}.json`
 - **useTuningSession hook**: Manages session lifecycle with IPC and event subscription
-- **TuningStatusBanner**: Dashboard banner showing current phase, 6-step indicator (Prepare → Filter Flight → Filter Tune → PID Flight → PID Tune → Verify), action buttons
-- **TuningMode**: `'filter' | 'pid' | 'full' | 'quick'` — wizard components adapt UI/flow per mode
-- **Verification flow**: After PID apply → "Erase & Verify" → erase flash → fly hover → download → analyze → completed. Or "Skip & Complete" to skip.
+- **TuningStatusBanner**: Dashboard banner showing current phase, 4-step indicator (Prepare → Flight → Tune → Verify), action buttons
+- **TuningMode**: `'filter' | 'pid' | 'quick'` — wizard components adapt UI/flow per mode
+- **Verification flow**: Filter Tune: throttle sweep → spectrogram comparison. PID Tune: stick snaps → step response comparison. Flash Tune: hover → noise comparison. Or "Skip & Complete" to skip.
 - **Archive on completion**: When phase transitions to `completed`, session is archived to `TuningHistoryManager` before becoming dismissable
 - IPC: `TUNING_GET_SESSION`, `TUNING_START_SESSION`, `TUNING_UPDATE_PHASE`, `TUNING_RESET_SESSION`, `TUNING_GET_HISTORY`, `TUNING_UPDATE_VERIFICATION`, `TUNING_UPDATE_HISTORY_VERIFICATION` + `EVENT_TUNING_SESSION_CHANGED`
 - Design doc: `docs/TUNING_WORKFLOW_REVISION.md`
@@ -320,7 +322,7 @@ Read-only single-page analysis view. Opened when user clicks "Analyze" on a down
 
 ### Tuning Wizard (`src/renderer/components/TuningWizard/`)
 
-Multi-step wizard for active tuning sessions (Deep Tune and Flash Tune). Supports mode-aware step routing.
+Multi-step wizard for active tuning sessions (Filter Tune, PID Tune, and Flash Tune). Supports mode-aware step routing.
 
 **Steps by mode** (used only during active tuning sessions):
 - `filter`: Flight Guide → Session → Filters → Summary (skips PIDs)
@@ -332,7 +334,7 @@ Multi-step wizard for active tuning sessions (Deep Tune and Flash Tune). Support
 - **FlightGuideContent**: Mode-specific flight phase instructions (filter: throttle sweeps, pid: stick snaps)
 - **TuningSummaryStep**: Mode-specific button labels (Apply Filters/PIDs) and success messages
 - **ApplyConfirmationModal**: Confirmation dialog before applying changes (snapshot option, reboot warning)
-- **TuningWorkflowModal**: Standalone modal showing two-flight workflow with separate filter + PID guides
+- **TuningWorkflowModal**: Standalone modal showing tuning workflow with flight-specific guides
 - Flight guide data in `src/shared/constants/flightGuide.ts`
 - Triggered from TuningStatusBanner when active tuning session is at filter_analysis or pid_analysis phase
 
@@ -353,14 +355,16 @@ Interactive visualization of analysis results using Recharts (SVG).
 
 Completed tuning sessions are archived with self-contained metrics for comparison.
 
-- **TuningCompletionSummary**: Shown when `session.phase === 'completed'` instead of the generic banner. Shows noise chart (if verification data available), throttle spectrogram heatmap (if filter metrics available), applied changes, PID metrics, Dismiss/Start New buttons
-- **NoiseComparisonChart**: Before/after spectrum overlay using Recharts. "Before" from filter hover flight, "After" from verification hover flight. Delta pill shows dB improvement/regression
+- **TuningCompletionSummary**: Shown when `session.phase === 'completed'` instead of the generic banner. Mode-aware: Filter Tune shows spectrogram comparison, PID Tune shows step response comparison, Flash Tune shows noise + TF comparison. Dismiss/Start New buttons
+- **SpectrogramComparisonChart**: Side-by-side ThrottleSpectrogramChart with shared axis selector and dB delta pill (Filter Tune verification)
+- **StepResponseComparison**: Per-axis PID metrics before/after grid with delta indicators (PID Tune verification)
+- **NoiseComparisonChart**: Before/after spectrum overlay using Recharts. Delta pill shows dB improvement/regression
 - **AppliedChangesTable**: Reusable table of setting changes with old → new values and % change
 - **TuningHistoryPanel**: Dashboard section below SnapshotManager. Expandable cards per completed tuning session (newest first). Includes quality score badge and trend chart.
 - **QualityTrendChart**: Line chart showing flight quality score progression across tuning sessions (minimum 2 data points to render)
-- **TuningSessionDetail**: Expanded view reusing NoiseComparisonChart, ThrottleSpectrogramChart (from compact archived data), and AppliedChangesTable
+- **TuningSessionDetail**: Expanded view with mode-aware verification charts, same logic as TuningCompletionSummary
 - **useTuningHistory hook**: Loads history for current profile, reloads on profile change and session dismissal
-- Verification flight: optional hover after PID apply. Compare filter hover spectrum (before) vs verification hover spectrum (after)
+- Verification: Filter Tune → throttle sweep (spectrogram), PID Tune → stick snaps (step response), Flash Tune → hover (noise spectrum)
 - Types in `src/shared/types/tuning-history.types.ts` (CompactSpectrum, CompactThrottleSpectrogram, CompactThrottleBand, FilterMetricsSummary, PIDMetricsSummary, CompletedTuningRecord)
 - Design doc: `docs/TUNING_HISTORY_AND_COMPARISON.md`
 
@@ -442,7 +446,7 @@ npm run demo:generate-history # Build + generate 5 tuning sessions (~2 min)
 - `E2E_USER_DATA_DIR` env var → `app.setPath('userData', ...)` in `src/main/index.ts` for test isolation
 - Clean state: `.e2e-userdata/` is wiped before each test file
 - `test:e2e` uses `--grep-invert 'generate 5'` to exclude slow generator
-- 4 spec files: smoke (4), Deep Tune cycle (11), Flash Tune cycle (7), history generator (1)
+- 5 spec files: smoke (4), Filter Tune cycle (7), PID Tune cycle (7), Flash Tune cycle (7), history generator (3)
 - `vitest.config.ts` excludes `e2e/` to prevent Vitest from picking up Playwright specs
 - `advancePastVerification()` in MockMSPClient keeps flight type cycling correct when verification is skipped
 
@@ -496,7 +500,7 @@ await waitFor(() => {
 - **Restore safety backup** auto-creates "Pre-restore (auto)" snapshot before applying
 - **Server-side filtering** by current profile's snapshotIds
 - **Dynamic numbering** `#1` (oldest) through `#N` (newest) — recalculates on deletion
-- **Tuning metadata** on auto snapshots: `tuningSessionNumber`, `tuningType` ('guided'/'quick'), `snapshotRole` ('pre-tuning'/'post-tuning'). Contextual labels like "Pre-tuning #3 (Deep Tune)". Role badges: pre-tuning (orange), post-tuning (green)
+- **Tuning metadata** on auto snapshots: `tuningSessionNumber`, `tuningType` ('filter'/'pid'/'quick'), `snapshotRole` ('pre-tuning'/'post-tuning'). Contextual labels like "Pre-tuning #3 (Filter Tune)". Role badges: pre-tuning (orange), post-tuning (green)
 - **Compare** smart matching: for tuning snapshots, auto-selects pre/post-tuning pair from the same session number. Falls back to comparing with previous snapshot (or empty config for oldest). Uses `snapshotDiffUtils.ts` to parse CLI diff, compute changes, and group by command type. Displayed in `SnapshotDiffModal` with GitHub-style color coding (green=added, yellow=changed). Settings reverted to factory default show as "Changed to (default)".
 
 ### BlackboxStatus Readonly Mode
