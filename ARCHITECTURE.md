@@ -1,6 +1,6 @@
 # Architecture Overview
 
-**Last Updated:** March 11, 2026 | **Phase 4 Complete, Phase 6 Complete** | **2388 unit tests, 116 files + 26 Playwright E2E tests**
+**Last Updated:** March 11, 2026 | **Phase 4 Complete, Phase 6 Complete** | **2403 unit tests, 116 files + 26 Playwright E2E tests**
 
 ---
 
@@ -656,7 +656,7 @@ Built with **Recharts** (SVG):
 - **SpectrumChart** — FFT noise spectrum per axis (roll/pitch/yaw). Shows noise floor reference lines, detected peak frequency markers, color-coded axes.
 - **StepResponseChart** — Overlaid setpoint vs gyro trace for individual steps. Prev/Next navigation, metrics overlay (overshoot %, rise time, settling, latency).
 - **TFStepResponseChart** — Synthetic step response from Transfer Function (Wiener deconvolution). Single mode for Flash Analysis, before/after comparison for verification. Per-axis overshoot metrics, delta pill.
-- **ThrottleSpectrogramChart** — Custom SVG heatmap showing noise magnitude across frequency (x) and throttle (y) bands. Color-coded dB scale. Integrated in FilterAnalysisStep, QuickAnalysisStep, and AnalysisOverview.
+- **ThrottleSpectrogramChart** — Custom SVG heatmap showing noise magnitude across frequency (x) and throttle (y) bands. Color-coded dB scale. Accepts both live `data` (analysis) and `compactData` (archived) props. Integrated in FilterAnalysisStep, QuickAnalysisStep, AnalysisOverview, TuningCompletionSummary, and TuningSessionDetail.
 - **AxisTabs** — Shared Roll/Pitch/Yaw/All tab selector for charts. Supports `showAll` prop.
 - **chartUtils** — `toRechartsData()` conversion, `downsampleData()`, `findBestStep()` scoring, `computeRobustYDomain()` (outlier-resistant Y axis).
 
@@ -805,7 +805,7 @@ Hardware error (FC timeout, USB disconnect)
 | `blackbox.types.ts` | `BlackboxInfo`, `BlackboxParseResult`, `BlackboxFlightData`, `BBLLogHeader`, `BBLEncoding`, `BBLPredictor` |
 | `analysis.types.ts` | `PowerSpectrum`, `NoiseProfile`, `FilterRecommendation`, `StepResponse` (with `ffDominated`), `StepResponseTrace`, `PIDRecommendation`, `AxisStepMetrics`, `CurrentFilterSettings`, `FeedforwardContext` |
 | `tuning.types.ts` | `TuningPhase` (10 values), `TuningSession`, `TuningMode`, `AppliedChange` |
-| `tuning-history.types.ts` | `CompactSpectrum`, `FilterMetricsSummary`, `PIDMetricsSummary`, `CompletedTuningRecord` |
+| `tuning-history.types.ts` | `CompactSpectrum`, `CompactThrottleSpectrogram`, `CompactThrottleBand`, `FilterMetricsSummary`, `PIDMetricsSummary`, `CompletedTuningRecord` |
 | `ipc.types.ts` | `ApplyRecommendationsInput/Progress/Result`, `SnapshotRestoreProgress/Result`, `BetaflightAPI` (complete API interface) |
 | `toast.types.ts` | `ToastType`, `Toast` |
 
@@ -813,13 +813,13 @@ Hardware error (FC timeout, USB disconnect)
 
 | File | Key Exports |
 |------|-------------|
-| `metricsExtract.ts` | `downsampleSpectrum()`, `downsampleStepResponse()`, `extractFilterMetrics()`, `extractPIDMetrics()` — compact metrics for history storage |
+| `metricsExtract.ts` | `downsampleSpectrum()`, `downsampleStepResponse()`, `extractFilterMetrics()`, `extractPIDMetrics()`, `extractThrottleSpectrogram()` — compact metrics for history storage |
 
 ---
 
 ## Testing Strategy
 
-**2388 unit tests across 116 files + 26 Playwright E2E tests**. See [TESTING.md](./TESTING.md) for complete inventory.
+**2403 unit tests across 116 files + 26 Playwright E2E tests**. See [TESTING.md](./TESTING.md) for complete inventory.
 
 | Area | Files | Tests |
 |------|-------|-------|
@@ -831,9 +831,9 @@ Hardware error (FC timeout, USB disconnect)
 | MSC (Mass Storage) | 2 | 43 |
 | Storage Managers | 7 | 127 |
 | IPC Handlers | 1 | 109 |
-| UI Components + Charts + Contexts | 44 | 663 |
-| React Hooks + Utils | 14 | 167 |
-| Shared Constants & Utils | 4 | 78 |
+| UI Components + Charts + Contexts | 44 | 667 |
+| React Hooks + Utils | 14 | 171 |
+| Shared Constants & Utils | 4 | 85 |
 | E2E Workflows (Vitest) | 1 | 30 |
 | Demo Mode (Vitest) | 2 | 73 |
 | **Playwright E2E** | **5** | **26** |

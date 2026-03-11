@@ -163,7 +163,7 @@ npm run test:ui           # Visual interface with DOM snapshots
 
 ## Test Inventory
 
-**Total: 2388 unit tests across 116 files + 26 Playwright E2E tests across 5 spec files** (last verified: March 11, 2026)
+**Total: 2403 unit tests across 116 files + 26 Playwright E2E tests across 5 spec files** (last verified: March 11, 2026)
 
 ### UI Components
 
@@ -197,7 +197,7 @@ npm run test:ui           # Visual interface with DOM snapshots
 | `TuningWizard/SessionSelectStep.test.tsx` | 8 | Session picker, auto-parse, parsing/error/empty states, reverse order |
 | `TuningWizard/TuningSummaryStep.test.tsx` | 17 | Recommendations table, mode-aware labels (filter/pid/quick), apply/progress/success/error states, tfResult for quick mode |
 | `TuningWizard/charts/AxisTabs.test.tsx` | 6 | Tab rendering, selection, aria-selected, onChange callback |
-| `TuningWizard/charts/ThrottleSpectrogramChart.test.tsx` | 6 | Throttle spectrogram heatmap rendering, axis labels, color scale, empty state |
+| `TuningWizard/charts/ThrottleSpectrogramChart.test.tsx` | 10 | Throttle spectrogram heatmap rendering, axis labels, color scale, empty state, compact data (archived) rendering |
 | `TuningHistory/AppliedChangesTable.test.tsx` | 7 | Setting changes table, percent formatting, empty state, zero value handling |
 | `TuningHistory/NoiseComparisonChart.test.tsx` | 9 | Before/after spectrum overlay, delta pill, axis tabs, empty state |
 | `TuningHistory/TuningCompletionSummary.test.tsx` | 17 | Completion summary with/without verification, noise chart, changes, PID metrics, actions, quality score badge with tier label, re-analyze button, Flash Tune title |
@@ -243,7 +243,7 @@ npm run test:ui           # Visual interface with DOM snapshots
 | `hooks/useBlackboxLogs.test.ts` | 9 | Log list, profile change subscription, delete, openFolder |
 | `hooks/useDemoMode.test.ts` | 3 | Demo mode detection, reset demo |
 | `utils/bbSettingsUtils.test.ts` | 18 | BB settings status computation, version-aware debug mode, fix/reset commands |
-| `utils/spectrogramUtils.test.ts` | 11 | Spectrogram data transformation, color mapping, frequency/throttle axis utilities |
+| `utils/spectrogramUtils.test.ts` | 15 | Spectrogram data transformation, color mapping, frequency/throttle axis utilities, compact data heatmap preparation |
 
 ### IPC Handlers
 
@@ -343,7 +343,7 @@ npm run test:ui           # Visual interface with DOM snapshots
 
 | File | Tests | Description |
 |------|-------|-------------|
-| `shared/utils/metricsExtract.test.ts` | 30 | Spectrum downsampling, filter/PID/TF metrics extraction, boundary handling, trackingErrorRMS extraction, step response downsampling, throttleBands extraction, dcGain extraction |
+| `shared/utils/metricsExtract.test.ts` | 37 | Spectrum downsampling, filter/PID/TF metrics extraction, boundary handling, trackingErrorRMS extraction, step response downsampling, throttleBands extraction, dcGain extraction, throttle spectrogram extraction |
 | `shared/utils/tuneQualityScore.test.ts` | 36 | Quality score computation, tier boundaries, partial metrics, backward compat, clamping, TIER_LABELS, verification quality, transfer function metrics (bandwidth, phase margin, quality parity) |
 | `shared/constants.test.ts` | 7 | Preset profile flight style mapping validation |
 | `shared/types/profile.types.test.ts` | 5 | FlightStyle type compilation, DroneProfileOptional inheritance |

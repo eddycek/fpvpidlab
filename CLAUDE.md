@@ -210,8 +210,8 @@ window.betaflight.onConnectionChanged((status) => {
 - Array of `CompletedTuningRecord[]` per profile (oldest-first on disk, newest-first in API)
 - Archived from completed sessions with self-contained metrics + applied changes
 - Deleted when profile is deleted
-- Compact metrics: `FilterMetricsSummary` (noise floor, peaks, 128-bin spectrum), `PIDMetricsSummary` (step response), `TransferFunctionMetricsSummary` (bandwidth, phase margin, dcGain, throttleBands)
-- Spectrum downsampling: `downsampleSpectrum()` in `src/shared/utils/metricsExtract.ts`
+- Compact metrics: `FilterMetricsSummary` (noise floor, peaks, 128-bin spectrum, throttle spectrogram), `PIDMetricsSummary` (step response), `TransferFunctionMetricsSummary` (bandwidth, phase margin, dcGain, throttleBands)
+- Spectrum downsampling: `downsampleSpectrum()`, `extractThrottleSpectrogram()` in `src/shared/utils/metricsExtract.ts`
 - Design doc: `docs/TUNING_HISTORY_AND_COMPARISON.md`
 
 ### Blackbox Parser (`src/main/blackbox/`)
@@ -343,7 +343,7 @@ Interactive visualization of analysis results using Recharts (SVG).
 - **SpectrumChart**: FFT noise spectrum with per-axis color coding, noise floor reference lines, peak frequency markers. Integrated in FilterAnalysisStep noise details (collapsible).
 - **StepResponseChart**: Setpoint vs gyro trace for individual steps, Prev/Next step navigation, metrics overlay (overshoot, rise time, settling, latency). Integrated in PIDAnalysisStep (collapsible).
 - **TFStepResponseChart**: Synthetic step response from Transfer Function analysis (Wiener deconvolution). Single mode for Flash Analysis in QuickAnalysisStep, before/after comparison mode for verification in TuningCompletionSummary and TuningSessionDetail. Plasmatree PID-Analyzer inspired. Shows per-axis overshoot metrics and delta pill.
-- **ThrottleSpectrogramChart**: Custom SVG heatmap showing noise magnitude (dB) across frequency (x-axis) and throttle bands (y-axis). Color-coded scale. Uses `spectrogramUtils.ts` for data transformation. Integrated in FilterAnalysisStep, QuickAnalysisStep, and AnalysisOverview.
+- **ThrottleSpectrogramChart**: Custom SVG heatmap showing noise magnitude (dB) across frequency (x-axis) and throttle bands (y-axis). Color-coded scale. Accepts both live `data` (analysis) and `compactData` (archived) props. Uses `spectrogramUtils.ts` for data transformation. Integrated in FilterAnalysisStep, QuickAnalysisStep, AnalysisOverview, TuningCompletionSummary, and TuningSessionDetail.
 - **AxisTabs**: Shared tab selector (Roll/Pitch/Yaw/All) for charts. Supports `showAll` prop for spectrogram views
 - **chartUtils**: Data conversion utilities (Float64Array → Recharts format), downsampling, findBestStep scoring
 - **StepResponseTrace**: Raw trace data (timeMs, setpoint, gyro arrays) extracted in `StepMetrics.computeStepResponse()` and attached to each `StepResponse`
@@ -353,15 +353,15 @@ Interactive visualization of analysis results using Recharts (SVG).
 
 Completed tuning sessions are archived with self-contained metrics for comparison.
 
-- **TuningCompletionSummary**: Shown when `session.phase === 'completed'` instead of the generic banner. Shows noise chart (if verification data available), applied changes, PID metrics, Dismiss/Start New buttons
+- **TuningCompletionSummary**: Shown when `session.phase === 'completed'` instead of the generic banner. Shows noise chart (if verification data available), throttle spectrogram heatmap (if filter metrics available), applied changes, PID metrics, Dismiss/Start New buttons
 - **NoiseComparisonChart**: Before/after spectrum overlay using Recharts. "Before" from filter hover flight, "After" from verification hover flight. Delta pill shows dB improvement/regression
 - **AppliedChangesTable**: Reusable table of setting changes with old → new values and % change
 - **TuningHistoryPanel**: Dashboard section below SnapshotManager. Expandable cards per completed tuning session (newest first). Includes quality score badge and trend chart.
 - **QualityTrendChart**: Line chart showing flight quality score progression across tuning sessions (minimum 2 data points to render)
-- **TuningSessionDetail**: Expanded view reusing NoiseComparisonChart and AppliedChangesTable
+- **TuningSessionDetail**: Expanded view reusing NoiseComparisonChart, ThrottleSpectrogramChart (from compact archived data), and AppliedChangesTable
 - **useTuningHistory hook**: Loads history for current profile, reloads on profile change and session dismissal
 - Verification flight: optional hover after PID apply. Compare filter hover spectrum (before) vs verification hover spectrum (after)
-- Types in `src/shared/types/tuning-history.types.ts` (CompactSpectrum, FilterMetricsSummary, PIDMetricsSummary, CompletedTuningRecord)
+- Types in `src/shared/types/tuning-history.types.ts` (CompactSpectrum, CompactThrottleSpectrogram, CompactThrottleBand, FilterMetricsSummary, PIDMetricsSummary, CompletedTuningRecord)
 - Design doc: `docs/TUNING_HISTORY_AND_COMPARISON.md`
 
 ### Auto-Apply Recommendations
