@@ -671,11 +671,25 @@ Custom Claude Code skill for PID tuning expertise. Invoke with `/tuning-advisor`
 
 **Skill definition:** `.claude/skills/tuning-advisor/SKILL.md`
 
-### PostToolUse Hook (Tuning Logic Check)
+### Doc Sync Skill (`/doc-sync`)
 
-A PostToolUse hook (`.claude/hooks/tuning-logic-check.sh`) triggers on Edit/Write to files in `src/main/analysis/` or `src/main/demo/DemoDataGenerator*`. It emits a reminder to consider running `/tuning-advisor review` before committing tuning logic changes. Non-blocking (exit 0).
+Documentation accuracy auditor. Verifies README decision tables, feature descriptions, test counts, and all MD files against the actual codebase. **Run before every PR merge.**
 
-Registered in `.claude/settings.json` under `hooks.PostToolUse`.
+**What it checks:**
+- Decision tables (Filter, PID, TF rules) — thresholds, conditions, confidence, step sizes vs code
+- Cross-file count consistency (tests, modules, handlers, hooks)
+- Feature descriptions vs implementation (parameters, thresholds, band counts)
+- Stale text ("planned"/"pending" for completed features, removed features still described)
+- Code comments with wrong values
+
+**Skill definition:** `.claude/skills/doc-sync/SKILL.md`
+
+### PostToolUse Hooks
+
+Two PostToolUse hooks registered in `.claude/settings.json` under `hooks.PostToolUse`:
+
+1. **Tuning Logic Check** (`.claude/hooks/tuning-logic-check.sh`) — triggers on Edit/Write to `src/main/analysis/` or `src/main/demo/DemoDataGenerator*`. Reminds to run `/tuning-advisor review`.
+2. **Doc Sync Check** (`.claude/hooks/doc-sync-check.sh`) — triggers on Edit/Write to analysis code, constants, types, IPC handlers, hooks, and test files. Reminds to run `/doc-sync`.
 
 ## Platform-Specific Notes
 

@@ -161,6 +161,10 @@
           {
             "type": "command",
             "command": ".claude/hooks/tuning-logic-check.sh"
+          },
+          {
+            "type": "command",
+            "command": ".claude/hooks/doc-sync-check.sh"
           }
         ]
       }
