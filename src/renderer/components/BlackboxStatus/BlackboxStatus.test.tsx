@@ -590,4 +590,57 @@ describe('BlackboxStatus', () => {
       expect(testReadBtn.title).toBe('Not available in demo mode');
     });
   });
+
+  describe('Huffman compression detection', () => {
+    it('shows compression badge and warning for compressed logs', async () => {
+      const compressedLog = {
+        ...makeMockLog(1),
+        compressionDetected: true,
+      };
+      vi.mocked(window.betaflight.getBlackboxInfo).mockResolvedValue(mockBlackboxInfoSupported);
+      vi.mocked(window.betaflight.listBlackboxLogs).mockResolvedValue([compressedLog]);
+
+      render(<BlackboxStatus onAnalyze={vi.fn()} />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Huffman')).toBeInTheDocument();
+      });
+
+      expect(screen.getByText(/Huffman compressed/)).toBeInTheDocument();
+    });
+
+    it('disables Analyze button for compressed logs', async () => {
+      const compressedLog = {
+        ...makeMockLog(1),
+        compressionDetected: true,
+      };
+      vi.mocked(window.betaflight.getBlackboxInfo).mockResolvedValue(mockBlackboxInfoSupported);
+      vi.mocked(window.betaflight.listBlackboxLogs).mockResolvedValue([compressedLog]);
+
+      render(<BlackboxStatus onAnalyze={vi.fn()} />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Analyze')).toBeInTheDocument();
+      });
+
+      const analyzeBtn = screen.getByText('Analyze').closest('button')!;
+      expect(analyzeBtn).toBeDisabled();
+      expect(analyzeBtn.title).toContain('Huffman');
+    });
+
+    it('does not show compression warning for normal logs', async () => {
+      vi.mocked(window.betaflight.getBlackboxInfo).mockResolvedValue(mockBlackboxInfoSupported);
+      vi.mocked(window.betaflight.listBlackboxLogs).mockResolvedValue([makeMockLog(1)]);
+
+      render(<BlackboxStatus onAnalyze={vi.fn()} />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Analyze')).toBeInTheDocument();
+      });
+
+      expect(screen.queryByText('Huffman')).not.toBeInTheDocument();
+      const analyzeBtn = screen.getByText('Analyze').closest('button')!;
+      expect(analyzeBtn).not.toBeDisabled();
+    });
+  });
 });

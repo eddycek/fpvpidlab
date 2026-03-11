@@ -346,14 +346,28 @@ export function BlackboxStatus({ onAnalyze, readonly, refreshKey }: BlackboxStat
                       <span>
                         {log.fcInfo.variant} {log.fcInfo.version}
                       </span>
+                      {log.compressionDetected && (
+                        <span className="compression-badge">Huffman</span>
+                      )}
                     </div>
+                    {log.compressionDetected && (
+                      <div className="compression-warning">
+                        Data is Huffman compressed — analysis unavailable. Reflash firmware without
+                        USE_HUFFMAN or download logs via Betaflight Configurator.
+                      </div>
+                    )}
                   </div>
                   <div className="log-actions">
                     {onAnalyze && !readonly && (
                       <button
                         className="log-analyze-button"
                         onClick={() => onAnalyze(log.id, log.filename)}
-                        title="Analyze & Tune"
+                        title={
+                          log.compressionDetected
+                            ? 'Cannot analyze — Huffman compressed data'
+                            : 'Analyze & Tune'
+                        }
+                        disabled={log.compressionDetected}
                       >
                         Analyze
                       </button>

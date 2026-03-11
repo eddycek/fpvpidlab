@@ -11,7 +11,7 @@ export enum SDCardState {
   FATAL = 1,
   CARD_INIT = 2,
   FS_INIT = 3,
-  READY = 4
+  READY = 4,
 }
 
 /**
@@ -136,7 +136,7 @@ export enum BlackboxDebugMode {
   FF_INTERPOLATED = 59,
   BLACKBOX_OUTPUT = 60,
   GYRO_SAMPLE = 61,
-  RX_TIMING = 62
+  RX_TIMING = 62,
 }
 
 /**
@@ -177,6 +177,8 @@ export interface BlackboxLogMetadata {
     version: string;
     target: string;
   };
+  /** Whether Huffman compression was detected during download (data unusable without decompression) */
+  compressionDetected?: boolean;
 }
 
 // ============================================================

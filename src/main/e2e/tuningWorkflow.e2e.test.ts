@@ -646,7 +646,7 @@ describe('E2E Tuning Workflow', () => {
       // Set up mock for download
       mockMSP.downloadBlackboxLog.mockImplementation(async (onProgress: any) => {
         if (onProgress) onProgress(100);
-        return Buffer.from('fake-bbl-data');
+        return { data: Buffer.from('fake-bbl-data'), compressionDetected: false };
       });
 
       // Ensure profile has fcSerial
@@ -885,10 +885,10 @@ describe('E2E Tuning Workflow', () => {
       await invoke(IPCChannel.PROFILE_CREATE, makeProfileInput('SN-ERR-001', 'Error Test Quad'));
 
       // First download hangs
-      let resolveDownload: (value: Buffer) => void;
+      let resolveDownload: (value: { data: Buffer; compressionDetected: boolean }) => void;
       mockMSP.downloadBlackboxLog.mockImplementation(
         () =>
-          new Promise<Buffer>((resolve) => {
+          new Promise<{ data: Buffer; compressionDetected: boolean }>((resolve) => {
             resolveDownload = resolve;
           })
       );
@@ -906,7 +906,7 @@ describe('E2E Tuning Workflow', () => {
       expect(res2.error).toContain('already in progress');
 
       // Clean up: resolve first download
-      resolveDownload!(Buffer.from('data'));
+      resolveDownload!({ data: Buffer.from('data'), compressionDetected: false });
       await promise1;
     });
 
@@ -995,7 +995,7 @@ describe('E2E Tuning Workflow', () => {
       // Step 5: Download blackbox log
       mockMSP.downloadBlackboxLog.mockImplementation(async (onProgress: any) => {
         if (onProgress) onProgress(100);
-        return Buffer.from('filter-flight-data');
+        return { data: Buffer.from('filter-flight-data'), compressionDetected: false };
       });
 
       const { event: dlEvent } = createMockEvent();

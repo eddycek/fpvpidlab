@@ -255,6 +255,14 @@ function AppContent() {
           });
           toast.success(`Log downloaded: ${metadata.filename}`);
 
+          // Block tuning flow if Huffman compression detected
+          if (metadata.compressionDetected) {
+            toast.error(
+              'Huffman compressed data detected — analysis unavailable. Reflash firmware without USE_HUFFMAN or download logs via Betaflight Configurator.'
+            );
+            break;
+          }
+
           // Transition session to *_analysis phase and store the log ID.
           // Clear eraseCompleted — the phase is advancing past the erase step.
           const phase = tuning.session?.phase;

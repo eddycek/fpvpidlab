@@ -38,7 +38,8 @@ export class BlackboxManager {
     data: Buffer,
     profileId: string,
     fcSerial: string,
-    fcInfo: { variant: string; version: string; target: string }
+    fcInfo: { variant: string; version: string; target: string },
+    options?: { compressionDetected?: boolean }
   ): Promise<BlackboxLogMetadata> {
     const id = uuidv4();
     const timestamp = new Date().toISOString();
@@ -57,6 +58,7 @@ export class BlackboxManager {
       filepath,
       size: data.length,
       fcInfo,
+      ...(options?.compressionDetected && { compressionDetected: true }),
     };
 
     // Update metadata index

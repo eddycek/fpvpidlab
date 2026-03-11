@@ -117,22 +117,29 @@ export function registerBlackboxHandlers(deps: HandlerDependencies): void {
           // --- Flash: existing MSP_DATAFLASH_READ path ---
           logger.info('Starting flash download via MSP...');
 
-          const logData = await deps.mspClient.downloadBlackboxLog((progress: number) => {
+          const downloadResult = await deps.mspClient.downloadBlackboxLog((progress: number) => {
             event.sender.send(IPCChannel.EVENT_BLACKBOX_DOWNLOAD_PROGRESS, progress);
           });
 
           const fcInfo = await deps.mspClient.getFCInfo();
 
           const metadata = await deps.blackboxManager.saveLog(
-            logData,
+            downloadResult.data,
             currentProfile.id,
             currentProfile.fcSerialNumber,
             {
               variant: fcInfo.variant,
               version: fcInfo.version,
               target: fcInfo.target,
-            }
+            },
+            { compressionDetected: downloadResult.compressionDetected }
           );
+
+          if (downloadResult.compressionDetected) {
+            logger.warn(
+              `Huffman compression detected in Blackbox log ${metadata.filename} — data cannot be analyzed`
+            );
+          }
 
           logger.info(`Blackbox log saved: ${metadata.filename} (${metadata.size} bytes)`);
           return createResponse<BlackboxLogMetadata>(metadata);

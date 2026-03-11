@@ -82,9 +82,10 @@ describe('MSPClient.extractFlashPayload', () => {
     buf[11] = 0x6f; // 'o'
 
     const result = MSPClient.extractFlashPayload(buf);
-    expect(result.length).toBe(5);
-    expect(result[0]).toBe(0x48); // 'H'
-    expect(result.toString()).toBe('H Pro');
+    expect(result.data.length).toBe(5);
+    expect(result.data[0]).toBe(0x48); // 'H'
+    expect(result.data.toString()).toBe('H Pro');
+    expect(result.isCompressed).toBe(false);
   });
 
   it('strips 6-byte header (no compression flag)', () => {
@@ -98,11 +99,12 @@ describe('MSPClient.extractFlashPayload', () => {
     buf[9] = 0x72;
 
     const result = MSPClient.extractFlashPayload(buf);
-    expect(result.length).toBe(4);
-    expect(result[0]).toBe(0x48);
+    expect(result.data.length).toBe(4);
+    expect(result.data[0]).toBe(0x48);
+    expect(result.isCompressed).toBe(false);
   });
 
-  it('handles compressed response (warns but returns data)', () => {
+  it('detects compressed response and sets isCompressed flag', () => {
     // [4B addr][2B size=3][1B comp=1][3 bytes compressed data]
     const buf = Buffer.alloc(10);
     buf.writeUInt32LE(100, 0);
@@ -113,14 +115,16 @@ describe('MSPClient.extractFlashPayload', () => {
     buf[9] = 0xcc;
 
     const result = MSPClient.extractFlashPayload(buf);
-    expect(result.length).toBe(3);
-    expect(result[0]).toBe(0xaa);
+    expect(result.data.length).toBe(3);
+    expect(result.data[0]).toBe(0xaa);
+    expect(result.isCompressed).toBe(true);
   });
 
   it('returns raw data for buffers shorter than 6 bytes', () => {
     const buf = Buffer.from([0x01, 0x02, 0x03]);
     const result = MSPClient.extractFlashPayload(buf);
-    expect(result).toBe(buf);
+    expect(result.data).toBe(buf);
+    expect(result.isCompressed).toBe(false);
   });
 
   it('correctly strips header for typical 180-byte chunk', () => {
@@ -135,8 +139,9 @@ describe('MSPClient.extractFlashPayload', () => {
     flashData.copy(response, 7);
 
     const result = MSPClient.extractFlashPayload(response);
-    expect(result.length).toBe(180);
-    expect(Buffer.compare(result, flashData)).toBe(0);
+    expect(result.data.length).toBe(180);
+    expect(Buffer.compare(result.data, flashData)).toBe(0);
+    expect(result.isCompressed).toBe(false);
   });
 });
 

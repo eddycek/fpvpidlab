@@ -993,7 +993,10 @@ export class MSPClient extends EventEmitter {
    * @param size - Number of bytes to read (max 4096)
    * @returns Buffer containing only the flash data (header stripped)
    */
-  async readBlackboxChunk(address: number, size: number): Promise<Buffer> {
+  async readBlackboxChunk(
+    address: number,
+    size: number
+  ): Promise<{ data: Buffer; isCompressed: boolean }> {
     if (!this.isConnected()) {
       throw new ConnectionError('Flight controller not connected');
     }
@@ -1038,34 +1041,33 @@ export class MSPClient extends EventEmitter {
    *   [4B readAddress] [2B dataSize] [data...]
    *
    * Detects header size by comparing response length with dataSize field.
+   * Returns both the payload data and whether Huffman compression was detected.
    */
-  static extractFlashPayload(responseData: Buffer): Buffer {
+  static extractFlashPayload(responseData: Buffer): { data: Buffer; isCompressed: boolean } {
     if (responseData.length < 6) {
-      return responseData;
+      return { data: responseData, isCompressed: false };
     }
 
     const dataSize = responseData.readUInt16LE(4);
 
     // Detect 7-byte header (with compression flag) vs 6-byte header
     if (responseData.length === 7 + dataSize && responseData.length >= 7) {
-      const isCompressed = responseData[6];
+      const isCompressed = responseData[6] !== 0;
       if (isCompressed) {
-        logger.warn(
-          'Compressed dataflash response detected — compression not yet supported, data may be corrupted'
-        );
+        logger.warn('Compressed dataflash response detected — Huffman decompression not supported');
       }
-      return responseData.subarray(7, 7 + dataSize);
+      return { data: responseData.subarray(7, 7 + dataSize), isCompressed };
     }
 
     if (responseData.length === 6 + dataSize) {
-      return responseData.subarray(6, 6 + dataSize);
+      return { data: responseData.subarray(6, 6 + dataSize), isCompressed: false };
     }
 
     // Unknown format — return everything after minimum 6-byte header
     logger.warn(
       `Unexpected dataflash response size: ${responseData.length} bytes, expected ${6 + dataSize} or ${7 + dataSize}`
     );
-    return responseData.subarray(6);
+    return { data: responseData.subarray(6), isCompressed: false };
   }
 
   /**
@@ -1073,7 +1075,9 @@ export class MSPClient extends EventEmitter {
    * @param onProgress - Optional callback for progress updates (0-100)
    * @returns Buffer containing all log data
    */
-  async downloadBlackboxLog(onProgress?: (progress: number) => void): Promise<Buffer> {
+  async downloadBlackboxLog(
+    onProgress?: (progress: number) => void
+  ): Promise<{ data: Buffer; compressionDetected: boolean }> {
     if (!this.isConnected()) {
       throw new ConnectionError('Flight controller not connected');
     }
@@ -1090,6 +1094,7 @@ export class MSPClient extends EventEmitter {
 
       const chunks: Buffer[] = [];
       let bytesRead = 0;
+      let compressionDetected = false;
 
       // Conservative adaptive chunking with recovery delays
       // Start with known-working size, gradually increase with caution
@@ -1105,7 +1110,11 @@ export class MSPClient extends EventEmitter {
         const requestSize = Math.min(currentChunkSize, remaining);
 
         try {
-          const chunk = await this.readBlackboxChunk(bytesRead, requestSize);
+          const chunkResult = await this.readBlackboxChunk(bytesRead, requestSize);
+          const chunk = chunkResult.data;
+          if (chunkResult.isCompressed) {
+            compressionDetected = true;
+          }
 
           // Guard against 0-byte responses (FC returned empty data) — would cause infinite loop
           if (chunk.length === 0) {
@@ -1174,10 +1183,10 @@ export class MSPClient extends EventEmitter {
 
       const fullLog = Buffer.concat(chunks);
       logger.info(
-        `Blackbox download complete: ${fullLog.length} bytes (final chunk size: ${currentChunkSize}B)`
+        `Blackbox download complete: ${fullLog.length} bytes (final chunk size: ${currentChunkSize}B)${compressionDetected ? ' — HUFFMAN COMPRESSION DETECTED' : ''}`
       );
 
-      return fullLog;
+      return { data: fullLog, compressionDetected };
     } catch (error) {
       logger.error('Failed to download Blackbox log:', error);
       throw error;
