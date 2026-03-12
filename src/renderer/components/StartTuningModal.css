@@ -99,6 +99,17 @@
   letter-spacing: 0.3px;
 }
 
+.start-tuning-profile-stats {
+  font-size: 9px;
+  color: var(--text-secondary, #888);
+  white-space: nowrap;
+}
+
+.start-tuning-profile-stats.empty {
+  color: var(--text-tertiary, #555);
+  font-style: italic;
+}
+
 .start-tuning-options {
   display: flex;
   flex-direction: column;

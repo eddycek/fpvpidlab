@@ -5,6 +5,7 @@ import userEvent from '@testing-library/user-event';
 import { StartTuningModal } from './StartTuningModal';
 import { TUNING_TYPE } from '@shared/constants';
 import type { FCInfo } from '@shared/types/common.types';
+import type { CompletedTuningRecord } from '@shared/types/tuning-history.types';
 
 const DEMO_FC_INFO: FCInfo = {
   variant: 'BTFL',
@@ -151,5 +152,84 @@ describe('StartTuningModal', () => {
     // Without clicking any profile button, start Filter Tune
     await user.click(screen.getByText('Filter Tune'));
     expect(onStart).toHaveBeenCalledWith(TUNING_TYPE.FILTER, 2);
+  });
+
+  // Tuning history context tests
+  it('shows session count and recency for profiles with history', () => {
+    const history: CompletedTuningRecord[] = [
+      {
+        id: '1',
+        profileId: 'p1',
+        startedAt: new Date().toISOString(),
+        completedAt: new Date().toISOString(),
+        tuningType: TUNING_TYPE.FILTER,
+        bfPidProfileIndex: 1,
+        baselineSnapshotId: null,
+        postFilterSnapshotId: null,
+        postTuningSnapshotId: null,
+        filterLogId: null,
+        pidLogId: null,
+        quickLogId: null,
+        verificationLogId: null,
+        appliedFilterChanges: [],
+        appliedPIDChanges: [],
+        appliedFeedforwardChanges: [],
+        filterMetrics: null,
+        pidMetrics: null,
+        verificationMetrics: null,
+        verificationPidMetrics: null,
+        transferFunctionMetrics: null,
+      },
+      {
+        id: '2',
+        profileId: 'p1',
+        startedAt: new Date().toISOString(),
+        completedAt: new Date().toISOString(),
+        tuningType: TUNING_TYPE.PID,
+        bfPidProfileIndex: 1,
+        baselineSnapshotId: null,
+        postFilterSnapshotId: null,
+        postTuningSnapshotId: null,
+        filterLogId: null,
+        pidLogId: null,
+        quickLogId: null,
+        verificationLogId: null,
+        appliedFilterChanges: [],
+        appliedPIDChanges: [],
+        appliedFeedforwardChanges: [],
+        filterMetrics: null,
+        pidMetrics: null,
+        verificationMetrics: null,
+        verificationPidMetrics: null,
+        transferFunctionMetrics: null,
+      },
+    ];
+
+    render(
+      <StartTuningModal
+        onStart={vi.fn()}
+        onCancel={vi.fn()}
+        fcInfo={DEMO_FC_INFO}
+        tuningHistory={history}
+      />
+    );
+
+    // Profile 2 (index 1) should show "2 tunes · today"
+    expect(screen.getByText(/2 tunes/)).toBeInTheDocument();
+    expect(screen.getByText(/today/)).toBeInTheDocument();
+  });
+
+  it('shows "unused" for profiles with no tuning history', () => {
+    render(
+      <StartTuningModal
+        onStart={vi.fn()}
+        onCancel={vi.fn()}
+        fcInfo={DEMO_FC_INFO}
+        tuningHistory={[]}
+      />
+    );
+
+    // Profiles 2, 3, 4 (not current) should show "unused"
+    expect(screen.getAllByText('unused')).toHaveLength(3);
   });
 });

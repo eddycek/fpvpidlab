@@ -1,8 +1,47 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import type { TuningType } from '@shared/types/tuning.types';
 import type { FCInfo } from '@shared/types/common.types';
+import type { CompletedTuningRecord } from '@shared/types/tuning-history.types';
 import { TUNING_TYPE, TUNING_TYPE_LABELS } from '@shared/constants';
 import './StartTuningModal.css';
+
+interface ProfileStats {
+  sessionCount: number;
+  lastTunedAt: string | null;
+  lastTuningType: TuningType | null;
+}
+
+function computeProfileStats(
+  history: CompletedTuningRecord[],
+  profileCount: number
+): Map<number, ProfileStats> {
+  const map = new Map<number, ProfileStats>();
+  for (let i = 0; i < profileCount; i++) {
+    map.set(i, { sessionCount: 0, lastTunedAt: null, lastTuningType: null });
+  }
+  // history is newest-first
+  for (const record of history) {
+    if (record.bfPidProfileIndex == null) continue;
+    const stats = map.get(record.bfPidProfileIndex);
+    if (!stats) continue;
+    stats.sessionCount++;
+    if (!stats.lastTunedAt) {
+      stats.lastTunedAt = record.completedAt;
+      stats.lastTuningType = record.tuningType ?? null;
+    }
+  }
+  return map;
+}
+
+function formatRelativeDate(iso: string): string {
+  const ms = Date.now() - new Date(iso).getTime();
+  const days = Math.floor(ms / 86400000);
+  if (days === 0) return 'today';
+  if (days === 1) return 'yesterday';
+  if (days < 30) return `${days}d ago`;
+  const months = Math.floor(days / 30);
+  return `${months}mo ago`;
+}
 
 interface StartTuningModalProps {
   onStart: (tuningType: TuningType, bfPidProfileIndex?: number) => void;
@@ -10,6 +49,7 @@ interface StartTuningModalProps {
   fcInfo?: FCInfo;
   defaultPidProfileIndex?: number;
   pidProfileLabels?: Record<number, string>;
+  tuningHistory?: CompletedTuningRecord[];
 }
 
 export function StartTuningModal({
@@ -18,6 +58,7 @@ export function StartTuningModal({
   fcInfo,
   defaultPidProfileIndex,
   pidProfileLabels,
+  tuningHistory,
 }: StartTuningModalProps) {
   const profileCount = fcInfo?.pidProfileCount ?? 0;
   const currentFcProfile = fcInfo?.pidProfileIndex ?? 0;
@@ -25,6 +66,11 @@ export function StartTuningModal({
 
   const [selectedProfile, setSelectedProfile] = useState<number>(
     defaultPidProfileIndex ?? currentFcProfile
+  );
+
+  const profileStats = useMemo(
+    () => computeProfileStats(tuningHistory ?? [], profileCount),
+    [tuningHistory, profileCount]
   );
 
   const handleStart = (tuningType: TuningType) => {
@@ -46,6 +92,7 @@ export function StartTuningModal({
               {Array.from({ length: profileCount }, (_, i) => {
                 const label = pidProfileLabels?.[i];
                 const isCurrent = i === currentFcProfile;
+                const stats = profileStats.get(i);
                 return (
                   <button
                     key={i}
@@ -55,6 +102,14 @@ export function StartTuningModal({
                     <span className="start-tuning-profile-num">{i + 1}</span>
                     {label && <span className="start-tuning-profile-name">{label}</span>}
                     {isCurrent && <span className="start-tuning-profile-current">current</span>}
+                    {stats && stats.sessionCount > 0 ? (
+                      <span className="start-tuning-profile-stats">
+                        {stats.sessionCount} tune{stats.sessionCount !== 1 ? 's' : ''}
+                        {stats.lastTunedAt && ` · ${formatRelativeDate(stats.lastTunedAt)}`}
+                      </span>
+                    ) : (
+                      !isCurrent && <span className="start-tuning-profile-stats empty">unused</span>
+                    )}
                   </button>
                 );
               })}

@@ -766,6 +766,7 @@ function AppContent() {
           fcInfo={connectedFcInfo ?? undefined}
           defaultPidProfileIndex={currentProfile?.bfPidProfileIndex}
           pidProfileLabels={currentProfile?.bfPidProfileLabels}
+          tuningHistory={tuningHistory.history}
         />
       )}
 
