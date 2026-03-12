@@ -106,6 +106,28 @@
   color: #666;
 }
 
+.quality-trend-legend {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  padding: 6px 0 4px;
+}
+
+.quality-trend-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: #aaa;
+}
+
+.quality-trend-legend-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
 .quality-trend-tooltip-components {
   font-size: 10px;
   color: #666;

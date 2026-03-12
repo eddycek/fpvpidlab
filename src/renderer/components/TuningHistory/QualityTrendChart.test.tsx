@@ -15,11 +15,16 @@ vi.mock('recharts', async (importOriginal) => {
   };
 });
 
-function makeRecord(id: string, date: string, noiseFloorDb = -50): CompletedTuningRecord {
+function makeRecord(
+  id: string,
+  date: string,
+  noiseFloorDb = -50,
+  tuningType = TUNING_TYPE.FILTER
+): CompletedTuningRecord {
   return {
     id,
     profileId: 'p1',
-    tuningType: TUNING_TYPE.FILTER,
+    tuningType,
     startedAt: '2026-01-01T00:00:00Z',
     completedAt: date,
     baselineSnapshotId: null,
@@ -106,6 +111,29 @@ describe('QualityTrendChart', () => {
     ];
     render(<QualityTrendChart history={records} />);
     expect(screen.getByText('Tune Quality Trend')).toBeInTheDocument();
+  });
+
+  it('renders legend with all three tuning types', () => {
+    const records = [
+      makeRecord('r1', '2026-02-10T00:00:00Z'),
+      makeRecord('r2', '2026-02-01T00:00:00Z'),
+    ];
+    render(<QualityTrendChart history={records} />);
+    expect(screen.getByText('Filter Tune')).toBeInTheDocument();
+    expect(screen.getByText('PID Tune')).toBeInTheDocument();
+    expect(screen.getByText('Flash Tune')).toBeInTheDocument();
+  });
+
+  it('renders separate lines per tuning type', () => {
+    const records = [
+      makeRecord('r1', '2026-02-10T00:00:00Z', -50, TUNING_TYPE.FILTER),
+      makeRecord('r2', '2026-02-05T00:00:00Z', -45, TUNING_TYPE.PID),
+      makeRecord('r3', '2026-02-01T00:00:00Z', -40, TUNING_TYPE.FLASH),
+    ];
+    const { container } = render(<QualityTrendChart history={records} />);
+    // 3 Line components render 3 .recharts-line elements
+    const lines = container.querySelectorAll('.recharts-line');
+    expect(lines.length).toBe(3);
   });
 
   it('skips records with null scores', () => {

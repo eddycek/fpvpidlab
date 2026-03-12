@@ -93,8 +93,16 @@ function AppContent() {
 
   useEffect(() => {
     refreshAvailableLogIds();
-    return window.betaflight.onProfileChanged(() => {
+    return window.betaflight.onProfileChanged((profile) => {
       refreshAvailableLogIds();
+      // Re-fetch BB settings when profile becomes available (fixes startup race
+      // where connection event fires before profile is set)
+      if (profile) {
+        window.betaflight
+          .getBlackboxSettings()
+          .then((s) => setBbSettings(s))
+          .catch(() => setBbSettings(null));
+      }
     });
   }, []);
 
@@ -631,13 +639,17 @@ function AppContent() {
             onExit={() => {
               setAnalysisLogId(null);
               setAnalysisLogName(null);
+              document.querySelector('.app-main')?.scrollTo({ top: 0 });
             }}
           />
         ) : activeLogId ? (
           <TuningWizard
             logId={activeLogId}
             mode={wizardMode}
-            onExit={() => setActiveLogId(null)}
+            onExit={() => {
+              setActiveLogId(null);
+              document.querySelector('.app-main')?.scrollTo({ top: 0 });
+            }}
             onApplyComplete={handleApplyComplete}
           />
         ) : (

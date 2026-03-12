@@ -62,7 +62,8 @@ export function registerFCInfoHandlers(deps: HandlerDependencies): void {
         // This avoids entering CLI mode (BF CLI 'exit' reboots the FC).
         const currentProfile = await deps.profileManager.getCurrentProfile();
         if (!currentProfile) {
-          throw new Error('No active profile');
+          // Expected during startup race: connection event fires before profile is set
+          return createResponse<BlackboxSettings>(undefined, 'No active profile');
         }
 
         // Use the most recent snapshot (last in array) for the freshest settings.

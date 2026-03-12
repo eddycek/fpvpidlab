@@ -214,19 +214,19 @@ export function ThrottleSpectrogramChart({
             <g transform={`translate(${tooltip.x + 12}, ${tooltip.y - 10})`} pointerEvents="none">
               <rect
                 x={0}
-                y={-14}
-                width={200}
-                height={42}
+                y={-18}
+                width={240}
+                height={52}
                 rx={4}
                 fill="#1a1a1a"
                 stroke="#444"
                 strokeWidth={1}
               />
-              <text x={8} y={0} fontSize={11} fill="#ddd">
+              <text x={10} y={2} fontSize={13} fill="#ddd">
                 Throttle {fmtThrottle(tooltip.cell.throttleMin)}-
                 {fmtThrottle(tooltip.cell.throttleMax)}%
               </text>
-              <text x={8} y={16} fontSize={11} fill="#ddd">
+              <text x={10} y={22} fontSize={13} fill="#ddd">
                 {tooltip.cell.frequency.toFixed(0)} Hz, {tooltip.cell.db.toFixed(1)} dB
               </text>
             </g>

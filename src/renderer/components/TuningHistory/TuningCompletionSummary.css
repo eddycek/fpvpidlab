@@ -327,9 +327,26 @@
 
 .overshoot-axis-item {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
   font-size: 12px;
+}
+
+.step-comparison-metrics {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.step-comparison-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.step-comparison-metric-label {
+  color: #888;
+  min-width: 60px;
 }
 
 .overshoot-axis-label {

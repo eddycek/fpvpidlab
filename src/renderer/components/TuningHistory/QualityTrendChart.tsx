@@ -22,9 +22,13 @@ interface TrendDataPoint {
   index: number;
   label: string;
   date: string;
-  score: number;
+  filterScore?: number;
+  pidScore?: number;
+  flashScore?: number;
   tier: string;
   tuningType: string;
+  tuningTypeRaw: string;
+  score: number;
   noiseLevel: string;
   filterChanges: number;
   pidChanges: number;
@@ -38,6 +42,12 @@ const TIER_COLORS: Record<string, string> = {
   Poor: '#ff6b6b',
 };
 
+const TYPE_COLORS = {
+  filter: '#4dabf7',
+  pid: '#b197fc',
+  quick: '#ff922b',
+} as const;
+
 function formatDateFull(iso: string): string {
   return new Date(iso).toLocaleDateString('en-US', {
     month: 'short',
@@ -48,8 +58,11 @@ function formatDateFull(iso: string): string {
 }
 
 function CustomTooltip({ active, payload }: any) {
-  if (!active || !payload?.[0]) return null;
-  const d = payload[0].payload as TrendDataPoint;
+  if (!active || !payload?.length) return null;
+  // Find first non-null payload entry (active line for this point)
+  const entry = payload.find((p: any) => p.value != null);
+  if (!entry) return null;
+  const d = entry.payload as TrendDataPoint;
   const tierColor = TIER_COLORS[d.tier] ?? '#aaa';
   const totalChanges = d.filterChanges + d.pidChanges;
 
@@ -69,7 +82,14 @@ function CustomTooltip({ active, payload }: any) {
         </span>
       </div>
       <div className="quality-trend-tooltip-meta">
-        <span className="quality-trend-tooltip-type">{d.tuningType}</span>
+        <span
+          className="quality-trend-tooltip-type"
+          style={{
+            color: TYPE_COLORS[d.tuningTypeRaw as keyof typeof TYPE_COLORS] ?? '#4dabf7',
+          }}
+        >
+          {d.tuningType}
+        </span>
         <span className="quality-trend-tooltip-noise">Noise: {d.noiseLevel}</span>
       </div>
       {totalChanges > 0 && (
@@ -107,18 +127,24 @@ export function QualityTrendChart({ history }: QualityTrendChartProps) {
         const componentLabels = score.components
           .map((c) => `${c.label}: ${c.score}/${c.maxPoints}`)
           .join(', ');
-        points.push({
+        const rawType = record.tuningType ?? 'filter';
+        const point: TrendDataPoint = {
           index: points.length + 1,
           label: `#${points.length + 1}`,
           date: formatDateFull(record.completedAt),
           score: score.overall,
           tier: TIER_LABELS[score.tier],
           tuningType: record.tuningType ? TUNING_TYPE_LABELS[record.tuningType] : 'Tuning',
+          tuningTypeRaw: rawType,
           noiseLevel: record.filterMetrics?.noiseLevel ?? 'unknown',
           filterChanges: record.appliedFilterChanges.length,
           pidChanges: record.appliedPIDChanges.length,
           components: componentLabels,
-        });
+        };
+        if (rawType === 'filter') point.filterScore = score.overall;
+        else if (rawType === 'pid') point.pidScore = score.overall;
+        else if (rawType === 'quick') point.flashScore = score.overall;
+        points.push(point);
       }
     }
     return points;
@@ -177,14 +203,47 @@ export function QualityTrendChart({ history }: QualityTrendChartProps) {
             />
             <Line
               type="monotone"
-              dataKey="score"
-              stroke="#4dabf7"
+              dataKey="filterScore"
+              stroke={TYPE_COLORS.filter}
               strokeWidth={2}
-              dot={{ fill: '#4dabf7', r: 4 }}
+              dot={{ fill: TYPE_COLORS.filter, r: 4 }}
+              connectNulls
+              isAnimationActive={false}
+            />
+            <Line
+              type="monotone"
+              dataKey="pidScore"
+              stroke={TYPE_COLORS.pid}
+              strokeWidth={2}
+              dot={{ fill: TYPE_COLORS.pid, r: 4 }}
+              connectNulls
+              isAnimationActive={false}
+            />
+            <Line
+              type="monotone"
+              dataKey="flashScore"
+              stroke={TYPE_COLORS.quick}
+              strokeWidth={2}
+              dot={{ fill: TYPE_COLORS.quick, r: 4 }}
+              connectNulls
               isAnimationActive={false}
             />
           </LineChart>
         </ResponsiveContainer>
+        <div className="quality-trend-legend">
+          <span className="quality-trend-legend-item">
+            <span className="quality-trend-legend-dot" style={{ background: TYPE_COLORS.filter }} />
+            Filter Tune
+          </span>
+          <span className="quality-trend-legend-item">
+            <span className="quality-trend-legend-dot" style={{ background: TYPE_COLORS.pid }} />
+            PID Tune
+          </span>
+          <span className="quality-trend-legend-item">
+            <span className="quality-trend-legend-dot" style={{ background: TYPE_COLORS.quick }} />
+            Flash Tune
+          </span>
+        </div>
       </div>
     </div>
   );

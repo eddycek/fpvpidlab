@@ -72,19 +72,19 @@ async function runDeepCycle(cycleNum: number): Promise<void> {
     .waitFor({ state: 'visible', timeout: WAIT });
   await demo.clickButton('Close Wizard');
 
-  // Verification flight
-  await page
-    .getByRole('button', { name: 'Erase & Verify' })
-    .waitFor({ state: 'visible', timeout: WAIT });
-  await demo.clickButton('Erase & Verify');
+  // Verification flight (if changes applied) or direct completion (if no changes)
+  const eraseVerifyBtn = page.getByRole('button', { name: 'Erase & Verify' });
+  const filterCompleteText = page.getByText(/Filter Tune Complete/i);
+  await eraseVerifyBtn.or(filterCompleteText).waitFor({ state: 'visible', timeout: WAIT });
 
-  await demo.waitForText('Download Log', WAIT);
-  await demo.clickButton('Download Log');
-
-  await demo.waitForText('Analyze Verification', WAIT);
-  await demo.clickButton('Analyze Verification');
-
-  await demo.waitForText(/Filter Tune Complete/i, ANALYSIS_WAIT);
+  if (await eraseVerifyBtn.isVisible().catch(() => false)) {
+    await eraseVerifyBtn.click();
+    await demo.waitForText('Download Log', WAIT);
+    await demo.clickButton('Download Log');
+    await demo.waitForText('Analyze Verification', WAIT);
+    await demo.clickButton('Analyze Verification');
+    await demo.waitForText(/Filter Tune Complete/i, ANALYSIS_WAIT);
+  }
 
   await demo.screenshot(`stress-cycle-${cycleNum}-filter-complete`);
 
@@ -139,19 +139,19 @@ async function runFlashCycle(cycleNum: number): Promise<void> {
     .waitFor({ state: 'visible', timeout: WAIT });
   await demo.clickButton('Close Wizard');
 
-  // Verification flight
-  await page
-    .getByRole('button', { name: 'Erase & Verify' })
-    .waitFor({ state: 'visible', timeout: WAIT });
-  await demo.clickButton('Erase & Verify');
+  // Verification flight (if changes applied) or direct completion (if no changes)
+  const eraseVerifyBtn = page.getByRole('button', { name: 'Erase & Verify' });
+  const flashCompleteText = page.getByText(/Flash Tune Complete/i);
+  await eraseVerifyBtn.or(flashCompleteText).waitFor({ state: 'visible', timeout: WAIT });
 
-  await demo.waitForText('Download Log', WAIT);
-  await demo.clickButton('Download Log');
-
-  await demo.waitForText('Analyze Verification', WAIT);
-  await demo.clickButton('Analyze Verification');
-
-  await demo.waitForText(/Flash Tune Complete/i, ANALYSIS_WAIT);
+  if (await eraseVerifyBtn.isVisible().catch(() => false)) {
+    await eraseVerifyBtn.click();
+    await demo.waitForText('Download Log', WAIT);
+    await demo.clickButton('Download Log');
+    await demo.waitForText('Analyze Verification', WAIT);
+    await demo.clickButton('Analyze Verification');
+    await demo.waitForText(/Flash Tune Complete/i, ANALYSIS_WAIT);
+  }
 
   await demo.screenshot(`stress-cycle-${cycleNum}-flash-complete`);
 

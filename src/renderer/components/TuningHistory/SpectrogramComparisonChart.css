@@ -9,15 +9,9 @@
 }
 
 .spectrogram-comparison-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-}
-
-@media (max-width: 800px) {
-  .spectrogram-comparison-grid {
-    grid-template-columns: 1fr;
-  }
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
 .spectrogram-comparison-panel {
@@ -27,9 +21,9 @@
 }
 
 .spectrogram-comparison-label {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
-  color: #888;
+  color: #999;
   text-transform: uppercase;
   letter-spacing: 0.3px;
 }

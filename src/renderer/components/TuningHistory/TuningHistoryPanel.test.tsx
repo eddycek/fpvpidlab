@@ -162,8 +162,10 @@ describe('TuningHistoryPanel', () => {
     quick.tuningType = TUNING_TYPE.FLASH;
     render(<TuningHistoryPanel history={[guided, quick]} loading={false} />);
 
-    expect(screen.getByText('Filter Tune')).toBeInTheDocument();
-    expect(screen.getByText('Flash Tune')).toBeInTheDocument();
+    const badges = document.querySelectorAll('.tuning-type-badge');
+    const badgeTexts = Array.from(badges).map((b) => b.textContent);
+    expect(badgeTexts).toContain('Filter Tune');
+    expect(badgeTexts).toContain('Flash Tune');
   });
 
   it('shows noise level in summary', () => {
