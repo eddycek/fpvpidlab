@@ -187,6 +187,16 @@ async function initialize(): Promise<void> {
         try {
           const session = await tuningSessionManager.getSession(existingProfile.id);
           if (session) {
+            // Restore BF PID profile if session has one specified
+            if (session.bfPidProfileIndex !== undefined) {
+              try {
+                await mspClient.selectPidProfile(session.bfPidProfileIndex);
+                logger.info(`Reconnect: restored BF PID profile ${session.bfPidProfileIndex}`);
+              } catch (e) {
+                logger.warn('Reconnect: failed to restore BF PID profile (non-fatal):', e);
+              }
+            }
+
             // Auto-transition from *_flight_pending → *_log_ready if flash has data
             if (
               session.phase === TUNING_PHASE.FILTER_FLIGHT_PENDING ||

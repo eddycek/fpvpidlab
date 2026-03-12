@@ -39,11 +39,13 @@ export interface DroneProfileRequired {
  */
 export interface DroneProfileOptional {
   propSize?: string;
-  weight?: number;        // AUW in grams
+  weight?: number; // AUW in grams
   motorKV?: number;
   notes?: string;
   flightStyle?: FlightStyle;
   lastConnected?: string;
+  bfPidProfileIndex?: number; // preferred BF PID profile (0-based), undefined = FC default
+  bfPidProfileLabels?: Record<number, string>; // user labels: {0: "Stock", 1: "Tuned"}
 }
 
 /**
@@ -51,8 +53,8 @@ export interface DroneProfileOptional {
  */
 export interface DroneProfile extends DroneProfileRequired, DroneProfileOptional {
   // Unique identifiers
-  id: string;                    // UUID for profile
-  fcSerialNumber: string;        // FC serial number (unique drone ID)
+  id: string; // UUID for profile
+  fcSerialNumber: string; // FC serial number (unique drone ID)
 
   // Auto-detected from FC
   fcInfo: FCInfo;

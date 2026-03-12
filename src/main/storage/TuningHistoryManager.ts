@@ -62,6 +62,7 @@ export class TuningHistoryManager {
       verificationMetrics: session.verificationMetrics ?? null,
       verificationPidMetrics: session.verificationPidMetrics ?? null,
       transferFunctionMetrics: session.transferFunctionMetrics ?? null,
+      bfPidProfileIndex: session.bfPidProfileIndex,
     };
 
     const existing = await this.loadRecords(session.profileId);

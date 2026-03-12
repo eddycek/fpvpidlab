@@ -36,6 +36,7 @@ global.window.betaflight = {
   getBlackboxSettings: vi.fn(),
   getFeedforwardConfig: vi.fn().mockRejectedValue(new Error('Not connected')),
   fixBlackboxSettings: vi.fn(),
+  selectPidProfile: vi.fn().mockResolvedValue(undefined),
 
   // Snapshots
   createSnapshot: vi.fn(),

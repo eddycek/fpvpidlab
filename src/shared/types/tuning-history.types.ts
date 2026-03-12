@@ -187,4 +187,7 @@ export interface CompletedTuningRecord {
 
   /** Verification TF metrics (Flash Tune only — for before/after PID comparison) */
   verificationTransferFunctionMetrics?: TransferFunctionMetricsSummary | null;
+
+  /** BF PID profile used in this tuning session (0-based) */
+  bfPidProfileIndex?: number;
 }

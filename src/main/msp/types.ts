@@ -19,8 +19,9 @@ export enum MSPCommand {
   MSP_STATUS_EX = 150,
   MSP_UID = 160,
   MSP_SET_PID = 202,
+  MSP_SELECT_SETTING = 210,
   MSP_SET_BLACKBOX_CONFIG = 238,
-  MSP_EEPROM_WRITE = 250
+  MSP_EEPROM_WRITE = 250,
 }
 
 export interface MSPMessage {
@@ -42,5 +43,5 @@ export const MSP_PROTOCOL = {
   ERROR: 0x21, // '!'
   JUMBO_FRAME_MIN_SIZE: 0xff, // 255 - use jumbo frames for larger payloads
   MAX_PAYLOAD_SIZE: 256, // MSP v1 limit
-  MAX_JUMBO_PAYLOAD_SIZE: 8192 // MSP v2 jumbo frame limit
+  MAX_JUMBO_PAYLOAD_SIZE: 8192, // MSP v2 jumbo frame limit
 } as const;

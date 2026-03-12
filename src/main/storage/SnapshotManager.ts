@@ -64,6 +64,9 @@ export class SnapshotManager {
           ...(extraMetadata?.snapshotRole != null && {
             snapshotRole: extraMetadata.snapshotRole as 'pre-tuning' | 'post-tuning',
           }),
+          ...(fcInfo.pidProfileIndex != null && {
+            bfPidProfileIndex: fcInfo.pidProfileIndex,
+          }),
         },
       };
 

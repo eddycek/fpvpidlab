@@ -102,6 +102,7 @@ export enum IPCChannel {
   FC_GET_BLACKBOX_SETTINGS = 'fc:get-blackbox-settings',
   FC_GET_FEEDFORWARD_CONFIG = 'fc:get-feedforward-config',
   FC_FIX_BLACKBOX_SETTINGS = 'fc:fix-blackbox-settings',
+  FC_SELECT_PID_PROFILE = 'fc:select-pid-profile',
 
   // Snapshots
   SNAPSHOT_CREATE = 'snapshot:create',
@@ -195,6 +196,7 @@ export interface BetaflightAPI {
   getBlackboxSettings(): Promise<BlackboxSettings>;
   getFeedforwardConfig(): Promise<FeedforwardConfiguration>;
   fixBlackboxSettings(input: FixBlackboxSettingsInput): Promise<FixBlackboxSettingsResult>;
+  selectPidProfile(index: number): Promise<void>;
 
   // Snapshots
   createSnapshot(label?: string): Promise<ConfigurationSnapshot>;
@@ -265,7 +267,7 @@ export interface BetaflightAPI {
 
   // Tuning Session
   getTuningSession(): Promise<TuningSession | null>;
-  startTuningSession(tuningType?: TuningType): Promise<TuningSession>;
+  startTuningSession(tuningType?: TuningType, bfPidProfileIndex?: number): Promise<TuningSession>;
   updateTuningPhase(phase: TuningPhase, data?: Partial<TuningSession>): Promise<TuningSession>;
   resetTuningSession(): Promise<void>;
   onTuningSessionChanged(callback: (session: TuningSession | null) => void): () => void;

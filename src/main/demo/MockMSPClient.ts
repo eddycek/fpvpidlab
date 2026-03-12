@@ -102,6 +102,8 @@ export const DEMO_FC_INFO: FCInfo = {
   target: 'STM32F405',
   boardName: 'OMNIBUSF4SD',
   apiVersion: { protocol: 0, major: 1, minor: 46 },
+  pidProfileIndex: 0,
+  pidProfileCount: 4,
 };
 
 /** Standard 5" freestyle PID values */
@@ -191,6 +193,10 @@ export class MockMSPClient extends EventEmitter {
   private _mscModeActive = false;
   private _rebootPending = false;
   private _lastStorageType: 'flash' | 'sdcard' | 'none' = 'flash';
+  /** Current BF PID profile index (0-based) */
+  private _pidProfileIndex = 0;
+  /** Number of available BF PID profiles */
+  private _pidProfileCount = 4;
   /** Simulated flash state: true = has data after "flight" */
   private _flashHasData = false;
   /** Pre-generated demo BBL data (set by DemoDataGenerator) */
@@ -298,6 +304,7 @@ export class MockMSPClient extends EventEmitter {
     this.connection.appliedSettings.clear();
     this._flashHasData = false;
     this._demoBBLData = null;
+    this._pidProfileIndex = 0;
     this._stressSchedule.clear();
     logger.info('[DEMO] Demo state reset — starting from cycle 0');
   }
@@ -415,7 +422,11 @@ export class MockMSPClient extends EventEmitter {
   }
 
   async getFCInfo(): Promise<FCInfo> {
-    return { ...DEMO_FC_INFO };
+    return {
+      ...DEMO_FC_INFO,
+      pidProfileIndex: this._pidProfileIndex,
+      pidProfileCount: this._pidProfileCount,
+    };
   }
 
   async getFCSerialNumber(): Promise<string> {
@@ -754,6 +765,23 @@ export class MockMSPClient extends EventEmitter {
 
   clearRebootPending(): void {
     this._rebootPending = false;
+  }
+
+  async getStatusEx(): Promise<{ pidProfileIndex: number; pidProfileCount: number }> {
+    return {
+      pidProfileIndex: this._pidProfileIndex,
+      pidProfileCount: this._pidProfileCount,
+    };
+  }
+
+  async selectPidProfile(index: number): Promise<void> {
+    if (index < 0 || index >= this._pidProfileCount) {
+      throw new Error(
+        `Invalid PID profile index: ${index} (must be 0-${this._pidProfileCount - 1})`
+      );
+    }
+    this._pidProfileIndex = index;
+    logger.info(`[DEMO] Switched to PID profile ${index}`);
   }
 
   /**

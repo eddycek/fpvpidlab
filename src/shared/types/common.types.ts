@@ -32,6 +32,8 @@ export interface FCInfo {
   target: string;
   boardName: string;
   apiVersion: ApiVersionInfo;
+  pidProfileIndex?: number; // 0-based, from MSP_STATUS_EX byte 10
+  pidProfileCount?: number; // number of available PID profiles (typically 4 for BF 4.5+)
 }
 
 export interface Configuration {
@@ -53,6 +55,7 @@ export interface ConfigurationSnapshot {
     tuningSessionNumber?: number;
     tuningType?: 'filter' | 'pid' | 'quick';
     snapshotRole?: 'pre-tuning' | 'post-tuning';
+    bfPidProfileIndex?: number; // active BF PID profile when snapshot was created
   };
 }
 

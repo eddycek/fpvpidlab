@@ -131,6 +131,23 @@ export function registerFCInfoHandlers(deps: HandlerDependencies): void {
     }
   );
 
+  // FC_SELECT_PID_PROFILE
+  ipcMain.handle(
+    IPCChannel.FC_SELECT_PID_PROFILE,
+    async (_, index: number): Promise<IPCResponse<void>> => {
+      try {
+        if (!deps.mspClient) throw new Error('MSP client not initialized');
+        if (!deps.mspClient.isConnected()) throw new Error('Flight controller not connected');
+
+        await deps.mspClient.selectPidProfile(index);
+        return createResponse<void>(undefined);
+      } catch (error) {
+        logger.error('Failed to select PID profile:', error);
+        return createResponse<void>(undefined, getErrorMessage(error));
+      }
+    }
+  );
+
   // FC_FIX_BLACKBOX_SETTINGS
   ipcMain.handle(
     IPCChannel.FC_FIX_BLACKBOX_SETTINGS,

@@ -146,6 +146,16 @@ export class MSPClient extends EventEmitter {
       // Version gate: reject firmware below minimum supported version
       this.validateFirmwareVersion(fcInfo!);
 
+      // Read PID profile info from MSP_STATUS_EX
+      try {
+        const statusEx = await this.getStatusEx();
+        fcInfo!.pidProfileIndex = statusEx.pidProfileIndex;
+        fcInfo!.pidProfileCount = statusEx.pidProfileCount;
+      } catch (error) {
+        logger.warn('Failed to read MSP_STATUS_EX (PID profile info):', error);
+        // Non-fatal — leave fields undefined
+      }
+
       this.connectionStatus = {
         connected: true,
         portPath,
@@ -916,6 +926,46 @@ export class MSPClient extends EventEmitter {
   /**
    * Clear MSC mode flag after FC reconnects from MSC mode.
    */
+  /**
+   * Read PID profile index and count from MSP_STATUS_EX.
+   * Byte 10 = current PID profile index (0-based)
+   * Byte 11 = number of PID profiles
+   */
+  async getStatusEx(): Promise<{ pidProfileIndex: number; pidProfileCount: number }> {
+    const response = await this.connection.sendCommand(MSPCommand.MSP_STATUS_EX);
+
+    // MSP_STATUS_EX response is at least 16 bytes in BF 4.3+
+    if (response.data.length < 12) {
+      throw new MSPError('Invalid MSP_STATUS_EX response - expected at least 12 bytes');
+    }
+
+    const pidProfileIndex = response.data[10];
+    const pidProfileCount = response.data[11];
+
+    logger.info(`Status EX: PID profile ${pidProfileIndex}/${pidProfileCount}`);
+    return {
+      pidProfileIndex,
+      pidProfileCount: pidProfileCount > 0 ? pidProfileCount : 3, // fallback for old BF
+    };
+  }
+
+  /**
+   * Switch the active PID profile on the flight controller.
+   * Uses MSP_SELECT_SETTING (210) — immediate, no reboot required.
+   * @param index 0-based PID profile index
+   */
+  async selectPidProfile(index: number): Promise<void> {
+    if (index < 0 || index > 3) {
+      throw new MSPError(`Invalid PID profile index: ${index} (must be 0-3)`);
+    }
+
+    const payload = Buffer.alloc(1);
+    payload.writeUInt8(index, 0);
+    await this.connection.sendCommand(MSPCommand.MSP_SELECT_SETTING, payload);
+
+    logger.info(`Switched to PID profile ${index}`);
+  }
+
   clearMSCMode(): void {
     this._mscModeActive = false;
   }

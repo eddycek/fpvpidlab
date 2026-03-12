@@ -62,6 +62,19 @@ export function registerTuningHandlers(deps: HandlerDependencies): void {
         // exportCLIDiff() and does NOT exit — so any MSP commands after it
         // would time out (the FC only processes CLI input while in CLI mode).
 
+        // Stage 0: Ensure correct BF PID profile is selected (safety net)
+        if (profileManager && tuningSessionManager) {
+          const pId = profileManager.getCurrentProfileId();
+          if (pId) {
+            const session = await tuningSessionManager.getSession(pId);
+            if (session?.bfPidProfileIndex !== undefined) {
+              sendProgress({ stage: 'pid', message: 'Selecting PID profile...', percent: 2 });
+              await mspClient.selectPidProfile(session.bfPidProfileIndex);
+              logger.info(`Apply: ensured BF PID profile ${session.bfPidProfileIndex}`);
+            }
+          }
+        }
+
         // Stage 1: Apply PID recommendations via MSP (must happen before CLI)
         let appliedPIDs = 0;
         if (input.pidRecommendations.length > 0) {
@@ -251,7 +264,11 @@ export function registerTuningHandlers(deps: HandlerDependencies): void {
 
   ipcMain.handle(
     IPCChannel.TUNING_START_SESSION,
-    async (_event, tuningType?: TuningType): Promise<IPCResponse<TuningSession>> => {
+    async (
+      _event,
+      tuningType?: TuningType,
+      bfPidProfileIndex?: number
+    ): Promise<IPCResponse<TuningSession>> => {
       try {
         const resolvedType: TuningType = tuningType ?? TUNING_TYPE.FILTER;
 
@@ -261,6 +278,20 @@ export function registerTuningHandlers(deps: HandlerDependencies): void {
         const profileId = profileManager.getCurrentProfileId();
         if (!profileId) {
           return createResponse<TuningSession>(undefined, 'No active profile');
+        }
+
+        // Stage 0: Switch BF PID profile if requested (before snapshot and PID reads)
+        if (bfPidProfileIndex !== undefined && mspClient?.isConnected()) {
+          try {
+            await mspClient.selectPidProfile(bfPidProfileIndex);
+            logger.info(`Switched to BF PID profile ${bfPidProfileIndex} for tuning session`);
+          } catch (e) {
+            logger.error('Failed to switch PID profile:', e);
+            return createResponse<TuningSession>(
+              undefined,
+              `Failed to switch PID profile: ${getErrorMessage(e)}`
+            );
+          }
         }
 
         // Create safety snapshot before starting tuning
@@ -304,10 +335,11 @@ export function registerTuningHandlers(deps: HandlerDependencies): void {
             : resolvedType === TUNING_TYPE.PID
               ? TUNING_PHASE.PID_FLIGHT_PENDING
               : TUNING_PHASE.FILTER_FLIGHT_PENDING;
-        if (baselineSnapshotId) {
-          await tuningSessionManager.updatePhase(profileId, initialPhase, {
-            baselineSnapshotId,
-          });
+        const phaseData: Partial<TuningSession> = {};
+        if (baselineSnapshotId) phaseData.baselineSnapshotId = baselineSnapshotId;
+        if (bfPidProfileIndex !== undefined) phaseData.bfPidProfileIndex = bfPidProfileIndex;
+        if (Object.keys(phaseData).length > 0) {
+          await tuningSessionManager.updatePhase(profileId, initialPhase, phaseData);
         }
 
         const updated = await tuningSessionManager.getSession(profileId);

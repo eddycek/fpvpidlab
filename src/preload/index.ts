@@ -141,6 +141,13 @@ const betaflightAPI: BetaflightAPI = {
     return response.data;
   },
 
+  async selectPidProfile(index: number): Promise<void> {
+    const response = await ipcRenderer.invoke(IPCChannel.FC_SELECT_PID_PROFILE, index);
+    if (!response.success) {
+      throw new Error(response.error || 'Failed to select PID profile');
+    }
+  },
+
   // Snapshots
   async createSnapshot(label?: string): Promise<ConfigurationSnapshot> {
     const response = await ipcRenderer.invoke(IPCChannel.SNAPSHOT_CREATE, label);
@@ -570,8 +577,15 @@ const betaflightAPI: BetaflightAPI = {
     return response.data;
   },
 
-  async startTuningSession(tuningType?: TuningType): Promise<TuningSession> {
-    const response = await ipcRenderer.invoke(IPCChannel.TUNING_START_SESSION, tuningType);
+  async startTuningSession(
+    tuningType?: TuningType,
+    bfPidProfileIndex?: number
+  ): Promise<TuningSession> {
+    const response = await ipcRenderer.invoke(
+      IPCChannel.TUNING_START_SESSION,
+      tuningType,
+      bfPidProfileIndex
+    );
     if (!response.success) {
       throw new Error(response.error || 'Failed to start tuning session');
     }

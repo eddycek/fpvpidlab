@@ -595,4 +595,42 @@ describe('MockMSPClient', () => {
       expect(client.connection.appliedSettings.size).toBe(2);
     });
   });
+
+  describe('PID profile selection', () => {
+    it('getStatusEx returns default profile 0 with count 4', async () => {
+      const result = await client.getStatusEx();
+      expect(result.pidProfileIndex).toBe(0);
+      expect(result.pidProfileCount).toBe(4);
+    });
+
+    it('selectPidProfile changes active profile', async () => {
+      await client.selectPidProfile(2);
+      const result = await client.getStatusEx();
+      expect(result.pidProfileIndex).toBe(2);
+    });
+
+    it('selectPidProfile rejects out-of-range index', async () => {
+      await expect(client.selectPidProfile(4)).rejects.toThrow('Invalid PID profile index');
+      await expect(client.selectPidProfile(-1)).rejects.toThrow('Invalid PID profile index');
+    });
+
+    it('getFCInfo reflects current PID profile index', async () => {
+      await client.selectPidProfile(1);
+      const info = await client.getFCInfo();
+      expect(info.pidProfileIndex).toBe(1);
+      expect(info.pidProfileCount).toBe(4);
+    });
+
+    it('DEMO_FC_INFO has pidProfileIndex and pidProfileCount', () => {
+      expect(DEMO_FC_INFO.pidProfileIndex).toBe(0);
+      expect(DEMO_FC_INFO.pidProfileCount).toBe(4);
+    });
+
+    it('resetDemoState resets PID profile to 0', async () => {
+      await client.selectPidProfile(3);
+      client.resetDemoState();
+      const result = await client.getStatusEx();
+      expect(result.pidProfileIndex).toBe(0);
+    });
+  });
 });

@@ -1373,3 +1373,83 @@ describe('MSPClient.eraseBlackboxFlash — disconnect detection', () => {
     }
   });
 });
+
+// ─── getStatusEx ─────────────────────────────────────────────────────
+
+describe('MSPClient.getStatusEx', () => {
+  it('parses PID profile index and count from MSP_STATUS_EX', async () => {
+    const { client, sendCommand } = createClientWithStub();
+
+    // MSP_STATUS_EX response: at least 12 bytes
+    // Byte 10 = PID profile index, Byte 11 = PID profile count
+    const data = Buffer.alloc(16);
+    data[10] = 1; // profile index
+    data[11] = 4; // profile count
+
+    sendCommand.mockResolvedValue({
+      command: MSPCommand.MSP_STATUS_EX,
+      data,
+    });
+
+    const result = await client.getStatusEx();
+    expect(result.pidProfileIndex).toBe(1);
+    expect(result.pidProfileCount).toBe(4);
+  });
+
+  it('falls back to pidProfileCount=3 when FC returns 0', async () => {
+    const { client, sendCommand } = createClientWithStub();
+
+    const data = Buffer.alloc(16);
+    data[10] = 0;
+    data[11] = 0; // count = 0
+
+    sendCommand.mockResolvedValue({
+      command: MSPCommand.MSP_STATUS_EX,
+      data,
+    });
+
+    const result = await client.getStatusEx();
+    expect(result.pidProfileIndex).toBe(0);
+    expect(result.pidProfileCount).toBe(3);
+  });
+
+  it('throws on response shorter than 12 bytes', async () => {
+    const { client, sendCommand } = createClientWithStub();
+
+    sendCommand.mockResolvedValue({
+      command: MSPCommand.MSP_STATUS_EX,
+      data: Buffer.alloc(5),
+    });
+
+    await expect(client.getStatusEx()).rejects.toThrow('Invalid MSP_STATUS_EX response');
+  });
+});
+
+// ─── selectPidProfile ────────────────────────────────────────────────
+
+describe('MSPClient.selectPidProfile', () => {
+  it('sends MSP_SELECT_SETTING with correct payload', async () => {
+    const { client, sendCommand } = createClientWithStub();
+
+    sendCommand.mockResolvedValue({
+      command: MSPCommand.MSP_SELECT_SETTING,
+      data: Buffer.alloc(0),
+    });
+
+    await client.selectPidProfile(2);
+
+    expect(sendCommand).toHaveBeenCalledWith(MSPCommand.MSP_SELECT_SETTING, expect.any(Buffer));
+    const payload = sendCommand.mock.calls[0][1] as Buffer;
+    expect(payload[0]).toBe(2);
+  });
+
+  it('rejects invalid profile index < 0', async () => {
+    const { client } = createClientWithStub();
+    await expect(client.selectPidProfile(-1)).rejects.toThrow('Invalid PID profile index');
+  });
+
+  it('rejects invalid profile index > 3', async () => {
+    const { client } = createClientWithStub();
+    await expect(client.selectPidProfile(4)).rejects.toThrow('Invalid PID profile index');
+  });
+});
