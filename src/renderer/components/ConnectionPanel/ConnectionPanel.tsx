@@ -21,9 +21,8 @@ export function ConnectionPanel() {
 
     // If selected port no longer exists in the list, select first available
     if (ports.length > 0 && selectedPort) {
-      const portExists = ports.some(port => port.path === selectedPort);
+      const portExists = ports.some((port) => port.path === selectedPort);
       if (!portExists) {
-        console.log(`Selected port ${selectedPort} no longer exists, selecting ${ports[0].path}`);
         setSelectedPort(ports[0].path);
       }
     }
@@ -39,7 +38,9 @@ export function ConnectionPanel() {
     if (wasConnectedRef.current && !status.connected) {
       setReconnectCooldown(3);
       // Rescan ports after disconnect to detect FC when it comes back
-      setTimeout(() => { scanPorts(); }, 1500);
+      setTimeout(() => {
+        scanPorts();
+      }, 1500);
     }
     wasConnectedRef.current = status.connected;
   }, [status.connected, scanPorts]);
@@ -70,15 +71,18 @@ export function ConnectionPanel() {
 
       {error && <div className="error">{error}</div>}
       {reconnectCooldown > 0 && (
-        <div className="info" style={{
-          padding: '8px 12px',
-          backgroundColor: '#1e3a5f',
-          border: '1px solid #2563eb',
-          borderRadius: '4px',
-          marginBottom: '12px',
-          fontSize: '13px',
-          color: '#93c5fd'
-        }}>
+        <div
+          className="info"
+          style={{
+            padding: '8px 12px',
+            backgroundColor: '#1e3a5f',
+            border: '1px solid #2563eb',
+            borderRadius: '4px',
+            marginBottom: '12px',
+            fontSize: '13px',
+            color: '#93c5fd',
+          }}
+        >
           Wait {reconnectCooldown} second{reconnectCooldown !== 1 ? 's' : ''} before reconnecting...
         </div>
       )}
@@ -114,7 +118,9 @@ export function ConnectionPanel() {
         <div className="connection-status">
           <span className="status-label">Status: </span>
           {status.connected ? (
-            <span className="status-connected">● Connected <span className="connection-port-info">{selectedPort}</span></span>
+            <span className="status-connected">
+              ● Connected <span className="connection-port-info">{selectedPort}</span>
+            </span>
           ) : (
             <span className="status-disconnected">Disconnected</span>
           )}
@@ -122,11 +128,7 @@ export function ConnectionPanel() {
 
         <div className="connection-actions">
           {status.connected ? (
-            <button
-              className="danger"
-              onClick={handleDisconnect}
-              disabled={loading}
-            >
+            <button className="danger" onClick={handleDisconnect} disabled={loading}>
               {loading ? 'Disconnecting...' : 'Disconnect'}
             </button>
           ) : (
@@ -135,7 +137,11 @@ export function ConnectionPanel() {
               onClick={handleConnect}
               disabled={!selectedPort || loading || ports.length === 0 || reconnectCooldown > 0}
             >
-              {loading ? 'Connecting...' : reconnectCooldown > 0 ? `Wait ${reconnectCooldown}s` : 'Connect'}
+              {loading
+                ? 'Connecting...'
+                : reconnectCooldown > 0
+                  ? `Wait ${reconnectCooldown}s`
+                  : 'Connect'}
             </button>
           )}
         </div>

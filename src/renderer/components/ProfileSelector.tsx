@@ -33,7 +33,6 @@ export function ProfileSelector() {
     } else {
       // Prevent profile switching when FC is connected
       if (connectionStatus.connected) {
-        console.log('Cannot switch profiles while FC is connected');
         return;
       }
 
@@ -92,9 +91,6 @@ export function ProfileSelector() {
   };
 
   const handleExport = async (id: string) => {
-    // In Electron, we would use dialog to get save path
-    // For now, just log
-    console.log('Export profile:', id);
     // TODO: Implement export with file dialog
     alert('Export functionality will be implemented with file dialog');
   };

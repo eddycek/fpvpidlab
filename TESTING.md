@@ -167,7 +167,7 @@ npm run test:ui           # Visual interface with DOM snapshots
 
 ## Test Inventory
 
-**Total: 2418 unit tests across 118 files + 29 Playwright E2E tests across 6 spec files** (last verified: March 12, 2026)
+**Total: 2420 unit tests across 118 files + 30 Playwright E2E tests across 6 spec files** (last verified: March 12, 2026)
 
 ### UI Components
 
@@ -207,7 +207,7 @@ npm run test:ui           # Visual interface with DOM snapshots
 | `TuningHistory/TuningCompletionSummary.test.tsx` | 20 | Completion summary with/without verification, noise chart, spectrogram comparison (Filter Tune), step response comparison (PID Tune), changes, PID metrics, actions, quality score badge with tier label, re-analyze button, mode-aware titles, smart suggestion buttons |
 | `TuningHistory/TuningHistoryPanel.test.tsx` | 18 | History list, expand/collapse, detail view with duration/flights, empty/loading states, quality score badge with tier label, trend chart, re-analyze verification, mode-aware labels |
 | `TuningHistory/VerificationSessionModal.test.tsx` | 7 | Auto-analyze single session, multi-session picker, reverse order, cancel, error/parsing states |
-| `TuningHistory/QualityTrendChart.test.tsx` | 5 | Trend chart rendering, minimum data threshold, null score handling |
+| `TuningHistory/QualityTrendChart.test.tsx` | 7 | Trend chart rendering, minimum data threshold, null score handling, per-type colored lines, legend |
 | `TuningHistory/SpectrogramComparisonChart.test.tsx` | 5 | Side-by-side spectrogram comparison, before/after labels, empty states, compact data rendering |
 | `TuningHistory/StepResponseComparison.test.tsx` | 6 | Before/after step response metrics, per-axis comparison, delta indicators, empty states |
 | `ProfileWizard.test.tsx` | 6 | Profile creation wizard, flight style selector, preset mapping |
@@ -333,12 +333,6 @@ npm run test:ui           # Visual interface with DOM snapshots
 | `analysis/ThrottleTFAnalyzer.test.ts` | 8 | Per-band TF analysis, throttle binning, variance computation, TPA warning, band boundaries |
 | `analysis/AnalysisPipeline.realdata.test.ts` | 20 | End-to-end filter+PID analysis with bf45-reference fixture and real_flight.bbl, safety bounds, determinism, performance |
 
-### E2E Workflow Tests
-
-| File | Tests | Description |
-|------|-------|-------------|
-| `e2e/tuningWorkflow.e2e.test.ts` | 30 | Profile+connection workflow, snapshot CRUD+restore, tuning session lifecycle, apply recommendations 4-stage ordering, error recovery, BB settings fix, full tuning cycle |
-
 ### Header Validation
 
 | File | Tests | Description |
@@ -354,7 +348,7 @@ npm run test:ui           # Visual interface with DOM snapshots
 | `shared/constants.test.ts` | 7 | Preset profile flight style mapping validation |
 | `shared/types/profile.types.test.ts` | 5 | FlightStyle type compilation, DroneProfileOptional inheritance |
 
-### Header Validation
+### Header Validation & Constants
 
 | File | Tests | Description |
 |------|-------|-------------|

@@ -181,10 +181,7 @@ export function ProfileWizard({ fcSerial, fcInfo, onComplete }: ProfileWizardPro
     </div>
   );
 
-  // Temporarily render directly without portal for debugging
-  console.log('ProfileWizard: Rendering...');
   return modalContent;
-  // return createPortal(modalContent, document.body);
 }
 
 // Method selection step
