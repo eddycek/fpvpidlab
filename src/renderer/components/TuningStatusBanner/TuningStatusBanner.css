@@ -36,6 +36,19 @@
   border: 1px solid rgba(168, 85, 247, 0.3);
 }
 
+.tuning-profile-badge {
+  font-size: 10px;
+  font-weight: 500;
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-right: 12px;
+  margin-bottom: 18px;
+  white-space: nowrap;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-secondary, #aaa);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
 .tuning-status-step {
   display: flex;
   flex-direction: column;

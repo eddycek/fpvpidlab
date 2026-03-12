@@ -403,6 +403,9 @@ export function TuningStatusBanner({
         >
           {TUNING_TYPE_LABELS[session.tuningType ?? TUNING_TYPE.FILTER]}
         </span>
+        {session.bfPidProfileIndex != null && (
+          <span className="tuning-profile-badge">Profile {session.bfPidProfileIndex + 1}</span>
+        )}
         {STEP_LABELS.map((label, i) => {
           const isDone = i < activeStepIndex;
           const isCurrent = i === activeStepIndex;

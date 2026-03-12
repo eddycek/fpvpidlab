@@ -70,6 +70,7 @@ function AppContent() {
   const [fixingSettings, setFixingSettings] = useState(false);
   const [showBannerFixConfirm, setShowBannerFixConfirm] = useState(false);
   const [fcVersion, setFcVersion] = useState('');
+  const [connectedFcInfo, setConnectedFcInfo] = useState<FCInfo | null>(null);
   const [analyzingVerification, setAnalyzingVerification] = useState(false);
   const [bbRefreshKey, setBbRefreshKey] = useState(0);
   const [storageType, setStorageType] = useState<BlackboxStorageType>('flash');
@@ -109,6 +110,7 @@ function AppContent() {
   const fetchBBSettings = (connStatus: ConnectionStatus) => {
     if (connStatus.connected) {
       setFcVersion(connStatus.fcInfo?.version || '');
+      setConnectedFcInfo(connStatus.fcInfo ?? null);
       window.betaflight
         .getBlackboxSettings()
         .then((s) => setBbSettings(s))
@@ -116,6 +118,7 @@ function AppContent() {
     } else {
       setBbSettings(null);
       setFcVersion('');
+      setConnectedFcInfo(null);
     }
   };
 
@@ -750,16 +753,19 @@ function AppContent() {
 
       {showStartTuningModal && (
         <StartTuningModal
-          onStart={async (tuningType) => {
+          onStart={async (tuningType, bfPidProfileIndex) => {
             setShowStartTuningModal(false);
             try {
               setErasedForPhase(null);
-              await tuning.startSession(tuningType);
+              await tuning.startSession(tuningType, bfPidProfileIndex);
             } catch (err) {
               toast.error(err instanceof Error ? err.message : 'Failed to start tuning session');
             }
           }}
           onCancel={() => setShowStartTuningModal(false)}
+          fcInfo={connectedFcInfo ?? undefined}
+          defaultPidProfileIndex={currentProfile?.bfPidProfileIndex}
+          pidProfileLabels={currentProfile?.bfPidProfileLabels}
         />
       )}
 

@@ -1,14 +1,36 @@
-import React from 'react';
+import React, { useState } from 'react';
 import type { TuningType } from '@shared/types/tuning.types';
+import type { FCInfo } from '@shared/types/common.types';
 import { TUNING_TYPE, TUNING_TYPE_LABELS } from '@shared/constants';
 import './StartTuningModal.css';
 
 interface StartTuningModalProps {
-  onStart: (tuningType: TuningType) => void;
+  onStart: (tuningType: TuningType, bfPidProfileIndex?: number) => void;
   onCancel: () => void;
+  fcInfo?: FCInfo;
+  defaultPidProfileIndex?: number;
+  pidProfileLabels?: Record<number, string>;
 }
 
-export function StartTuningModal({ onStart, onCancel }: StartTuningModalProps) {
+export function StartTuningModal({
+  onStart,
+  onCancel,
+  fcInfo,
+  defaultPidProfileIndex,
+  pidProfileLabels,
+}: StartTuningModalProps) {
+  const profileCount = fcInfo?.pidProfileCount ?? 0;
+  const currentFcProfile = fcInfo?.pidProfileIndex ?? 0;
+  const showProfileSelector = profileCount > 1;
+
+  const [selectedProfile, setSelectedProfile] = useState<number>(
+    defaultPidProfileIndex ?? currentFcProfile
+  );
+
+  const handleStart = (tuningType: TuningType) => {
+    onStart(tuningType, showProfileSelector ? selectedProfile : undefined);
+  };
+
   return (
     <div className="start-tuning-overlay" onClick={onCancel}>
       <div className="start-tuning-modal" onClick={(e) => e.stopPropagation()}>
@@ -17,8 +39,31 @@ export function StartTuningModal({ onStart, onCancel }: StartTuningModalProps) {
           Each mode uses a dedicated test flight + a verification flight to confirm results.
         </p>
 
+        {showProfileSelector && (
+          <div className="start-tuning-profile-section">
+            <label className="start-tuning-profile-label">BF PID Profile</label>
+            <div className="start-tuning-profile-selector">
+              {Array.from({ length: profileCount }, (_, i) => {
+                const label = pidProfileLabels?.[i];
+                const isCurrent = i === currentFcProfile;
+                return (
+                  <button
+                    key={i}
+                    className={`start-tuning-profile-btn${selectedProfile === i ? ' active' : ''}`}
+                    onClick={() => setSelectedProfile(i)}
+                  >
+                    <span className="start-tuning-profile-num">{i + 1}</span>
+                    {label && <span className="start-tuning-profile-name">{label}</span>}
+                    {isCurrent && <span className="start-tuning-profile-current">current</span>}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         <div className="start-tuning-options">
-          <button className="start-tuning-option" onClick={() => onStart(TUNING_TYPE.FILTER)}>
+          <button className="start-tuning-option" onClick={() => handleStart(TUNING_TYPE.FILTER)}>
             <div className="start-tuning-option-header">
               <span className="start-tuning-option-title">
                 {TUNING_TYPE_LABELS[TUNING_TYPE.FILTER]}
@@ -32,7 +77,7 @@ export function StartTuningModal({ onStart, onCancel }: StartTuningModalProps) {
             </p>
           </button>
 
-          <button className="start-tuning-option" onClick={() => onStart(TUNING_TYPE.PID)}>
+          <button className="start-tuning-option" onClick={() => handleStart(TUNING_TYPE.PID)}>
             <div className="start-tuning-option-header">
               <span className="start-tuning-option-title">
                 {TUNING_TYPE_LABELS[TUNING_TYPE.PID]}
@@ -45,7 +90,7 @@ export function StartTuningModal({ onStart, onCancel }: StartTuningModalProps) {
             </p>
           </button>
 
-          <button className="start-tuning-option" onClick={() => onStart(TUNING_TYPE.FLASH)}>
+          <button className="start-tuning-option" onClick={() => handleStart(TUNING_TYPE.FLASH)}>
             <div className="start-tuning-option-header">
               <span className="start-tuning-option-title">
                 {TUNING_TYPE_LABELS[TUNING_TYPE.FLASH]}

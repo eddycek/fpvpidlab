@@ -114,6 +114,15 @@ export function FCInfoDisplay() {
               <span className="info-value">
                 {info.apiVersion.major}.{info.apiVersion.minor}
               </span>
+
+              {info.pidProfileIndex != null && info.pidProfileCount != null && (
+                <>
+                  <span className="info-label">PID Profile:</span>
+                  <span className="info-value">
+                    {info.pidProfileIndex + 1} / {info.pidProfileCount}
+                  </span>
+                </>
+              )}
             </div>
 
             {bbSettings && (

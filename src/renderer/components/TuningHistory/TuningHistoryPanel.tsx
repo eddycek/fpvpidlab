@@ -94,6 +94,11 @@ export function TuningHistoryPanel({
                     {TUNING_TYPE_LABELS[record.tuningType ?? TUNING_TYPE.FILTER] ??
                       record.tuningType}
                   </span>
+                  {record.bfPidProfileIndex != null && (
+                    <span className="tuning-history-profile-badge">
+                      P{record.bfPidProfileIndex + 1}
+                    </span>
+                  )}
                   {score && (
                     <span className={`quality-score-badge quality-score-${score.tier}`}>
                       {score.overall} {TIER_LABELS[score.tier]}

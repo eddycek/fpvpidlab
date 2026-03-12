@@ -68,6 +68,12 @@ export function TuningSessionDetail({ record, onReanalyzeVerification }: TuningS
         <span>
           {flights} flight{flights !== 1 ? 's' : ''}
         </span>
+        {record.bfPidProfileIndex != null && (
+          <>
+            <span className="completion-meta-sep">{'\u2022'}</span>
+            <span>PID Profile {record.bfPidProfileIndex + 1}</span>
+          </>
+        )}
       </div>
 
       {score && (
