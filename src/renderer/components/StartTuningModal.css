@@ -29,6 +29,76 @@
   color: var(--text-secondary, #aaa);
 }
 
+.start-tuning-profile-section {
+  margin-bottom: 16px;
+  padding: 12px;
+  background: var(--bg-tertiary, #2a2a2a);
+  border-radius: 8px;
+  border: 1px solid var(--border-color, #444);
+}
+
+.start-tuning-profile-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary, #aaa);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.start-tuning-profile-selector {
+  display: flex;
+  gap: 6px;
+}
+
+.start-tuning-profile-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 4px;
+  background: var(--bg-secondary, #1e1e1e);
+  border: 1px solid var(--border-color, #444);
+  border-radius: 6px;
+  cursor: pointer;
+  transition:
+    border-color 0.15s,
+    background 0.15s;
+}
+
+.start-tuning-profile-btn:hover {
+  border-color: var(--accent-color, #4fc3f7);
+}
+
+.start-tuning-profile-btn.active {
+  border-color: var(--accent-color, #4fc3f7);
+  background: rgba(79, 195, 247, 0.1);
+}
+
+.start-tuning-profile-num {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary, #fff);
+}
+
+.start-tuning-profile-name {
+  font-size: 10px;
+  color: var(--text-secondary, #aaa);
+  max-width: 80px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.start-tuning-profile-current {
+  font-size: 9px;
+  color: var(--accent-color, #4fc3f7);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
 .start-tuning-options {
   display: flex;
   flex-direction: column;

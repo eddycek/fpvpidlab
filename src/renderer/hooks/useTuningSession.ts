@@ -4,7 +4,7 @@ import type { TuningSession, TuningPhase, TuningType } from '@shared/types/tunin
 export interface UseTuningSessionReturn {
   session: TuningSession | null;
   loading: boolean;
-  startSession: (tuningType?: TuningType) => Promise<void>;
+  startSession: (tuningType?: TuningType, bfPidProfileIndex?: number) => Promise<void>;
   resetSession: () => Promise<void>;
   updatePhase: (phase: TuningPhase, data?: Partial<TuningSession>) => Promise<void>;
 }
@@ -44,8 +44,8 @@ export function useTuningSession(): UseTuningSessionReturn {
     });
   }, [reload]);
 
-  const startSession = useCallback(async (tuningType?: TuningType) => {
-    const s = await window.betaflight.startTuningSession(tuningType);
+  const startSession = useCallback(async (tuningType?: TuningType, bfPidProfileIndex?: number) => {
+    const s = await window.betaflight.startTuningSession(tuningType, bfPidProfileIndex);
     setSession(s);
   }, []);
 
