@@ -53,6 +53,7 @@ Connecting with BF 4.2 or earlier will show an error and auto-disconnect. See [B
 - USB serial connection to Betaflight flight controllers (MSP protocol)
 - Multi-quad profile management with automatic FC detection by serial number
 - Profile auto-selection on connect, profile locking while FC is connected
+- BF PID profile selection — choose which Betaflight PID profile slot (1–4) to tune into
 - 10 preset profiles (Tiny Whoop, 5" Freestyle, 7" Long Range, etc.)
 - Cross-platform (Windows, macOS, Linux)
 
@@ -287,7 +288,7 @@ npm run rebuild                      # Rebuild native modules (serialport)
 
 All UI changes must include tests. Tests automatically run before commits. Coverage thresholds enforced: 80% lines/functions/statements, 75% branches.
 
-**Unit tests:** 2427 tests across 118 files — MSP protocol, storage managers, IPC handlers, UI components, hooks, BBL parser fuzz, analysis pipeline validation.
+**Unit tests:** 2445 tests across 118 files — MSP protocol, storage managers, IPC handlers, UI components, hooks, BBL parser fuzz, analysis pipeline validation.
 
 **Playwright E2E:** 30 tests across 6 spec files — launches real Electron app in demo mode, walks through complete tuning cycles (Filter Tune, PID Tune, Flash Tune, and stress-test edge cases).
 

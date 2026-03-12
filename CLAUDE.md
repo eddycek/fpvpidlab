@@ -138,6 +138,7 @@ npm run rebuild
 - Connection requires 500ms stabilization delay after port open
 - Retry logic: 2 attempts with reset between failures
 - **Version gate**: `validateFirmwareVersion()` checks API version on connect — rejects BF < 4.3 (API 1.44) with `UnsupportedVersionError`, auto-disconnects
+- **BF PID profile selection**: `MSP_SELECT_SETTING` (210) switches active PID profile (0-indexed). `getStatusEx()` reads current `pidProfileIndex` and `pidProfileCount` from FC. FCInfo carries these fields.
 
 ### Betaflight Version Compatibility
 
@@ -160,7 +161,7 @@ IPC handlers are split into domain modules under `src/main/ipc/handlers/`:
 | `types.ts` | — | `HandlerDependencies` interface, `createResponse`, `parseDiffSetting` |
 | `events.ts` | — | 7 event broadcast functions |
 | `connectionHandlers.ts` | 6 | Port scanning, connect, disconnect, status, demo mode, reset demo |
-| `fcInfoHandlers.ts` | 5 | FC info, CLI export, BB settings, FF config, fix settings |
+| `fcInfoHandlers.ts` | 6 | FC info, CLI export, BB settings, FF config, fix settings, BF PID profile selection |
 | `snapshotHandlers.ts` | 6 | Snapshot CRUD, export, restore |
 | `profileHandlers.ts` | 10 | Profile CRUD, presets, FC serial |
 | `pidHandlers.ts` | 3 | PID get/set/save |
@@ -303,8 +304,9 @@ Three tuning modes: **Filter Tune** (2 flights: analysis + verification), **PID 
 
 - **TuningSessionManager** (`src/main/storage/`): CRUD for per-profile session files at `{userData}/data/tuning/{profileId}.json`
 - **useTuningSession hook**: Manages session lifecycle with IPC and event subscription
-- **TuningStatusBanner**: Dashboard banner showing current phase, 4-step indicator (Prepare → Flight → Tune → Verify), action buttons
+- **TuningStatusBanner**: Dashboard banner showing current phase, 4-step indicator (Prepare → Flight → Tune → Verify), action buttons, BF PID profile badge
 - **TuningMode**: `'filter' | 'pid' | 'quick'` — wizard components adapt UI/flow per mode
+- **StartTuningModal**: Mode selection (Filter Tune/PID Tune/Flash Tune) with BF PID profile selector when FC has multiple profiles. Selected profile stored on `TuningSession.bfPidProfileIndex`
 - **Verification flow** (mandatory): After apply, user clicks "Erase & Verify" → fly verification flight → download → analyze verification → completed. Filter Tune: throttle sweep → spectrogram comparison. PID Tune: stick snaps → step response comparison. Flash Tune: hover → noise comparison.
 - **Archive on completion**: When phase transitions to `completed`, session is archived to `TuningHistoryManager` before becoming dismissable
 - IPC: `TUNING_GET_SESSION`, `TUNING_START_SESSION`, `TUNING_UPDATE_PHASE`, `TUNING_RESET_SESSION`, `TUNING_GET_HISTORY`, `TUNING_UPDATE_VERIFICATION`, `TUNING_UPDATE_HISTORY_VERIFICATION` + `EVENT_TUNING_SESSION_CHANGED`
@@ -515,7 +517,7 @@ await waitFor(() => {
 - When no tuning session is active, `BlackboxStatus` shows full functionality
 
 ### FC Info Blackbox Diagnostics
-- `FCInfoDisplay` shows `debug_mode` and `logging_rate` on the right side with ✓/⚠ indicators
+- `FCInfoDisplay` shows `debug_mode` and `logging_rate` on the right side with ✓/⚠ indicators, plus `PID Profile X/Y` when FC reports multiple PID profiles
 - Settings read from baseline snapshot CLI diff via `FC_GET_BLACKBOX_SETTINGS` IPC (not from live CLI session)
 - If setting not in diff → at BF default (debug_mode=NONE → warning, blackbox_sample_rate=1 → 4kHz OK)
 - Logging rate: `8000 / pid_process_denom / 2^blackbox_sample_rate`

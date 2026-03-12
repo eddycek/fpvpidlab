@@ -1,6 +1,6 @@
 # Architecture Overview
 
-**Last Updated:** March 12, 2026 | **Phase 4 Complete, Phase 6 Complete** | **2427 unit tests, 118 files + 30 Playwright E2E tests**
+**Last Updated:** March 12, 2026 | **Phase 4 Complete, Phase 6 Complete** | **2445 unit tests, 118 files + 30 Playwright E2E tests**
 
 ---
 
@@ -37,7 +37,7 @@
 │  ┌───────────────────────────────┼──────────────────────────────────────┐  │
 │  │              Preload Script (contextBridge, 527 lines)              │  │
 │  └───────────────────────────────┼──────────────────────────────────────┘  │
-│                                  │ IPC (50 channels, 14 event types)       │
+│                                  │ IPC (51 channels, 14 event types)       │
 │                                  │                                         │
 │  ┌───────────────────────────────┼──────────────────────────────────────┐  │
 │  │                     Main Process (Node.js)                          │  │
@@ -130,7 +130,7 @@ If tuning session exists AND phase is filter_flight_pending, pid_flight_pending,
 | `MSPConnection.ts` | 309 | Serial port handling, CLI mode |
 | `MSPProtocol.ts` | 229 | MSP v1 packet encoding/decoding |
 | `cliUtils.ts` | — | CLI command parsing utilities |
-| `commands.ts` | 16 | MSP command enum (21 commands) |
+| `commands.ts` | 16 | MSP command enum (23 commands) |
 | `types.ts` | 44 | MSP type definitions |
 
 #### MSP Protocol (v1)
@@ -158,8 +158,10 @@ Jumbo: auto-upgraded when payload > 255 bytes (for flash reads)
 | `MSP_FILTER_CONFIG` | 92 | Read current filter settings (47+ bytes, BF 4.3+) — includes RPM filter (bytes 43-44) and dynamic notch (bytes 39, 47) |
 | `MSP_PID_ADVANCED` | 94 | Read feedforward configuration (45 bytes: boost, per-axis gains, smoothing, jitter, transition, max rate limit) |
 | `MSP_PID` | 112 | Read PID configuration (9 bytes: 3 axes × 3 terms) |
+| `MSP_STATUS_EX` | 150 | Extended status (PID profile index, profile count) |
 | `MSP_UID` | 160 | FC unique ID (96-bit, for profile matching) |
 | `MSP_SET_PID` | 202 | Write PID configuration |
+| `MSP_SELECT_SETTING` | 210 | Select BF PID profile (0-indexed) |
 
 #### MSPConnection — CLI Mode Handling
 
@@ -181,7 +183,9 @@ Jumbo: auto-upgraded when payload > 255 bytes (for flash reads)
 - `disconnect()` — close with 1s backend delay for port release
 - Cooldown: 3s UI timer after disconnect prevents "FC not responding"
 
-**FC info:** `getFCInfo()` → composite of `getApiVersion()`, `getFCVariant()`, `getFCVersion()`, `getBoardInfo()`
+**FC info:** `getFCInfo()` → composite of `getApiVersion()`, `getFCVariant()`, `getFCVersion()`, `getBoardInfo()`. `getStatusEx()` reads current PID profile index and count.
+
+**PID profile selection:** `selectPIDProfile(index)` via `MSP_SELECT_SETTING` (210) switches the active BF PID profile (0-indexed). Used before tuning to target a specific profile slot.
 
 **Configuration:** `exportCLIDiff()` / `exportCLIDump()` — enter CLI, run `diff all` / `dump`, stay in CLI mode (caller decides when to exit)
 
@@ -437,7 +441,9 @@ DroneProfile {
   lastConnected?: string,
   connectionCount: number,
   snapshotIds: string[],         // Links to owned snapshots
-  baselineSnapshotId?: string
+  baselineSnapshotId?: string,
+  bfPidProfileIndex?: number,    // Last-used BF PID profile (0-indexed)
+  bfPidProfileLabels?: string[]  // User labels for each BF PID profile slot
 }
 ```
 
@@ -458,7 +464,8 @@ ConfigurationSnapshot {
     createdBy: string,
     tuningSessionNumber?: number,   // Session counter for contextual labels
     tuningType?: 'filter' | 'pid' | 'quick', // Filter Tune, PID Tune, or Flash Tune
-    snapshotRole?: 'pre-tuning' | 'post-tuning'  // Role badges (orange/green)
+    snapshotRole?: 'pre-tuning' | 'post-tuning',  // Role badges (orange/green)
+    bfPidProfileIndex?: number   // BF PID profile active when snapshot was taken
   }
 }
 ```
@@ -482,7 +489,8 @@ TuningSession {
   postTuningSnapshotId?: string,
   filterMetrics?: FilterMetricsSummary,
   pidMetrics?: PIDMetricsSummary,
-  verificationMetrics?: FilterMetricsSummary
+  verificationMetrics?: FilterMetricsSummary,
+  bfPidProfileIndex?: number     // BF PID profile targeted by this session (0-indexed)
 }
 ```
 
@@ -490,12 +498,12 @@ TuningSession {
 
 ### IPC Layer (`src/main/ipc/`)
 
-**50 IPC channels** organized by domain:
+**51 IPC channels** organized by domain:
 
 | Domain | Channels | Key Operations |
 |--------|----------|---------------|
 | Connection (6) | `list_ports`, `connect`, `disconnect`, `get_status`, `is_demo_mode`, `reset_demo` | Port scanning, connect/disconnect, demo mode |
-| FC Info (5) | `get_info`, `export_cli`, `get_blackbox_settings`, `get_feedforward_config`, `fix_blackbox_settings` | FC data, CLI export, FF config, BB settings fix |
+| FC Info (6) | `get_info`, `export_cli`, `get_blackbox_settings`, `get_feedforward_config`, `fix_blackbox_settings`, `select_pid_profile` | FC data, CLI export, FF config, BB settings fix, BF PID profile selection |
 | Profiles (10) | `create`, `create_from_preset`, `update`, `delete`, `list`, `get`, `get_current`, `set_current`, `export`, `get_fc_serial` | Full profile CRUD |
 | Snapshots (6) | `create`, `list`, `delete`, `export`, `load`, `restore` | Snapshot CRUD + rollback |
 | Blackbox (9) | `get_info`, `download_log`, `list_logs`, `delete_log`, `erase_flash`, `open_folder`, `test_read`, `parse_log`, `import_log` | Flash ops + parsing + import |
@@ -795,7 +803,7 @@ Hardware error (FC timeout, USB disconnect)
 
 | File | Key Types |
 |------|-----------|
-| `common.types.ts` | `FCInfo`, `ConnectionStatus`, `PortInfo`, `ConfigurationSnapshot`, `SnapshotMetadata` |
+| `common.types.ts` | `FCInfo` (includes `pidProfileIndex`, `pidProfileCount`), `ConnectionStatus`, `PortInfo`, `ConfigurationSnapshot`, `SnapshotMetadata` |
 | `profile.types.ts` | `DroneProfile`, `DroneProfileMetadata`, `ProfileCreationInput`, `DroneSize`, `BatteryType`, `FlightStyle` |
 | `pid.types.ts` | `PIDTerm { P, I, D }`, `PIDFTerm extends PIDTerm { F }`, `PIDConfiguration`, `FeedforwardConfiguration` |
 | `blackbox.types.ts` | `BlackboxInfo`, `BlackboxParseResult`, `BlackboxFlightData`, `BBLLogHeader`, `BBLEncoding`, `BBLPredictor` |
@@ -815,7 +823,7 @@ Hardware error (FC timeout, USB disconnect)
 
 ## Testing Strategy
 
-**2427 unit tests across 118 files + 30 Playwright E2E tests**. See [TESTING.md](./TESTING.md) for complete inventory.
+**2445 unit tests across 118 files + 30 Playwright E2E tests**. See [TESTING.md](./TESTING.md) for complete inventory.
 
 | Area | Files | Tests |
 |------|-------|-------|
@@ -823,15 +831,15 @@ Hardware error (FC timeout, USB disconnect)
 | FFT Analysis (+ Data Quality + Spectrogram + Delay) | 8 | 226 |
 | Step Response + PID + TF + CrossAxis + PropWash + DTerm + Bayesian | 10 | 310 |
 | Header Validation + Constants | 2 | 31 |
-| MSP Protocol & Client | 4 | 178 |
+| MSP Protocol & Client | 4 | 186 |
 | MSC (Mass Storage) | 2 | 45 |
 | Storage Managers | 7 | 127 |
 | IPC Handlers | 1 | 109 |
-| UI Components + Charts + Contexts | 46 | 682 |
+| UI Components + Charts + Contexts | 46 | 696 |
 | React Hooks + Utils | 14 | 171 |
 | Shared Constants & Utils | 4 | 85 |
 | E2E Workflows (Vitest) | 1 | 30 |
-| Demo Mode (Vitest) | 2 | 73 |
+| Demo Mode (Vitest) | 2 | 79 |
 | **Playwright E2E** | **6** | **30** |
 
 **Pre-commit hook** (husky + lint-staged) blocks commits when tests fail. All async UI tests use `waitFor()`. Mock layer: `src/renderer/test/setup.ts` mocks entire `window.betaflight` API.

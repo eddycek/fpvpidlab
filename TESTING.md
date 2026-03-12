@@ -167,7 +167,7 @@ npm run test:ui           # Visual interface with DOM snapshots
 
 ## Test Inventory
 
-**Total: 2427 unit tests across 118 files + 30 Playwright E2E tests across 6 spec files** (last verified: March 12, 2026)
+**Total: 2445 unit tests across 118 files + 30 Playwright E2E tests across 6 spec files** (last verified: March 12, 2026)
 
 ### UI Components
 
@@ -185,7 +185,7 @@ npm run test:ui           # Visual interface with DOM snapshots
 | `SnapshotManager/snapshotDiffUtils.test.ts` | 24 | CLI diff parsing, change computation |
 | `Toast/Toast.test.tsx` | 14 | Toast notification rendering and lifecycle |
 | `Toast/ToastContainer.test.tsx` | 6 | Toast container layout and stacking |
-| `StartTuningModal.test.tsx` | 8 | Start tuning modal, 3-mode selection (Filter Tune/PID Tune/Flash Tune), "Start here" badge, cancel |
+| `StartTuningModal.test.tsx` | 22 | Start tuning modal, 3-mode selection (Filter Tune/PID Tune/Flash Tune), "Start here" badge, cancel, BF PID profile selector (display, selection, labels, persistence) |
 | `TuningStatusBanner/TuningStatusBanner.test.tsx` | 67 | Workflow banner, unified 4-step indicator, actions, downloading, applied phases, BB settings pre-flight warning, filter/PID verification flow, flashUsedSize-based erased state, import file, skip erase, SD card labels + eraseCompleted, Flash Tune phases |
 | `TuningWizard/TuningWizard.test.tsx` | 46 | Multi-step wizard flow, results display, apply, mode-aware routing, onApplyComplete with metrics, FF warning, RPM status, flight style display |
 | `TuningWizard/FlightGuideContent.test.tsx` | 11 | Flight guide content rendering, version-aware tip filtering |
@@ -263,7 +263,7 @@ npm run test:ui           # Visual interface with DOM snapshots
 |------|-------|-------------|
 | `msp/MSPProtocol.test.ts` | 40 | MSPv1 encode/decode, jumbo frames, round-trip, parseBuffer, checksum validation, garbage recovery |
 | `msp/MSPConnection.test.ts` | 51 | Connection lifecycle, sendCommand, sendCommandNoResponse, timeouts, error/partial responses, CLI mode (prompt debounce, chunk-boundary, trailing CR), event forwarding, port error fast-fail, CLI buffer limit |
-| `msp/MSPClient.test.ts` | 70 | FC info queries, PID/filter/FF config, board info, UID, blackbox info (flash+SD card), SD card summary, MSC reboot (fire-and-forget), set PID, CLI diff, save & reboot, connect/disconnect, version gate, listPorts, chunk ceiling, erase disconnect detection |
+| `msp/MSPClient.test.ts` | 78 | FC info queries, PID/filter/FF config, board info, UID, blackbox info (flash+SD card), SD card summary, MSC reboot (fire-and-forget), set PID, CLI diff, save & reboot, connect/disconnect, version gate, listPorts, chunk ceiling, erase disconnect detection, BF PID profile selection (getStatusEx, selectPIDProfile) |
 | `msp/cliUtils.test.ts` | 17 | CLI command response validation, error pattern detection, setting extraction |
 
 ### MSC (Mass Storage Class)
@@ -358,7 +358,7 @@ npm run test:ui           # Visual interface with DOM snapshots
 
 | File | Tests | Description |
 |------|-------|-------------|
-| `demo/MockMSPClient.test.ts` | 47 | Mock FC connection, state management, FC info, PID/filter/FF config, blackbox, CLI, save/reboot, flags, flight type cycling, advancePastVerification, Flash Tune mode |
+| `demo/MockMSPClient.test.ts` | 53 | Mock FC connection, state management, FC info, PID/filter/FF config, blackbox, CLI, save/reboot, flags, flight type cycling, advancePastVerification, Flash Tune mode, BF PID profile selection (getStatusEx, selectPIDProfile) |
 | `demo/DemoDataGenerator.test.ts` | 26 | BBL generation for filter/PID/quick analysis, multi-session, header metadata, step inputs, throttle sweeps, progressive noise reduction |
 
 ### Playwright E2E Tests (Demo Mode)
