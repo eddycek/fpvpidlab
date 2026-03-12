@@ -342,6 +342,15 @@ export function registerTuningHandlers(deps: HandlerDependencies): void {
           await tuningSessionManager.updatePhase(profileId, initialPhase, phaseData);
         }
 
+        // Persist selected profile as preference for next session
+        if (bfPidProfileIndex !== undefined && profileManager) {
+          try {
+            await profileManager.updateProfile(profileId, { bfPidProfileIndex });
+          } catch (e) {
+            logger.warn('Could not persist bfPidProfileIndex preference:', e);
+          }
+        }
+
         const updated = await tuningSessionManager.getSession(profileId);
         sendTuningSessionChanged(updated);
         return createResponse<TuningSession>(updated || session);
