@@ -14,6 +14,9 @@ Overview of all design documents in this directory. Completed documents are arch
 |----------|--------|-------------|
 | [TUNING_PRECISION_IMPROVEMENTS](./TUNING_PRECISION_IMPROVEMENTS.md) | **Active** | Research-based tuning accuracy improvements: ~~Wiener deconvolution~~ (done), ~~proportional PID scaling~~ (done), ~~data quality scoring~~ (done), ~~flight quality score~~ (done), ~~throttle spectrograms~~ (done), chirp analysis |
 | [UX_IMPROVEMENT_IDEAS](./UX_IMPROVEMENT_IDEAS.md) | **Active** | Backlog of UX improvement ideas (4/7 done, rest are future work) |
+| [PAYMENT_AND_INVOICING](./PAYMENT_AND_INVOICING.md) | **Proposed** | Stripe payment gateway + Trivi API invoicing. End-to-end purchase → invoice → license delivery flow |
+| [TELEMETRY_COLLECTION](./TELEMETRY_COLLECTION.md) | **Proposed** | Anonymous telemetry via CF Workers + R2. Daily reports, admin CLI, future backup foundation |
+| [LICENSE_KEY_SYSTEM](./LICENSE_KEY_SYSTEM.md) | **Proposed** | Freemium licensing via CF Workers + D1. Ed25519 keys, offline grace period, admin API |
 
 ## Completed Documents (`complete/`)
 
