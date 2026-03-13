@@ -1,13 +1,17 @@
-# Copy to terraform.tfvars and fill in values
-# NEVER commit terraform.tfvars (it's in .gitignore)
+# Copy to terraform.tfvars and fill in values.
+# NEVER commit terraform.tfvars (it's in .gitignore).
+#
+# For dev:  environment = "dev"  → bucket: pidlab-telemetry-dev, worker: pidlab-telemetry-dev, no cron
+# For prod: environment = "prod" → bucket: pidlab-telemetry, worker: pidlab-telemetry, cron 07:00 UTC
 
 cloudflare_account_id = "your-account-id"
 cloudflare_api_token  = "your-api-token"
+environment           = "dev"
 
 admin_key      = "your-admin-key"
 resend_api_key = "re_xxxxxxxxxxxx"
 report_email   = "you@example.com"
 
-# Optional: custom domain (requires zone_id)
+# Optional: custom domain (typically prod only)
 # domain  = "telemetry.pidlab.app"
 # zone_id = "your-zone-id"

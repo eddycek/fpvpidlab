@@ -270,7 +270,8 @@ export class TelemetryManager {
 
       for (let attempt = 0; attempt <= TELEMETRY.RETRY_DELAYS.length; attempt++) {
         try {
-          const response = await net.fetch(TELEMETRY.UPLOAD_URL, {
+          const uploadUrl = process.env.TELEMETRY_URL || TELEMETRY.UPLOAD_URL;
+          const response = await net.fetch(uploadUrl, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',

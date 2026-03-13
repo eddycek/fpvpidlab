@@ -83,11 +83,23 @@ terraform apply        # Deploy updated worker
 |----------|----------|-------------|
 | `cloudflare_account_id` | Yes | Cloudflare account ID |
 | `cloudflare_api_token` | Yes | API token (Workers, R2, DNS permissions) |
+| `environment` | Yes | `dev` or `prod` (default: `dev`) |
 | `admin_key` | Yes | Admin API key for `/admin/*` endpoints |
 | `resend_api_key` | Yes | Resend API key for daily email reports |
 | `report_email` | Yes | Recipient for daily reports |
 | `domain` | No | Custom domain (e.g. `telemetry.pidlab.app`) |
 | `zone_id` | No | Cloudflare zone ID (required if `domain` is set) |
+
+### Dev vs Prod
+
+| | Dev (`environment = "dev"`) | Prod (`environment = "prod"`) |
+|---|---|---|
+| R2 bucket | `pidlab-telemetry-dev` | `pidlab-telemetry` |
+| Worker name | `pidlab-telemetry-dev` | `pidlab-telemetry` |
+| Cron trigger | Disabled (empty schedule) | Daily 07:00 UTC |
+| Custom domain | Optional | Recommended |
+
+Data is fully isolated — dev and prod never share a bucket.
 
 ## Telemetry Worker
 
@@ -132,20 +144,23 @@ The Electron app's `TelemetryManager` (`src/main/telemetry/`) handles:
 - FC serial anonymization (SHA-256 salted with installation ID)
 - gzip compression + `net.fetch` POST with retry (1s/2s/4s)
 - Daily heartbeat on app start, post-session trigger, manual "Send Now"
-- Upload endpoint: `TELEMETRY.UPLOAD_URL` in `src/shared/constants.ts`
+- Upload URL: `TELEMETRY.UPLOAD_URL` in `src/shared/constants.ts` (prod default)
+- **Override**: `TELEMETRY_URL` env var points app to dev Worker
 
 Uploads silently fail until Workers are deployed (by design).
+
+### Pointing app to dev Worker
+
+```bash
+# Get dev Worker URL after terraform apply
+cd infrastructure/terraform
+export TELEMETRY_URL=$(terraform output -raw worker_url)/v1/collect
+
+# Start app with dev telemetry endpoint
+TELEMETRY_URL=$TELEMETRY_URL npm run dev
+```
 
 ## Development
 
 No infrastructure is required for local development. The app runs fully offline.
 Demo mode (`npm run dev:demo`) skips all uploads.
-
-### Local Worker Testing
-
-```bash
-cd infrastructure/telemetry-worker
-npm install
-npx wrangler dev
-# Worker runs at http://localhost:8787
-```
