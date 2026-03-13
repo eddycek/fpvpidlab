@@ -164,3 +164,12 @@ TELEMETRY_URL=$TELEMETRY_URL npm run dev
 
 No infrastructure is required for local development. The app runs fully offline.
 Demo mode (`npm run dev:demo`) skips all uploads.
+
+### Local Worker Testing
+
+```bash
+cd infrastructure/telemetry-worker
+npm install
+npx wrangler dev
+# Worker runs at http://localhost:8787
+```
