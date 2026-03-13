@@ -2,6 +2,8 @@
 
 Cloud infrastructure for PIDlab backend services. All services run on **Cloudflare** (Workers, R2, D1).
 
+All resources are managed via **Terraform** — no manual CLI commands needed.
+
 ## Services
 
 | Service | Status | Description | Design Doc |
@@ -15,24 +17,77 @@ Cloud infrastructure for PIDlab backend services. All services run on **Cloudfla
 ```
 infrastructure/
 ├── README.md
-├── telemetry-worker/      ← CF Worker: upload, admin stats, daily cron report
-│   ├── wrangler.toml
+├── terraform/                 ← Infrastructure-as-code (all resources)
+│   ├── main.tf                ← R2 bucket, Worker, cron trigger, DNS
+│   ├── terraform.tfvars.example
+│   ├── build-worker.sh        ← Builds worker-bundle.js from TS source
+│   └── .gitignore             ← Excludes state, secrets, bundle
+├── telemetry-worker/          ← CF Worker source: upload, admin, cron
+│   ├── wrangler.toml          ← Local dev only (wrangler dev)
 │   ├── package.json
 │   ├── tsconfig.json
 │   └── src/
-│       ├── index.ts       ← Router + CORS + cron entry
-│       ├── types.ts       ← Env bindings, bundle schema, aggregation types
-│       ├── upload.ts      ← POST /v1/collect (validate, rate-limit, R2 write)
-│       ├── admin.ts       ← GET /admin/stats/* (authenticated, R2 scan)
-│       ├── validation.ts  ← UUID, schema, size, rate-limit checks
-│       └── cron.ts        ← Daily 07:00 UTC aggregation → Resend email
-├── license-worker/        ← (planned)
-└── payment-worker/        ← (planned)
+│       ├── index.ts           ← Router + CORS + cron entry
+│       ├── types.ts           ← Env bindings, bundle schema, aggregation types
+│       ├── upload.ts          ← POST /v1/collect (validate, rate-limit, R2 write)
+│       ├── admin.ts           ← GET /admin/stats/* (authenticated, R2 scan)
+│       ├── validation.ts      ← UUID, schema, size, rate-limit checks
+│       └── cron.ts            ← Daily 07:00 UTC aggregation → Resend email
+├── license-worker/            ← (planned)
+└── payment-worker/            ← (planned)
 
 scripts/
-├── telemetry-stats.sh     ← Quick summary via admin API
-└── telemetry-report.sh    ← Full report with all breakdowns
+├── telemetry-stats.sh         ← Quick summary via admin API
+└── telemetry-report.sh        ← Full report with all breakdowns
 ```
+
+## Deployment (Terraform)
+
+All infrastructure is defined in `terraform/main.tf`. One `terraform apply` creates everything:
+- R2 bucket (`pidlab-telemetry`)
+- Worker deployment with R2 binding + secrets
+- Cron trigger (daily 07:00 UTC)
+- Custom domain + DNS (optional)
+
+### First-Time Setup
+
+```bash
+cd infrastructure/terraform
+
+# 1. Configure variables
+cp terraform.tfvars.example terraform.tfvars
+# Edit terraform.tfvars with your Cloudflare account ID, API token, secrets
+
+# 2. Build worker bundle from TypeScript source
+./build-worker.sh
+
+# 3. Init + apply
+terraform init
+terraform apply
+
+# 4. Verify
+curl $(terraform output -raw worker_url)/health
+```
+
+### Updating Worker Code
+
+```bash
+cd infrastructure/terraform
+./build-worker.sh      # Rebuild bundle from latest TS source
+terraform apply        # Deploy updated worker
+```
+
+### Variables
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `cloudflare_account_id` | Yes | Cloudflare account ID |
+| `cloudflare_api_token` | Yes | API token (Workers, R2, DNS permissions) |
+| `admin_key` | Yes | Admin API key for `/admin/*` endpoints |
+| `resend_api_key` | Yes | Resend API key for daily email reports |
+| `report_email` | Yes | Recipient for daily reports |
+| `domain` | No | Custom domain (e.g. `telemetry.pidlab.app`) |
+| `zone_id` | No | Cloudflare zone ID (required if `domain` is set) |
 
 ## Telemetry Worker
 
@@ -57,35 +112,6 @@ pidlab-telemetry/
 └── ...
 ```
 
-### Secrets (set via `wrangler secret put`)
-
-| Secret | Purpose |
-|--------|---------|
-| `ADMIN_KEY` | Authentication for `/admin/*` endpoints |
-| `RESEND_API_KEY` | Email delivery for daily reports |
-| `REPORT_EMAIL` | Recipient address for daily reports |
-
-### First-Time Setup
-
-```bash
-cd infrastructure/telemetry-worker
-npm install
-
-# Create R2 bucket
-npx wrangler r2 bucket create pidlab-telemetry
-
-# Set secrets
-npx wrangler secret put ADMIN_KEY
-npx wrangler secret put RESEND_API_KEY
-npx wrangler secret put REPORT_EMAIL
-
-# Deploy
-npx wrangler deploy
-
-# Verify
-curl https://telemetry.pidlab.app/health
-```
-
 ## Stack
 
 | Component | Service | Free Tier |
@@ -95,6 +121,7 @@ curl https://telemetry.pidlab.app/health
 | License database | CF D1 (SQLite) | 5 GB, 5M reads/day |
 | Email reports | Resend | 3K emails/month |
 | Payments | Stripe | Pay-as-you-go |
+| IaC | Terraform + Cloudflare provider | Free |
 
 **Estimated cost**: $0/month up to ~5,000 active users.
 
