@@ -1,0 +1,13 @@
+# Copy to terraform.tfvars and fill in values
+# NEVER commit terraform.tfvars (it's in .gitignore)
+
+cloudflare_account_id = "your-account-id"
+cloudflare_api_token  = "your-api-token"
+
+admin_key      = "your-admin-key"
+resend_api_key = "re_xxxxxxxxxxxx"
+report_email   = "you@example.com"
+
+# Optional: custom domain (requires zone_id)
+# domain  = "telemetry.pidlab.app"
+# zone_id = "your-zone-id"
