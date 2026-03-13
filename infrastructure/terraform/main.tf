@@ -43,6 +43,17 @@ variable "cloudflare_account_id" {
   type        = string
 }
 
+variable "environment" {
+  description = "Environment: dev or prod"
+  type        = string
+  default     = "dev"
+
+  validation {
+    condition     = contains(["dev", "prod"], var.environment)
+    error_message = "Environment must be 'dev' or 'prod'."
+  }
+}
+
 variable "admin_key" {
   description = "Admin API key for /admin/* endpoints"
   type        = string
@@ -60,7 +71,7 @@ variable "report_email" {
   type        = string
 }
 
-# Optional: custom domain
+# Optional: custom domain (prod only typically)
 variable "domain" {
   description = "Custom domain for the worker (e.g. telemetry.pidlab.app). Leave empty to use *.workers.dev"
   type        = string
@@ -73,11 +84,20 @@ variable "zone_id" {
   default     = ""
 }
 
+# ─── Locals ─────────────────────────────────────────────────────────
+
+locals {
+  is_prod     = var.environment == "prod"
+  name_suffix = local.is_prod ? "" : "-${var.environment}"
+  bucket_name = "pidlab-telemetry${local.name_suffix}"
+  worker_name = "pidlab-telemetry${local.name_suffix}"
+}
+
 # ─── R2 Bucket ──────────────────────────────────────────────────────
 
 resource "cloudflare_r2_bucket" "telemetry" {
   account_id = var.cloudflare_account_id
-  name       = "pidlab-telemetry"
+  name       = local.bucket_name
   location   = "EEUR"
 }
 
@@ -85,7 +105,7 @@ resource "cloudflare_r2_bucket" "telemetry" {
 
 resource "cloudflare_workers_script" "telemetry" {
   account_id = var.cloudflare_account_id
-  name       = "pidlab-telemetry"
+  name       = local.worker_name
   content    = file("${path.module}/worker-bundle.js")
   module     = true
 
@@ -108,6 +128,12 @@ resource "cloudflare_workers_script" "telemetry" {
     name = "REPORT_EMAIL"
     text = var.report_email
   }
+
+  # Expose environment to Worker (for logging/debugging)
+  plain_text_binding {
+    name = "ENVIRONMENT"
+    text = var.environment
+  }
 }
 
 # ─── Cron Trigger ───────────────────────────────────────────────────
@@ -115,10 +141,11 @@ resource "cloudflare_workers_script" "telemetry" {
 resource "cloudflare_workers_cron_trigger" "daily_report" {
   account_id  = var.cloudflare_account_id
   script_name = cloudflare_workers_script.telemetry.name
-  schedules   = ["0 7 * * *"]
+  # Dev: no cron (empty list). Prod: daily at 07:00 UTC.
+  schedules = local.is_prod ? ["0 7 * * *"] : []
 }
 
-# ─── Custom Domain (optional) ──────────────────────────────────────
+# ─── Custom Domain (optional, prod only) ───────────────────────────
 
 resource "cloudflare_workers_route" "telemetry" {
   count       = var.domain != "" ? 1 : 0
@@ -134,14 +161,19 @@ resource "cloudflare_record" "telemetry" {
   content = "100::"
   type    = "AAAA"
   proxied = true
-  comment = "Telemetry Worker custom domain"
+  comment = "Telemetry Worker custom domain (${var.environment})"
 }
 
 # ─── Outputs ────────────────────────────────────────────────────────
 
+output "environment" {
+  description = "Active environment"
+  value       = var.environment
+}
+
 output "worker_url" {
   description = "Worker URL (workers.dev)"
-  value       = "https://pidlab-telemetry.${var.cloudflare_account_id}.workers.dev"
+  value       = "https://${local.worker_name}.${var.cloudflare_account_id}.workers.dev"
 }
 
 output "custom_url" {
