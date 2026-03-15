@@ -387,7 +387,13 @@ describe('extractPIDMetrics', () => {
       gyro: [0, 50, 180, 210, 200, 200],
     };
     const step = {
-      step: { axis: 'roll' as const, startIndex: 0, magnitude: 200, direction: 1 as const },
+      step: {
+        axis: 0 as const,
+        startIndex: 0,
+        endIndex: 100,
+        magnitude: 200,
+        direction: 'positive' as const,
+      },
       riseTimeMs: 20,
       overshootPercent: 5,
       settlingTimeMs: 40,
@@ -397,6 +403,8 @@ describe('extractPIDMetrics', () => {
       trackingErrorRMS: 0.1,
       steadyStateErrorPercent: 0,
       leadingEdgeOvershootPercent: 0,
+      peakValue: 210,
+      steadyStateValue: 200,
     };
     const result = makePIDResult({
       roll: {
@@ -424,7 +432,13 @@ describe('extractPIDMetrics', () => {
       gyro: [0, -50, -190, -200],
     };
     const step = {
-      step: { axis: 'pitch' as const, startIndex: 0, magnitude: -200, direction: -1 as const },
+      step: {
+        axis: 1 as const,
+        startIndex: 0,
+        endIndex: 100,
+        magnitude: -200,
+        direction: 'negative' as const,
+      },
       riseTimeMs: 20,
       overshootPercent: 5,
       settlingTimeMs: 30,
@@ -434,6 +448,8 @@ describe('extractPIDMetrics', () => {
       trackingErrorRMS: 0.1,
       steadyStateErrorPercent: 0,
       leadingEdgeOvershootPercent: 0,
+      peakValue: -210,
+      steadyStateValue: -200,
     };
     const result = makePIDResult({
       pitch: {
