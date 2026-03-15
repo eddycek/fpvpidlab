@@ -79,18 +79,45 @@ GitHub environments `dev` and `prod` can have protection rules (e.g. required ap
 
 ### GitHub Secrets
 
-| Secret | Purpose |
-|--------|---------|
-| `CLOUDFLARE_PROVISIONING` | Terraform provider — Workers + R2 provisioning |
-| `TERRAFORM_STATE_R2_ACCESS_KEY_ID` | Terraform S3 backend — R2 access key for tfstate |
-| `TERRAFORM_STATE_R2_SECRET_ACCESS_KEY` | Terraform S3 backend — R2 secret key for tfstate |
-| `TELEMETRY_ADMIN_KEY_DEV` | Admin API key for dev Worker |
-| `TELEMETRY_ADMIN_KEY_PROD` | Admin API key for prod Worker |
-| `RESEND_API_KEY` | Resend email delivery (both environments) |
+5 secrets in GitHub repo settings (`Settings → Secrets and variables → Actions`):
+
+#### `CLOUDFLARE_PROVISIONING`
+
+Cloudflare API token used by Terraform provider to manage all infrastructure resources.
+
+- **Used by**: `terraform apply` (CI/CD deploy-dev, deploy-prod jobs)
+- **Scope**: Workers Scripts Edit, Workers KV Storage Edit, Workers R2 Storage Edit, Workers Routes Edit, Workers Builds/Agents/Observability/Containers Edit, Cloudflare Pages Edit, Account Settings Read, User Details Read
+- **CF token name**: `pidlab-infra-provisioning`
+- **Created in**: Cloudflare Dashboard → My Profile → API Tokens → "Edit Cloudflare Workers" template + R2 Storage Edit
+
+#### `TERRAFORM_STATE_R2_ACCESS_KEY_ID` + `TERRAFORM_STATE_R2_SECRET_ACCESS_KEY`
+
+S3-compatible R2 credentials for Terraform backend. Terraform stores its state file (`terraform.tfstate`) in the `pidlab-tfstate` R2 bucket — these credentials allow reading and writing that state.
+
+- **Used by**: `terraform init` (CI/CD all jobs that run Terraform)
+- **Scope**: R2 Object Read & Write on all buckets (Terraform also manages telemetry buckets)
+- **CF token name**: `pidlab-terraform-r2-v2`
+- **Created in**: Cloudflare Dashboard → R2 → Manage R2 API Tokens → Object Read & Write, All buckets
+
+#### `TELEMETRY_ADMIN_KEY_DEV` + `TELEMETRY_ADMIN_KEY_PROD`
+
+API keys for authenticating requests to `/admin/stats/*` endpoints on telemetry Workers. Each environment has its own key. Passed to Workers as `ADMIN_KEY` secret binding via Terraform.
+
+- **Used by**: Terraform (injected as Worker secret), admin shell scripts (`scripts/telemetry-*.sh`)
+- **Scope**: Only used within Worker runtime — no Cloudflare API access
+- **Generated with**: `openssl rand -hex 32`
+
+#### `RESEND_API_KEY` (not yet set)
+
+Resend email delivery API key for daily telemetry report cron job. Optional — cron job logs report to console if not configured.
+
+- **Used by**: Terraform (injected as Worker secret), daily cron Worker
+- **Scope**: Resend email sending only
+- **Created in**: resend.com dashboard
 
 ## Bootstrap (One-Time Setup)
 
-These R2 buckets were created manually (chicken-and-egg — Terraform can't manage its own state bucket):
+Three R2 buckets were created manually via `wrangler` CLI (chicken-and-egg — Terraform can't manage its own state bucket):
 
 ```bash
 # Already done:
@@ -100,20 +127,6 @@ npx wrangler r2 bucket create pidlab-telemetry       # Prod telemetry data
 ```
 
 After bootstrap, everything is managed by Terraform + CI/CD. No more manual commands.
-
-### R2 API Token for Terraform Backend
-
-Created in **Cloudflare Dashboard → R2 → Manage R2 API Tokens**:
-- Permissions: Object Read & Write
-- Bucket: `pidlab-tfstate`
-- Set `R2_ACCESS_KEY_ID` and `R2_SECRET_ACCESS_KEY` in GitHub secrets
-
-### Cloudflare API Token for Terraform Provider
-
-Created in **Cloudflare Dashboard → My Profile → API Tokens**:
-- Template: Edit Cloudflare Workers
-- Additional: R2 Storage Edit
-- Set `CLOUDFLARE_API_TOKEN` in GitHub secrets
 
 ## Manual Operations
 
