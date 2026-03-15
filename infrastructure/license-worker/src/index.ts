@@ -36,7 +36,7 @@ export default {
       }
       // Health check
       else if (pathname === '/health') {
-        response = Response.json({ status: 'ok', timestamp: new Date().toISOString() });
+        response = Response.json({ status: 'ok', version: '1.0.0', timestamp: new Date().toISOString() });
       } else {
         response = new Response('Not found', { status: 404 });
       }
