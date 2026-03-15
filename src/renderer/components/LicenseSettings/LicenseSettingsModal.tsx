@@ -114,7 +114,7 @@ export function LicenseSettingsModal({ onClose }: LicenseSettingsModalProps) {
                   <div className="license-comparison-col">
                     <h3 className="license-comparison-title license-comparison-free">Free</h3>
                     <ul className="license-comparison-list">
-                      <li>1 drone profile</li>
+                      <li className="license-comparison-limit">1 drone profile</li>
                       <li>Filter Tune</li>
                       <li>PID Tune</li>
                       <li>Flash Tune</li>

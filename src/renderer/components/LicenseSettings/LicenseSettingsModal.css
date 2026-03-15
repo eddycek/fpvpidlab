@@ -158,6 +158,15 @@
   color: #10b981 !important;
 }
 
+.license-comparison-limit {
+  color: #d97706 !important;
+  font-weight: 500;
+}
+
+.license-comparison-limit::before {
+  color: #d97706 !important;
+}
+
 .license-pitch {
   margin-bottom: 14px;
 }
