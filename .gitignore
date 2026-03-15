@@ -43,7 +43,7 @@ electron-userdata/
 *.tfstate
 *.tfstate.backup
 .terraform/
-.terraform.lock.hcl
+# .terraform.lock.hcl is committed for CI reproducibility
 terraform.tfvars
 
 # Test & coverage

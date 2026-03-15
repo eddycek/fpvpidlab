@@ -113,9 +113,12 @@ resource "cloudflare_workers_script" "telemetry" {
     text = var.admin_key
   }
 
-  secret_text_binding {
-    name = "RESEND_API_KEY"
-    text = var.resend_api_key
+  dynamic "secret_text_binding" {
+    for_each = var.resend_api_key != "" ? [1] : []
+    content {
+      name = "RESEND_API_KEY"
+      text = var.resend_api_key
+    }
   }
 
   plain_text_binding {

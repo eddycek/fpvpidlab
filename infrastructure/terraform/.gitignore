@@ -2,7 +2,7 @@
 *.tfstate
 *.tfstate.backup
 .terraform/
-.terraform.lock.hcl
+# .terraform.lock.hcl is committed — ensures consistent provider versions
 
 # Variables file (contains secrets)
 terraform.tfvars
