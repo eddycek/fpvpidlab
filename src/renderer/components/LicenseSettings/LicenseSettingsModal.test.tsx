@@ -48,11 +48,15 @@ describe('LicenseSettingsModal', () => {
     render(<LicenseSettingsModal onClose={onClose} />);
 
     await waitFor(() => {
-      expect(screen.getByText('Pro')).toBeInTheDocument();
+      expect(screen.getByText('PIDLAB-ABCD-****-****')).toBeInTheDocument();
     });
-
-    expect(screen.getByText('PIDLAB-ABCD-****-****')).toBeInTheDocument();
     expect(screen.getByText('Remove License')).toBeInTheDocument();
+
+    // Comparison table and pitch visible in Pro mode too
+    expect(screen.getByText('1 drone profile')).toBeInTheDocument();
+    expect(screen.getByText('Unlimited drone profiles')).toBeInTheDocument();
+    expect(screen.getByText(/Thank you for supporting/)).toBeInTheDocument();
+    expect(screen.getByText(/lifetime access/)).toBeInTheDocument();
   });
 
   it('activates license on button click', async () => {
