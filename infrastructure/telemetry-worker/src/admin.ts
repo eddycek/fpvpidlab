@@ -106,7 +106,7 @@ async function handleVersions(env: Env): Promise<Response> {
   const versions: Record<string, number> = {};
 
   for (const { bundle } of installations) {
-    for (const v of bundle.fcInfo.bfVersions) {
+    for (const v of bundle.fcInfo?.bfVersions ?? []) {
       versions[v] = (versions[v] || 0) + 1;
     }
   }
@@ -122,10 +122,10 @@ async function handleDrones(env: Env): Promise<Response> {
   const flightStyles: Record<string, number> = {};
 
   for (const { bundle } of installations) {
-    for (const s of bundle.profiles.sizes) {
+    for (const s of bundle.profiles?.sizes ?? []) {
       sizes[s] = (sizes[s] || 0) + 1;
     }
-    for (const fs of bundle.profiles.flightStyles) {
+    for (const fs of bundle.profiles?.flightStyles ?? []) {
       flightStyles[fs] = (flightStyles[fs] || 0) + 1;
     }
   }
@@ -273,9 +273,10 @@ async function handleBlackbox(env: Env): Promise<Response> {
   const storageTypes: Record<string, number> = {};
 
   for (const { bundle } of installations) {
-    totalLogs += bundle.blackbox.totalLogsDownloaded;
-    if (bundle.blackbox.compressionDetected) compressionCount++;
-    for (const st of bundle.blackbox.storageTypes) {
+    const bb = bundle.blackbox ?? { totalLogsDownloaded: 0, storageTypes: [], compressionDetected: false };
+    totalLogs += bb.totalLogsDownloaded;
+    if (bb.compressionDetected) compressionCount++;
+    for (const st of bb.storageTypes ?? []) {
       storageTypes[st] = (storageTypes[st] || 0) + 1;
     }
   }
@@ -295,7 +296,7 @@ async function handleProfiles(env: Env): Promise<Response> {
   let totalProfiles = 0;
 
   for (const { bundle } of installations) {
-    const count = bundle.profiles.count;
+    const count = bundle.profiles?.count ?? 0;
     totalProfiles += count;
     distribution[count] = (distribution[count] || 0) + 1;
   }
@@ -307,7 +308,7 @@ async function handleProfiles(env: Env): Promise<Response> {
   });
 }
 
-/** GET /admin/stats/full — everything in one call */
+/** GET /admin/stats/full — everything in one call, field names match sub-endpoints */
 async function handleFull(env: Env): Promise<Response> {
   const installations = await listInstallations(env.TELEMETRY_BUCKET);
   const now = Date.now();
@@ -315,88 +316,100 @@ async function handleFull(env: Env): Promise<Response> {
   const d7 = 7 * h24;
   const d30 = 30 * h24;
 
-  // Aggregate everything in a single pass
-  const result = {
-    installations: {
-      total: installations.length,
-      active24h: 0,
-      active7d: 0,
-      active30d: 0,
-      platforms: {} as Record<string, number>,
-      environments: {} as Record<string, number>,
-    },
-    appVersions: {} as Record<string, number>,
-    bfVersions: {} as Record<string, number>,
-    boardTargets: {} as Record<string, number>,
-    sessions: {
-      totalCompleted: 0,
-      byMode: { filter: 0, pid: 0, quick: 0 },
-    },
-    profiles: {
-      total: 0,
-      sizes: {} as Record<string, number>,
-      flightStyles: {} as Record<string, number>,
-    },
-    features: {
-      analysisOverview: 0,
-      snapshotRestore: 0,
-      snapshotCompare: 0,
-      historyView: 0,
-    },
-    blackbox: {
-      totalLogs: 0,
-      compression: 0,
-    },
-    quality: {
-      scores: [] as number[],
-      average: null as number | null,
-    },
+  const stats = {
+    totalInstallations: installations.length,
+    active24h: 0,
+    active7d: 0,
+    active30d: 0,
+    platformDistribution: {} as Record<string, number>,
+    environmentDistribution: {} as Record<string, number>,
   };
+
+  const appVersions: Record<string, number> = {};
+  const bfVersions: Record<string, number> = {};
+  const boardTargets: Record<string, number> = {};
+  const sessions = { totalCompleted: 0, byMode: { filter: 0, pid: 0, quick: 0 } };
+  const profiles = { totalProfiles: 0, sizes: {} as Record<string, number>, flightStyles: {} as Record<string, number>, distribution: {} as Record<number, number> };
+  const features = { analysisOverview: 0, snapshotRestore: 0, snapshotCompare: 0, historyView: 0 };
+  const blackbox = { totalLogsDownloaded: 0, installationsWithCompression: 0, storageTypes: {} as Record<string, number> };
+  const qualityBuckets: Record<string, number> = { '0-20': 0, '20-40': 0, '40-60': 0, '60-80': 0, '80-100': 0 };
+  let qualitySum = 0;
+  let qualityCount = 0;
 
   for (const { metadata, bundle } of installations) {
     const age = now - new Date(metadata.lastSeen).getTime();
-    if (age <= h24) result.installations.active24h++;
-    if (age <= d7) result.installations.active7d++;
-    if (age <= d30) result.installations.active30d++;
+    if (age <= h24) stats.active24h++;
+    if (age <= d7) stats.active7d++;
+    if (age <= d30) stats.active30d++;
 
-    result.installations.platforms[bundle.platform] = (result.installations.platforms[bundle.platform] || 0) + 1;
-    const env = bundle.environment || 'unknown';
-    result.installations.environments[env] = (result.installations.environments[env] || 0) + 1;
+    stats.platformDistribution[bundle.platform] = (stats.platformDistribution[bundle.platform] || 0) + 1;
+    const envName = bundle.environment || 'unknown';
+    stats.environmentDistribution[envName] = (stats.environmentDistribution[envName] || 0) + 1;
 
-    result.appVersions[bundle.appVersion || 'unknown'] = (result.appVersions[bundle.appVersion || 'unknown'] || 0) + 1;
+    appVersions[bundle.appVersion || 'unknown'] = (appVersions[bundle.appVersion || 'unknown'] || 0) + 1;
 
-    for (const v of bundle.fcInfo.bfVersions) result.bfVersions[v] = (result.bfVersions[v] || 0) + 1;
-    for (const t of bundle.fcInfo.boardTargets) result.boardTargets[t] = (result.boardTargets[t] || 0) + 1;
+    for (const v of bundle.fcInfo?.bfVersions ?? []) bfVersions[v] = (bfVersions[v] || 0) + 1;
+    for (const t of bundle.fcInfo?.boardTargets ?? []) boardTargets[t] = (boardTargets[t] || 0) + 1;
 
-    result.sessions.totalCompleted += bundle.tuningSessions.totalCompleted;
-    result.sessions.byMode.filter += bundle.tuningSessions.byMode.filter;
-    result.sessions.byMode.pid += bundle.tuningSessions.byMode.pid;
-    result.sessions.byMode.quick += bundle.tuningSessions.byMode.quick;
+    const s = bundle.tuningSessions ?? { totalCompleted: 0, byMode: { filter: 0, pid: 0, quick: 0 }, recentQualityScores: [] };
+    sessions.totalCompleted += s.totalCompleted;
+    sessions.byMode.filter += s.byMode.filter;
+    sessions.byMode.pid += s.byMode.pid;
+    sessions.byMode.quick += s.byMode.quick;
 
-    result.profiles.total += bundle.profiles.count;
-    for (const s of bundle.profiles.sizes) result.profiles.sizes[s] = (result.profiles.sizes[s] || 0) + 1;
-    for (const f of bundle.profiles.flightStyles) result.profiles.flightStyles[f] = (result.profiles.flightStyles[f] || 0) + 1;
+    const pc = bundle.profiles?.count ?? 0;
+    profiles.totalProfiles += pc;
+    profiles.distribution[pc] = (profiles.distribution[pc] || 0) + 1;
+    for (const sz of bundle.profiles?.sizes ?? []) profiles.sizes[sz] = (profiles.sizes[sz] || 0) + 1;
+    for (const fs of bundle.profiles?.flightStyles ?? []) profiles.flightStyles[fs] = (profiles.flightStyles[fs] || 0) + 1;
 
-    if (bundle.features.analysisOverviewUsed) result.features.analysisOverview++;
-    if (bundle.features.snapshotRestoreUsed) result.features.snapshotRestore++;
-    if (bundle.features.snapshotCompareUsed) result.features.snapshotCompare++;
-    if (bundle.features.historyViewUsed) result.features.historyView++;
+    if (bundle.features?.analysisOverviewUsed) features.analysisOverview++;
+    if (bundle.features?.snapshotRestoreUsed) features.snapshotRestore++;
+    if (bundle.features?.snapshotCompareUsed) features.snapshotCompare++;
+    if (bundle.features?.historyViewUsed) features.historyView++;
 
-    result.blackbox.totalLogs += bundle.blackbox.totalLogsDownloaded;
-    if (bundle.blackbox.compressionDetected) result.blackbox.compression++;
+    const bb = bundle.blackbox ?? { totalLogsDownloaded: 0, storageTypes: [], compressionDetected: false };
+    blackbox.totalLogsDownloaded += bb.totalLogsDownloaded;
+    if (bb.compressionDetected) blackbox.installationsWithCompression++;
+    for (const st of bb.storageTypes ?? []) blackbox.storageTypes[st] = (blackbox.storageTypes[st] || 0) + 1;
 
-    result.quality.scores.push(...bundle.tuningSessions.recentQualityScores);
+    for (const score of s.recentQualityScores ?? []) {
+      qualitySum += score;
+      qualityCount++;
+      if (score < 20) qualityBuckets['0-20']++;
+      else if (score < 40) qualityBuckets['20-40']++;
+      else if (score < 60) qualityBuckets['40-60']++;
+      else if (score < 80) qualityBuckets['60-80']++;
+      else qualityBuckets['80-100']++;
+    }
   }
 
-  if (result.quality.scores.length > 0) {
-    result.quality.average = Math.round((result.quality.scores.reduce((a, b) => a + b, 0) / result.quality.scores.length) * 10) / 10;
-  }
-  // Keep only count, not raw scores
-  const qualityCount = result.quality.scores.length;
-  (result.quality as any).totalScores = qualityCount;
-  delete (result.quality as any).scores;
-
-  return Response.json(result);
+  return Response.json({
+    stats,
+    appVersions,
+    bfVersions,
+    boardTargets,
+    sessions,
+    profiles: {
+      ...profiles,
+      averagePerInstall: installations.length ? Math.round((profiles.totalProfiles / installations.length) * 10) / 10 : 0,
+    },
+    features: {
+      totalInstallations: installations.length,
+      adoption: {
+        analysisOverview: features.analysisOverview,
+        snapshotRestore: features.snapshotRestore,
+        snapshotCompare: features.snapshotCompare,
+        historyView: features.historyView,
+      },
+    },
+    blackbox,
+    quality: {
+      buckets: qualityBuckets,
+      averageScore: qualityCount > 0 ? Math.round((qualitySum / qualityCount) * 10) / 10 : null,
+      totalScores: qualityCount,
+    },
+  });
 }
 
 /** Route admin requests */
