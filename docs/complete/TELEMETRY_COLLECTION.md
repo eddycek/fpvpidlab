@@ -232,30 +232,14 @@ All admin endpoints require `X-Admin-Key` header.
 
 ### Shell Scripts
 
-**`scripts/telemetry-stats.sh`**: Quick summary
+All scripts are in `infrastructure/scripts/` and auto-load `.env.local`:
+
 ```bash
-#!/bin/bash
-curl -s -H "X-Admin-Key: $PIDLAB_ADMIN_KEY" \
-  https://api.pidlab.app/admin/stats | jq .
-```
-
-**`scripts/telemetry-report.sh`**: Full report with all breakdowns
-```bash
-#!/bin/bash
-API="https://api.pidlab.app/admin/stats"
-KEY="X-Admin-Key: $PIDLAB_ADMIN_KEY"
-
-echo "=== Summary ==="
-curl -s -H "$KEY" "$API" | jq .
-
-echo "=== BF Versions ==="
-curl -s -H "$KEY" "$API/versions" | jq .
-
-echo "=== Drone Sizes ==="
-curl -s -H "$KEY" "$API/drones" | jq .
-
-echo "=== Quality Scores ==="
-curl -s -H "$KEY" "$API/quality" | jq .
+./infrastructure/scripts/telemetry-stats.sh         # Summary (installs, active, modes)
+./infrastructure/scripts/app-versions.sh             # App version distribution
+./infrastructure/scripts/telemetry-bf-versions.sh    # BF firmware versions
+./infrastructure/scripts/telemetry-drones.sh         # Drone sizes + flight styles
+./infrastructure/scripts/telemetry-quality.sh        # Quality score histogram
 ```
 
 ## Implementation Tasks
@@ -296,8 +280,7 @@ curl -s -H "$KEY" "$API/quality" | jq .
 - [x] Resend email formatting and delivery
 
 ### Task 6: Shell Scripts — DONE
-- [x] `scripts/telemetry-stats.sh`
-- [x] `scripts/telemetry-report.sh`
+- [x] `infrastructure/scripts/telemetry-*.sh` (5 scripts for all admin endpoints)
 
 ### Task 7: Terraform Infrastructure-as-Code — DONE
 - [x] `infrastructure/terraform/main.tf` — R2 bucket, Worker, cron trigger, optional DNS

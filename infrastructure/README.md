@@ -70,7 +70,11 @@ infrastructure/
 │   ├── revoke-key.sh              ← Revoke a key
 │   ├── reset-key.sh               ← Reset machine binding
 │   ├── key-stats.sh               ← License key statistics
-│   └── app-versions.sh            ← App version distribution (telemetry)
+│   ├── telemetry-stats.sh         ← Telemetry summary (installs, active, modes)
+│   ├── app-versions.sh            ← App version distribution
+│   ├── telemetry-bf-versions.sh   ← BF firmware version distribution
+│   ├── telemetry-drones.sh        ← Drone sizes + flight styles
+│   └── telemetry-quality.sh       ← Quality score histogram
 └── payment-worker/                ← (planned)
 
 .github/workflows/
@@ -208,7 +212,7 @@ cd ../license-worker && npx wrangler deploy --env prod && cd ../terraform
 
 ## Admin Scripts
 
-Admin scripts in `infrastructure/scripts/` auto-load secrets from `.env.local` in the repo root and prompt for environment (dev/prod) on startup. Legacy telemetry scripts also exist in `scripts/` (root).
+Admin scripts in `infrastructure/scripts/` auto-load secrets from `.env.local` in the repo root and prompt for environment (dev/prod) on startup.
 
 ### License Key Management
 
@@ -216,7 +220,7 @@ Admin scripts in `infrastructure/scripts/` auto-load secrets from `.env.local` i
 # Generate a new license key (interactive — asks for email, type, note)
 ./infrastructure/scripts/generate-key.sh
 
-# List all keys (dev)
+# List all keys
 ./infrastructure/scripts/list-keys.sh
 
 # List with filters
@@ -239,13 +243,28 @@ All scripts default to **dev**. To target **prod**, either select "2" in the pro
 PIDLAB_ENV=prod ./infrastructure/scripts/generate-key.sh
 ```
 
-### Telemetry
+### Telemetry Analytics
 
 ```bash
-# View app version distribution (who's on what version)
+# Summary: total installs, active 24h/7d/30d, tuning modes, platforms
+./infrastructure/scripts/telemetry-stats.sh
+
+# PIDlab app version distribution (who's on what version)
 ./infrastructure/scripts/app-versions.sh
 
-# Check worker health
+# Betaflight firmware version distribution
+./infrastructure/scripts/telemetry-bf-versions.sh
+
+# Drone sizes and flight styles
+./infrastructure/scripts/telemetry-drones.sh
+
+# Flight quality score histogram + average
+./infrastructure/scripts/telemetry-quality.sh
+```
+
+### Health Checks
+
+```bash
 curl -sf https://pidlab-telemetry-dev.eddycek-ve.workers.dev/health
 curl -sf https://pidlab-license-dev.eddycek-ve.workers.dev/health
 ```
