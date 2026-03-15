@@ -15,7 +15,6 @@ Overview of all design documents in this directory. Completed documents are arch
 | [TUNING_PRECISION_IMPROVEMENTS](./TUNING_PRECISION_IMPROVEMENTS.md) | **Active** | Research-based tuning accuracy improvements: ~~Wiener deconvolution~~ (done), ~~proportional PID scaling~~ (done), ~~data quality scoring~~ (done), ~~flight quality score~~ (done), ~~throttle spectrograms~~ (done), chirp analysis |
 | [UX_IMPROVEMENT_IDEAS](./UX_IMPROVEMENT_IDEAS.md) | **Active** | Backlog of UX improvement ideas (4/7 done, rest are future work) |
 | [PAYMENT_AND_INVOICING](./PAYMENT_AND_INVOICING.md) | **Proposed** | Stripe payment gateway + Trivi API invoicing. End-to-end purchase → invoice → license delivery flow |
-| [TELEMETRY_COLLECTION](./TELEMETRY_COLLECTION.md) | **Complete** | Anonymous telemetry via CF Workers + R2. Client-side (PR #261) + server-side Worker (PR #262) |
 | [LICENSE_KEY_SYSTEM](./LICENSE_KEY_SYSTEM.md) | **Proposed** | Freemium licensing via CF Workers + D1. Ed25519 keys, offline grace period, admin API |
 
 ## Completed Documents (`complete/`)
@@ -36,6 +35,7 @@ Overview of all design documents in this directory. Completed documents are arch
 | [SD_CARD_BLACKBOX_SUPPORT](./complete/SD_CARD_BLACKBOX_SUPPORT.md) | SD card blackbox storage via MSC mode + tuning session fixes |
 | [TUNING_HISTORY_AND_COMPARISON](./complete/TUNING_HISTORY_AND_COMPARISON.md) | Tuning session history + before/after comparison on completion |
 | [TUNING_WORKFLOW_FIXES](./complete/TUNING_WORKFLOW_FIXES.md) | Fix for download/analyze blocking + phase transition issues |
+| [TELEMETRY_COLLECTION](./complete/TELEMETRY_COLLECTION.md) | Anonymous telemetry via CF Workers + R2. Client + server + Terraform IaC + CI/CD (PRs #261–#265) |
 | [TUNING_WORKFLOW_REVISION](./complete/TUNING_WORKFLOW_REVISION.md) | Stateful tuning workflow design. (Historical: originally described Deep Tune 10-phase state machine; later evolved into 3-mode architecture: Filter Tune, PID Tune, Flash Tune) |
 
 ## Status Legend

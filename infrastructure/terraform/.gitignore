@@ -7,5 +7,8 @@
 # Variables file (contains secrets)
 terraform.tfvars
 
+# Environment files with real secrets (manual deploy)
+.env.local
+
 # Worker bundle (built from source)
 worker-bundle.js
