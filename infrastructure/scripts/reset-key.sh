@@ -4,7 +4,7 @@ set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_env.sh"
 
 if [[ $# -eq 0 ]]; then
-  echo "=== Reset License Key Binding (${PIDLAB_ENV:-dev}) ==="
+  echo "=== Reset License Key Binding ==="
   read -rp "Key ID: " KEY_ID
 else
   KEY_ID="$1"

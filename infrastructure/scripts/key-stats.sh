@@ -3,6 +3,6 @@
 set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_env.sh"
 
-echo "=== License Key Stats (${PIDLAB_ENV:-dev}) ==="
+echo "=== License Key Stats ==="
 curl -s -H "X-Admin-Key: $PIDLAB_ADMIN_KEY" \
   "$PIDLAB_LICENSE_API_URL/admin/keys/stats" | jq .

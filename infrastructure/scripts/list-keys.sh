@@ -1,6 +1,5 @@
 #!/bin/bash
-# List license keys. Defaults to DEV. Override: PIDLAB_ENV=prod ./list-keys.sh
-# Options: --status active|revoked  --type paid|tester
+# List license keys. Options: --status active|revoked  --type paid|tester
 set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_env.sh"
 
@@ -13,6 +12,6 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-echo "=== License Keys (${PIDLAB_ENV:-dev}) ==="
+echo "=== License Keys ==="
 curl -s -H "X-Admin-Key: $PIDLAB_ADMIN_KEY" \
   "$PIDLAB_LICENSE_API_URL/admin/keys?${PARAMS#&}" | jq .
