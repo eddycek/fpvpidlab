@@ -1,9 +1,6 @@
 #!/bin/bash
 # Shared env loader for admin scripts.
-# Loads .env.local from repo root and sets up dev/prod targeting.
-#
-# Default: DEV environment
-# Override: PIDLAB_ENV=prod ./generate-key.sh ...
+# Loads .env.local from repo root and prompts for environment if not set.
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
@@ -14,23 +11,35 @@ if [[ ! -f "$ENV_FILE" ]]; then
   exit 1
 fi
 
-# Source as key=value (not export — we control what gets exported)
+# Source key=value pairs
 while IFS='=' read -r key value; do
-  # Skip comments, empty lines, and export lines
   [[ "$key" =~ ^#.*$ || -z "$key" || "$key" =~ ^export ]] && continue
-  # Strip quotes from value
   value="${value%\"}"
   value="${value#\"}"
   export "$key=$value"
 done < "$ENV_FILE"
-
-# Also source export lines (terraform vars)
 # shellcheck source=/dev/null
 source "$ENV_FILE"
 
-# Select environment (default: dev)
-PIDLAB_ENV="${PIDLAB_ENV:-dev}"
+# Ask for environment if not already set (only in interactive terminal)
+if [[ -z "${PIDLAB_ENV:-}" ]]; then
+  if [[ -t 0 ]]; then
+    echo "Environment: [1] dev  [2] prod"
+    read -rp "Select [1]: " ENV_CHOICE || true
+    case "${ENV_CHOICE:-}" in
+      2|prod) PIDLAB_ENV="prod" ;;
+      *)      PIDLAB_ENV="dev" ;;
+    esac
+  else
+    PIDLAB_ENV="dev"
+  fi
+  export PIDLAB_ENV
+fi
 
+echo "── Environment: $(echo "$PIDLAB_ENV" | tr '[:lower:]' '[:upper:]') ──"
+echo ""
+
+# Set API URLs and admin keys based on environment
 if [[ "$PIDLAB_ENV" == "prod" ]]; then
   export PIDLAB_LICENSE_API_URL="$LICENSE_PROD_URL"
   export PIDLAB_ADMIN_KEY="$LICENSE_ADMIN_KEY_PROD"

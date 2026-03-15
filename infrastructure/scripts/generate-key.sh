@@ -1,14 +1,9 @@
 #!/bin/bash
 # Generate a license key (interactive).
-# Reads secrets from .env.local, defaults to DEV.
-# Override: PIDLAB_ENV=prod ./generate-key.sh
 set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_env.sh"
 
-echo "=== Generate License Key (${PIDLAB_ENV:-dev}) ==="
-echo ""
-
-# Interactive prompts
+echo "=== Generate License Key ==="
 read -rp "Email: " EMAIL
 if [[ -z "$EMAIL" ]]; then
   echo "ERROR: Email is required." >&2

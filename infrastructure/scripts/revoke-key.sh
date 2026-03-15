@@ -4,7 +4,7 @@ set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_env.sh"
 
 if [[ $# -eq 0 ]]; then
-  echo "=== Revoke License Key (${PIDLAB_ENV:-dev}) ==="
+  echo "=== Revoke License Key ==="
   read -rp "Key ID: " KEY_ID
 else
   KEY_ID="$1"
