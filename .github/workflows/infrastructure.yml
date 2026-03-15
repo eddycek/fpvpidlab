@@ -69,15 +69,12 @@ jobs:
           name: license-worker-bundle
           path: ${{ env.TF_DIR }}/license-worker-bundle.js
 
-  # ── Terraform Plan (PR only) ────────────────────────────────────
-  plan:
-    name: Plan (${{ matrix.environment }})
+  # ── Terraform Plan prod (PR only) ───────────────────────────────
+  plan-prod:
+    name: Plan (prod)
     needs: [build-worker, build-license-worker]
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        environment: [dev, prod]
     steps:
       - uses: actions/checkout@v4
 
@@ -100,7 +97,7 @@ jobs:
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.TERRAFORM_STATE_R2_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.TERRAFORM_STATE_R2_SECRET_ACCESS_KEY }}
-        run: terraform init -backend-config=backend-${{ matrix.environment }}.hcl
+        run: terraform init -backend-config=backend-prod.hcl
 
       - name: Terraform Plan
         working-directory: ${{ env.TF_DIR }}
@@ -108,18 +105,17 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.TERRAFORM_STATE_R2_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.TERRAFORM_STATE_R2_SECRET_ACCESS_KEY }}
           TF_VAR_cloudflare_api_token: ${{ secrets.CLOUDFLARE_PROVISIONING }}
-          TF_VAR_admin_key: ${{ secrets.TELEMETRY_ADMIN_KEY_DEV }}
+          TF_VAR_admin_key: ${{ secrets.TELEMETRY_ADMIN_KEY_PROD }}
           TF_VAR_resend_api_key: ${{ secrets.RESEND_API_KEY }}
-          TF_VAR_license_admin_key: ${{ secrets.LICENSE_ADMIN_KEY_DEV }}
+          TF_VAR_license_admin_key: ${{ secrets.LICENSE_ADMIN_KEY_PROD }}
           TF_VAR_ed25519_private_key: ${{ secrets.ED25519_PRIVATE_KEY }}
           TF_VAR_ed25519_public_key: ${{ secrets.ED25519_PUBLIC_KEY }}
-        run: terraform plan -var-file=${{ matrix.environment }}.tfvars -no-color
+        run: terraform plan -var-file=prod.tfvars -no-color
 
-  # ── Terraform Apply (push to main) ──────────────────────────────
+  # ── Deploy dev (PR + push to main) ─────────────────────────────
   deploy-dev:
     name: Deploy dev
     needs: [build-worker, build-license-worker]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     environment: dev
     steps:
