@@ -1,21 +1,39 @@
 #!/bin/bash
-# Usage: ./generate-key.sh <email> [type] [note]
-# Requires: PIDLAB_LICENSE_API_URL, PIDLAB_ADMIN_KEY env vars
+# Generate a license key (interactive).
+# Reads secrets from .env.local, defaults to DEV.
+# Override: PIDLAB_ENV=prod ./generate-key.sh
 set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_env.sh"
 
-EMAIL="${1:?Usage: ./generate-key.sh <email> [type] [note]}"
-TYPE="${2:-paid}"
-NOTE="${3:-}"
+echo "=== Generate License Key (${PIDLAB_ENV:-dev}) ==="
+echo ""
 
-API_URL="${PIDLAB_LICENSE_API_URL:?Set PIDLAB_LICENSE_API_URL}"
-ADMIN_KEY="${PIDLAB_ADMIN_KEY:?Set PIDLAB_ADMIN_KEY}"
+# Interactive prompts
+read -rp "Email: " EMAIL
+if [[ -z "$EMAIL" ]]; then
+  echo "ERROR: Email is required." >&2
+  exit 1
+fi
+
+echo "Type: paid (default) or tester"
+read -rp "Type [paid]: " TYPE
+TYPE="${TYPE:-paid}"
+
+read -rp "Note (optional): " NOTE
+
+echo ""
+echo "Generating $TYPE key for $EMAIL..."
+echo ""
 
 PAYLOAD=$(jq -n --arg email "$EMAIL" --arg type "$TYPE" --arg note "$NOTE" \
   '{email: $email, type: $type, note: $note}')
 
-curl -s -X POST \
-  -H "X-Admin-Key: $ADMIN_KEY" \
+RESULT=$(curl -sf -X POST \
+  -H "X-Admin-Key: $PIDLAB_ADMIN_KEY" \
   -H "Content-Type: application/json" \
   -d "$PAYLOAD" \
-  "$API_URL/admin/keys/generate" | jq .
+  "$PIDLAB_LICENSE_API_URL/admin/keys/generate")
+
+echo "$RESULT" | jq .
+echo ""
+echo "License key: $(echo "$RESULT" | jq -r '.licenseKey')"

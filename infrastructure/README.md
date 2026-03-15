@@ -165,12 +165,17 @@ After bootstrap, everything is managed by Terraform + CI/CD. No more manual comm
 
 ## Manual Operations
 
-All manual operations require secrets from `.env.local`. First-time setup:
+All manual operations require secrets from `.env.local` in the **repo root**. First-time setup:
 
 ```bash
-cd infrastructure/terraform
 cp env.template .env.local
 # Fill in real values from 1Password (vault: PIDlab Infrastructure)
+```
+
+Admin scripts auto-load `.env.local` and default to **dev** environment. To target prod:
+
+```bash
+PIDLAB_ENV=prod ./infrastructure/scripts/generate-key.sh user@example.com
 ```
 
 ### Deploy infrastructure manually
@@ -178,23 +183,27 @@ cp env.template .env.local
 Normally CI/CD handles this on merge to main. Use this for emergency fixes or debugging.
 
 ```bash
-cd infrastructure/terraform
 source .env.local
+cd infrastructure/terraform
 
-# 1. Build worker bundle from TypeScript source
+# 1. Build telemetry worker bundle
 cd ../telemetry-worker && npm install && npx esbuild src/index.ts --bundle --format=esm --outfile=../terraform/worker-bundle.js && cd ../terraform
 
 # 2a. Deploy DEV
 terraform init -backend-config=backend-dev.hcl
-export TF_VAR_admin_key="$TF_VAR_admin_key_dev"
-terraform plan -var-file=dev.tfvars          # review changes
-terraform apply -var-file=dev.tfvars         # apply
+export TF_VAR_admin_key="$TELEMETRY_ADMIN_KEY_DEV"
+export TF_VAR_license_admin_key="$LICENSE_ADMIN_KEY_DEV"
+terraform apply -var-file=dev.tfvars
 
-# 2b. Deploy PROD (switch backend state)
+# 2b. Deploy license worker via wrangler (not terraform)
+cd ../license-worker && npm install && npx wrangler deploy && cd ../terraform
+
+# 2c. Deploy PROD
 terraform init -reconfigure -backend-config=backend-prod.hcl
-export TF_VAR_admin_key="$TF_VAR_admin_key_prod"
-terraform plan -var-file=prod.tfvars         # review changes
-terraform apply -var-file=prod.tfvars        # apply
+export TF_VAR_admin_key="$TELEMETRY_ADMIN_KEY_PROD"
+export TF_VAR_license_admin_key="$LICENSE_ADMIN_KEY_PROD"
+terraform apply -var-file=prod.tfvars
+cd ../license-worker && npx wrangler deploy --env prod && cd ../terraform
 ```
 
 ### Check Worker health

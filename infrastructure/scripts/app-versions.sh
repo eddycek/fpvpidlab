@@ -1,11 +1,8 @@
 #!/bin/bash
-# Show PIDlab app version distribution across all installations.
-# Requires: PIDLAB_TELEMETRY_API_URL, PIDLAB_TELEMETRY_ADMIN_KEY env vars
+# Show PIDlab app version distribution. Defaults to DEV. Override: PIDLAB_ENV=prod
 set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_env.sh"
 
-API_URL="${PIDLAB_TELEMETRY_API_URL:?Set PIDLAB_TELEMETRY_API_URL}"
-ADMIN_KEY="${PIDLAB_TELEMETRY_ADMIN_KEY:?Set PIDLAB_TELEMETRY_ADMIN_KEY}"
-
-curl -s -H "X-Admin-Key: $ADMIN_KEY" \
-  "$API_URL/admin/stats/app-versions" | jq .
+echo "=== App Version Distribution (${PIDLAB_ENV:-dev}) ==="
+curl -s -H "X-Admin-Key: $PIDLAB_TELEMETRY_ADMIN_KEY" \
+  "$PIDLAB_TELEMETRY_API_URL/admin/stats/app-versions" | jq .
