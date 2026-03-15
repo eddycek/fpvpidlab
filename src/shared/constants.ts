@@ -115,9 +115,11 @@ export const LICENSE = {
   API_URL_DEV: 'https://pidlab-license-dev.eddycek.workers.dev',
   /** Key format regex: PIDLAB-XXXX-XXXX-XXXX (28-char alphabet) */
   KEY_FORMAT_REGEX: /^PIDLAB-[A-HJKMNP-Z2-9]{4}-[A-HJKMNP-Z2-9]{4}-[A-HJKMNP-Z2-9]{4}$/,
-  /** Ed25519 public key (base64 SPKI DER). MUST be set before production release.
-   *  Empty = dev mode allows bypass, production rejects all licenses. */
-  ED25519_PUBLIC_KEY: '',
+  /** Ed25519 public key (base64 SPKI DER) for offline license verification.
+   *  MUST match the ED25519_PUBLIC_KEY secret on the license CF Worker.
+   *  On key rotation: update this value, deploy app, then rotate worker secret.
+   *  Generated with: infrastructure/scripts/generate-ed25519-keypair.sh */
+  ED25519_PUBLIC_KEY: 'MCowBQYDK2VwAyEAPhSegGVFCNCs5ZIb0StMdy10gs7QaW3oRls1XGTbZB8=',
   /** Free tier: max 1 profile */
   FREE_PROFILE_LIMIT: 1,
   /** Online validation interval (24 hours) */
