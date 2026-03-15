@@ -75,6 +75,51 @@ export function LicenseSettingsModal({ onClose }: LicenseSettingsModalProps) {
               </span>
             </div>
 
+            <div className="license-comparison">
+              <div className="license-comparison-col">
+                <h3 className="license-comparison-title license-comparison-free">Free</h3>
+                <ul className="license-comparison-list">
+                  <li className="license-comparison-limit">1 drone profile</li>
+                  <li>Filter Tune</li>
+                  <li>PID Tune</li>
+                  <li>Flash Tune</li>
+                  <li>Analysis overview</li>
+                  <li>Tuning history</li>
+                  <li>Snapshots &amp; restore</li>
+                </ul>
+              </div>
+              <div className="license-comparison-col">
+                <h3 className="license-comparison-title license-comparison-pro">Pro</h3>
+                <ul className="license-comparison-list">
+                  <li className="license-comparison-highlight">Unlimited drone profiles</li>
+                  <li>Filter Tune</li>
+                  <li>PID Tune</li>
+                  <li>Flash Tune</li>
+                  <li>Analysis overview</li>
+                  <li>Tuning history</li>
+                  <li>Snapshots &amp; restore</li>
+                </ul>
+              </div>
+            </div>
+
+            <div className="license-pitch">
+              <p>
+                {isPro ? (
+                  <>
+                    Thank you for supporting PIDlab! Your Pro license gives you{' '}
+                    <strong>lifetime access</strong> to all current and future features.
+                  </>
+                ) : (
+                  <>
+                    With a Pro license you get <strong>lifetime access</strong> to all current and
+                    future features. We don't guarantee that all functionality will remain in the
+                    free version as PIDlab evolves. By upgrading you also directly support the
+                    development of this project.
+                  </>
+                )}
+              </p>
+            </div>
+
             {isPro && status && (
               <>
                 {status.key && (
@@ -115,42 +160,6 @@ export function LicenseSettingsModal({ onClose }: LicenseSettingsModalProps) {
 
             {!isPro && (
               <>
-                <div className="license-comparison">
-                  <div className="license-comparison-col">
-                    <h3 className="license-comparison-title license-comparison-free">Free</h3>
-                    <ul className="license-comparison-list">
-                      <li className="license-comparison-limit">1 drone profile</li>
-                      <li>Filter Tune</li>
-                      <li>PID Tune</li>
-                      <li>Flash Tune</li>
-                      <li>Analysis overview</li>
-                      <li>Tuning history</li>
-                      <li>Snapshots &amp; restore</li>
-                    </ul>
-                  </div>
-                  <div className="license-comparison-col">
-                    <h3 className="license-comparison-title license-comparison-pro">Pro</h3>
-                    <ul className="license-comparison-list">
-                      <li className="license-comparison-highlight">Unlimited drone profiles</li>
-                      <li>Filter Tune</li>
-                      <li>PID Tune</li>
-                      <li>Flash Tune</li>
-                      <li>Analysis overview</li>
-                      <li>Tuning history</li>
-                      <li>Snapshots &amp; restore</li>
-                    </ul>
-                  </div>
-                </div>
-
-                <div className="license-pitch">
-                  <p>
-                    With a Pro license you get <strong>lifetime access</strong> to all current and
-                    future features. We don't guarantee that all functionality will remain in the
-                    free version as PIDlab evolves. By upgrading you also directly support the
-                    development of this project.
-                  </p>
-                </div>
-
                 {/* Buy button — hidden until Stripe integration is ready
                 <div className="license-buy-row">
                   <a
