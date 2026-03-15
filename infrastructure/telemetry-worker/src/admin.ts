@@ -169,6 +169,33 @@ async function handleQuality(env: Env): Promise<Response> {
   return Response.json(result);
 }
 
+/** GET /admin/stats/app-versions — PIDlab app version distribution */
+async function handleAppVersions(env: Env): Promise<Response> {
+  const installations = await listInstallations(env.TELEMETRY_BUCKET);
+  const versions: Record<string, number> = {};
+
+  for (const { bundle } of installations) {
+    const v = bundle.appVersion || 'unknown';
+    versions[v] = (versions[v] || 0) + 1;
+  }
+
+  // Sort by version descending (newest first)
+  const sorted = Object.entries(versions).sort(([a], [b]) => {
+    const pa = a.split('.').map(Number);
+    const pb = b.split('.').map(Number);
+    for (let i = 0; i < 3; i++) {
+      if ((pb[i] || 0) !== (pa[i] || 0)) return (pb[i] || 0) - (pa[i] || 0);
+    }
+    return 0;
+  });
+
+  return Response.json({
+    versions: Object.fromEntries(sorted),
+    total: installations.length,
+    latest: sorted.length > 0 ? sorted[0][0] : null,
+  });
+}
+
 /** Route admin requests */
 export async function handleAdmin(
   request: Request,
@@ -188,6 +215,8 @@ export async function handleAdmin(
       return handleDrones(env);
     case '/admin/stats/quality':
       return handleQuality(env);
+    case '/admin/stats/app-versions':
+      return handleAppVersions(env);
     default:
       return new Response('Not found', { status: 404 });
   }
