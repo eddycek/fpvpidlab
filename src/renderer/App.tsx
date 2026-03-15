@@ -38,7 +38,7 @@ import type {
   FlightGuideMode,
   AppliedChange,
 } from '@shared/types/tuning.types';
-import { TUNING_MODE, TUNING_PHASE, TUNING_TYPE } from '@shared/constants';
+import { APP_VERSION, TUNING_MODE, TUNING_PHASE, TUNING_TYPE } from '@shared/constants';
 import type {
   CompletedTuningRecord,
   FilterMetricsSummary,
@@ -620,7 +620,7 @@ function AppContent() {
           <span className="app-bf-compat">BF 4.3+</span>
         </div>
         <div className="app-header-right">
-          <span className="version">v0.1.0</span>
+          <span className="version">v{APP_VERSION}</span>
           <UpdateNotification />
           <button
             className={`app-license-badge ${isPro ? 'app-license-pro' : 'app-license-free'}`}
