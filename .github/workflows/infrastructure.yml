@@ -108,8 +108,8 @@ jobs:
           TF_VAR_admin_key: ${{ secrets.TELEMETRY_ADMIN_KEY_PROD }}
           TF_VAR_resend_api_key: ${{ secrets.RESEND_API_KEY }}
           TF_VAR_license_admin_key: ${{ secrets.LICENSE_ADMIN_KEY_PROD }}
-          TF_VAR_ed25519_private_key: ${{ secrets.ED25519_PRIVATE_KEY }}
-          TF_VAR_ed25519_public_key: ${{ secrets.ED25519_PUBLIC_KEY }}
+          TF_VAR_license_ed25519_private_key: ${{ secrets.LICENSE_ED25519_PRIVATE_KEY }}
+          TF_VAR_license_ed25519_public_key: ${{ secrets.LICENSE_ED25519_PUBLIC_KEY }}
         run: terraform plan -var-file=prod.tfvars -no-color
 
   # ── Deploy dev (internal PRs + push to main) ───────────────────
@@ -155,8 +155,8 @@ jobs:
           TF_VAR_admin_key: ${{ secrets.TELEMETRY_ADMIN_KEY_DEV }}
           TF_VAR_resend_api_key: ${{ secrets.RESEND_API_KEY }}
           TF_VAR_license_admin_key: ${{ secrets.LICENSE_ADMIN_KEY_DEV }}
-          TF_VAR_ed25519_private_key: ${{ secrets.ED25519_PRIVATE_KEY }}
-          TF_VAR_ed25519_public_key: ${{ secrets.ED25519_PUBLIC_KEY }}
+          TF_VAR_license_ed25519_private_key: ${{ secrets.LICENSE_ED25519_PRIVATE_KEY }}
+          TF_VAR_license_ed25519_public_key: ${{ secrets.LICENSE_ED25519_PUBLIC_KEY }}
         run: terraform apply -var-file=dev.tfvars -auto-approve
 
   deploy-prod:
@@ -201,6 +201,6 @@ jobs:
           TF_VAR_admin_key: ${{ secrets.TELEMETRY_ADMIN_KEY_PROD }}
           TF_VAR_resend_api_key: ${{ secrets.RESEND_API_KEY }}
           TF_VAR_license_admin_key: ${{ secrets.LICENSE_ADMIN_KEY_PROD }}
-          TF_VAR_ed25519_private_key: ${{ secrets.ED25519_PRIVATE_KEY }}
-          TF_VAR_ed25519_public_key: ${{ secrets.ED25519_PUBLIC_KEY }}
+          TF_VAR_license_ed25519_private_key: ${{ secrets.LICENSE_ED25519_PRIVATE_KEY }}
+          TF_VAR_license_ed25519_public_key: ${{ secrets.LICENSE_ED25519_PUBLIC_KEY }}
         run: terraform apply -var-file=prod.tfvars -auto-approve

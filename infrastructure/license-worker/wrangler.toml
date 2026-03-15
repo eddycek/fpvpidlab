@@ -10,6 +10,7 @@ database_id = "placeholder-dev-id"
 
 # Secrets set via `wrangler secret put`:
 # ADMIN_KEY, ED25519_PRIVATE_KEY, ED25519_PUBLIC_KEY
+# GitHub secrets: LICENSE_ED25519_PRIVATE_KEY, LICENSE_ED25519_PUBLIC_KEY
 
 [env.prod]
 name = "pidlab-license"

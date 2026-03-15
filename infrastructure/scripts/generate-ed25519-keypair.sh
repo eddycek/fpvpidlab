@@ -1,7 +1,8 @@
 #!/bin/bash
 # Generate Ed25519 keypair for license signing.
 # Output: base64-encoded PKCS8 private key and SPKI public key
-# Store as CF Worker secrets: ED25519_PRIVATE_KEY, ED25519_PUBLIC_KEY
+# GitHub secrets: LICENSE_ED25519_PRIVATE_KEY, LICENSE_ED25519_PUBLIC_KEY
+# Worker env bindings: ED25519_PRIVATE_KEY, ED25519_PUBLIC_KEY
 
 set -euo pipefail
 
@@ -20,12 +21,12 @@ PUBLIC_B64=$(base64 < "$TMPDIR/public.der" | tr -d '\n')
 
 echo "=== Ed25519 Keypair ==="
 echo ""
-echo "ED25519_PRIVATE_KEY (store as CF secret, NEVER commit):"
+echo "LICENSE_ED25519_PRIVATE_KEY (GitHub secret, NEVER commit):"
 echo "$PRIVATE_B64"
 echo ""
-echo "ED25519_PUBLIC_KEY (store as CF secret AND bundle in Electron app):"
+echo "LICENSE_ED25519_PUBLIC_KEY (GitHub secret + bundle in src/shared/constants.ts):"
 echo "$PUBLIC_B64"
 echo ""
-echo "To set as CF Worker secrets:"
-echo "  echo '$PRIVATE_B64' | wrangler secret put ED25519_PRIVATE_KEY"
-echo "  echo '$PUBLIC_B64' | wrangler secret put ED25519_PUBLIC_KEY"
+echo "To set as GitHub secrets:"
+echo "  gh secret set LICENSE_ED25519_PRIVATE_KEY --body '$PRIVATE_B64'"
+echo "  gh secret set LICENSE_ED25519_PUBLIC_KEY --body '$PUBLIC_B64'"

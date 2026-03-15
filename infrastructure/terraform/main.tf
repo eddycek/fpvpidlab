@@ -86,14 +86,14 @@ variable "license_admin_key" {
   default     = ""
 }
 
-variable "ed25519_private_key" {
+variable "license_ed25519_private_key" {
   description = "Ed25519 private key (base64 PKCS8 DER) for license signing"
   type        = string
   sensitive   = true
   default     = ""
 }
 
-variable "ed25519_public_key" {
+variable "license_ed25519_public_key" {
   description = "Ed25519 public key (base64 SPKI DER) for license verification"
   type        = string
   sensitive   = true
@@ -115,7 +115,7 @@ locals {
   worker_name         = "pidlab-telemetry${local.name_suffix}"
   license_db_name     = "pidlab-license${local.name_suffix}"
   license_worker_name = "pidlab-license${local.name_suffix}"
-  license_enabled     = var.license_admin_key != "" && var.ed25519_private_key != ""
+  license_enabled     = var.license_admin_key != "" && var.license_ed25519_private_key != ""
 }
 
 # ─── R2 Bucket ──────────────────────────────────────────────────────
@@ -224,12 +224,12 @@ resource "cloudflare_workers_script" "license" {
 
   secret_text_binding {
     name = "ED25519_PRIVATE_KEY"
-    text = var.ed25519_private_key
+    text = var.license_ed25519_private_key
   }
 
   secret_text_binding {
     name = "ED25519_PUBLIC_KEY"
-    text = var.ed25519_public_key
+    text = var.license_ed25519_public_key
   }
 }
 
