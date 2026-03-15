@@ -2,6 +2,7 @@
 # Usage: ./generate-key.sh <email> [type] [note]
 # Requires: PIDLAB_LICENSE_API_URL, PIDLAB_ADMIN_KEY env vars
 set -euo pipefail
+source "$(dirname "${BASH_SOURCE[0]}")/_env.sh"
 
 EMAIL="${1:?Usage: ./generate-key.sh <email> [type] [note]}"
 TYPE="${2:-paid}"
