@@ -15,12 +15,17 @@ describe('LicenseSettingsModal', () => {
     vi.mocked(window.betaflight.onLicenseChanged).mockReturnValue(() => {});
   });
 
-  it('renders free status with key input', async () => {
+  it('renders free status with comparison and key input', async () => {
     render(<LicenseSettingsModal onClose={onClose} />);
 
     await waitFor(() => {
-      expect(screen.getByText('Free')).toBeInTheDocument();
+      expect(screen.getAllByText('Free').length).toBeGreaterThanOrEqual(1);
     });
+
+    // Comparison table shows both tiers
+    expect(screen.getByText('1 drone profile')).toBeInTheDocument();
+    expect(screen.getByText('Unlimited drone profiles')).toBeInTheDocument();
+    expect(screen.getByText('Already have a license key?')).toBeInTheDocument();
 
     expect(screen.getByPlaceholderText('PIDLAB-XXXX-XXXX-XXXX')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Activate' })).toBeInTheDocument();

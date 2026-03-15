@@ -110,31 +110,70 @@ export function LicenseSettingsModal({ onClose }: LicenseSettingsModalProps) {
 
             {!isPro && (
               <>
-                <p className="license-description">
-                  Enter your license key to unlock Pro features (unlimited profiles).
-                </p>
-
-                <div className="license-key-input-row">
-                  <input
-                    type="text"
-                    className="license-key-input"
-                    placeholder="PIDLAB-XXXX-XXXX-XXXX"
-                    value={keyInput}
-                    onChange={(e) => setKeyInput(e.target.value.toUpperCase())}
-                    onKeyDown={handleKeyDown}
-                    maxLength={21}
-                    disabled={activating}
-                  />
-                  <button
-                    className="wizard-btn wizard-btn-primary"
-                    onClick={handleActivate}
-                    disabled={!keyInput.trim() || activating}
-                  >
-                    {activating ? 'Activating...' : 'Activate'}
-                  </button>
+                <div className="license-comparison">
+                  <div className="license-comparison-col">
+                    <h3 className="license-comparison-title license-comparison-free">Free</h3>
+                    <ul className="license-comparison-list">
+                      <li>1 drone profile</li>
+                      <li>Filter Tune</li>
+                      <li>PID Tune</li>
+                      <li>Flash Tune</li>
+                      <li>Analysis overview</li>
+                      <li>Tuning history</li>
+                      <li>Snapshots &amp; restore</li>
+                    </ul>
+                  </div>
+                  <div className="license-comparison-col">
+                    <h3 className="license-comparison-title license-comparison-pro">Pro</h3>
+                    <ul className="license-comparison-list">
+                      <li className="license-comparison-highlight">Unlimited drone profiles</li>
+                      <li>Filter Tune</li>
+                      <li>PID Tune</li>
+                      <li>Flash Tune</li>
+                      <li>Analysis overview</li>
+                      <li>Tuning history</li>
+                      <li>Snapshots &amp; restore</li>
+                    </ul>
+                  </div>
                 </div>
 
-                {error && <p className="license-error">{error}</p>}
+                {/* Buy button — hidden until Stripe integration is ready
+                <div className="license-buy-row">
+                  <a
+                    className="wizard-btn wizard-btn-primary license-buy-btn"
+                    href="https://pidlab.app/pricing"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Buy Pro License
+                  </a>
+                </div>
+                */}
+
+                <div className="license-activate-section">
+                  <p className="license-description">Already have a license key?</p>
+                  <div className="license-key-input-row">
+                    <input
+                      type="text"
+                      className="license-key-input"
+                      placeholder="PIDLAB-XXXX-XXXX-XXXX"
+                      value={keyInput}
+                      onChange={(e) => setKeyInput(e.target.value.toUpperCase())}
+                      onKeyDown={handleKeyDown}
+                      maxLength={21}
+                      disabled={activating}
+                    />
+                    <button
+                      className="wizard-btn wizard-btn-primary"
+                      onClick={handleActivate}
+                      disabled={!keyInput.trim() || activating}
+                    >
+                      {activating ? 'Activating...' : 'Activate'}
+                    </button>
+                  </div>
+
+                  {error && <p className="license-error">{error}</p>}
+                </div>
               </>
             )}
           </div>

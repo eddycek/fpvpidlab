@@ -97,11 +97,89 @@
   color: #aaa;
 }
 
+.license-comparison {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.license-comparison-col {
+  flex: 1;
+  background: #252525;
+  border-radius: 8px;
+  padding: 12px;
+  border: 1px solid #333;
+}
+
+.license-comparison-title {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.license-comparison-free {
+  color: #888;
+}
+
+.license-comparison-pro {
+  color: #10b981;
+}
+
+.license-comparison-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.license-comparison-list li {
+  font-size: 12px;
+  color: #999;
+  padding: 3px 0;
+  padding-left: 16px;
+  position: relative;
+}
+
+.license-comparison-list li::before {
+  content: '\2713';
+  position: absolute;
+  left: 0;
+  color: #555;
+  font-size: 11px;
+}
+
+.license-comparison-highlight {
+  color: #10b981 !important;
+  font-weight: 500;
+}
+
+.license-comparison-highlight::before {
+  color: #10b981 !important;
+}
+
+.license-activate-section {
+  border-top: 1px solid #333;
+  padding-top: 14px;
+}
+
+.license-buy-row {
+  margin-bottom: 16px;
+  display: flex;
+  justify-content: center;
+}
+
+.license-buy-btn {
+  text-decoration: none;
+  text-align: center;
+  width: 100%;
+}
+
 .license-description {
   color: #888;
   font-size: 12px;
   line-height: 1.5;
-  margin: 0 0 16px;
+  margin: 0 0 12px;
 }
 
 .license-key-input-row {
