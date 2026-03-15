@@ -12,6 +12,8 @@ export interface TelemetrySettings {
   installationId: string;
   /** ISO timestamp of last successful upload */
   lastUploadAt: string | null;
+  /** Last upload error message (null if last upload succeeded) */
+  lastUploadError: string | null;
 }
 
 /** Anonymous telemetry bundle sent to the cloud */
@@ -24,6 +26,8 @@ export interface TelemetryBundle {
   timestamp: string;
   /** App version */
   appVersion: string;
+  /** Environment: 'production' (packaged) or 'development' */
+  environment: 'production' | 'development';
   /** Platform (darwin, win32, linux) */
   platform: string;
 

@@ -2,7 +2,7 @@
   background: #1e1e1e;
   border: 1px solid #333;
   border-radius: 12px;
-  width: 480px;
+  width: 540px;
   max-width: 90vw;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
 }
@@ -134,8 +134,80 @@
   color: #fff;
 }
 
+.telemetry-error-value {
+  color: #ef4444 !important;
+  font-size: 12px !important;
+}
+
 .telemetry-actions {
   margin-top: 16px;
   display: flex;
+  justify-content: flex-end;
+}
+
+/* ── Settings Tabs ─────────────────────────────────────────────── */
+
+.settings-tabs {
+  display: flex;
+  border-bottom: 1px solid #333;
+  padding: 0 20px;
+}
+
+.settings-tab {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: #888;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 10px 16px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.settings-tab:hover {
+  color: #ccc;
+}
+
+.settings-tab-active {
+  color: #e0e0e0;
+  border-bottom-color: #2563eb;
+}
+
+/* ── Log Viewer ────────────────────────────────────────────────── */
+
+.logs-box {
+  background: #111;
+  border: 1px solid #2a2a2a;
+  border-radius: 6px;
+  padding: 8px;
+  height: 280px;
+  overflow-y: auto;
+  font-family: monospace;
+  font-size: 11px;
+  line-height: 1.5;
+  color: #aaa;
+  margin-bottom: 12px;
+}
+
+.logs-line {
+  white-space: pre-wrap;
+  word-break: break-all;
+  padding: 1px 0;
+}
+
+.logs-line:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.logs-loading {
+  color: #666;
+  font-size: 12px;
+  margin: 0;
+}
+
+.logs-actions {
+  display: flex;
+  gap: 8px;
   justify-content: flex-end;
 }

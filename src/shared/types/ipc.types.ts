@@ -164,6 +164,10 @@ export enum IPCChannel {
   TELEMETRY_SET_ENABLED = 'telemetry:set-enabled',
   TELEMETRY_SEND_NOW = 'telemetry:send-now',
 
+  // App Logs
+  APP_GET_LOGS = 'app:get-logs',
+  APP_EXPORT_LOGS = 'app:export-logs',
+
   // Auto-update
   UPDATE_CHECK = 'update:check',
   UPDATE_INSTALL = 'update:install',
@@ -309,6 +313,10 @@ export interface BetaflightAPI {
   getTelemetrySettings(): Promise<TelemetrySettings>;
   setTelemetryEnabled(enabled: boolean): Promise<TelemetrySettings>;
   sendTelemetryNow(): Promise<void>;
+
+  // App Logs
+  getAppLogs(lines?: number): Promise<string[]>;
+  exportAppLogs(): Promise<string>;
 
   // Auto-update
   checkForUpdate(): Promise<void>;

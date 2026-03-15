@@ -107,9 +107,14 @@ global.window.betaflight = {
     enabled: true,
     installationId: 'test-uuid',
     lastUploadAt: null,
+    lastUploadError: null,
   }),
   setTelemetryEnabled: vi.fn(),
   sendTelemetryNow: vi.fn().mockResolvedValue(undefined),
+
+  // App Logs
+  getAppLogs: vi.fn().mockResolvedValue([]),
+  exportAppLogs: vi.fn().mockResolvedValue(''),
 
   // Auto-update
   checkForUpdate: vi.fn().mockResolvedValue(undefined),

@@ -9,6 +9,7 @@ describe('useTelemetrySettings', () => {
       enabled: false,
       installationId: 'hook-test-uuid',
       lastUploadAt: null,
+      lastUploadError: null,
     });
   });
 
@@ -29,6 +30,7 @@ describe('useTelemetrySettings', () => {
       enabled: true,
       installationId: 'hook-test-uuid',
       lastUploadAt: null,
+      lastUploadError: null,
     });
 
     const { result } = renderHook(() => useTelemetrySettings());
@@ -51,11 +53,13 @@ describe('useTelemetrySettings', () => {
         enabled: true,
         installationId: 'hook-test-uuid',
         lastUploadAt: null,
+        lastUploadError: null,
       })
       .mockResolvedValue({
         enabled: true,
         installationId: 'hook-test-uuid',
         lastUploadAt: '2026-03-13T00:00:00Z',
+        lastUploadError: null,
       });
     vi.mocked(window.betaflight.sendTelemetryNow).mockResolvedValue(undefined);
 

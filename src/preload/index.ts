@@ -644,6 +644,23 @@ const betaflightAPI: BetaflightAPI = {
     }
   },
 
+  // App Logs
+  async getAppLogs(lines?: number): Promise<string[]> {
+    const response = await ipcRenderer.invoke(IPCChannel.APP_GET_LOGS, lines);
+    if (!response.success) {
+      throw new Error(response.error || 'Failed to get app logs');
+    }
+    return response.data;
+  },
+
+  async exportAppLogs(): Promise<string> {
+    const response = await ipcRenderer.invoke(IPCChannel.APP_EXPORT_LOGS);
+    if (!response.success) {
+      throw new Error(response.error || 'Failed to export logs');
+    }
+    return response.data;
+  },
+
   // Auto-update
   async checkForUpdate(): Promise<void> {
     const response = await ipcRenderer.invoke(IPCChannel.UPDATE_CHECK);

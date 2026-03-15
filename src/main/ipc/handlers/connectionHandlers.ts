@@ -1,4 +1,5 @@
-import { ipcMain } from 'electron';
+import { ipcMain, dialog } from 'electron';
+import fs from 'fs/promises';
 import { IPCChannel, IPCResponse } from '@shared/types/ipc.types';
 import type { PortInfo, ConnectionStatus } from '@shared/types/common.types';
 import type { HandlerDependencies } from './types';
@@ -130,4 +131,42 @@ export function registerConnectionHandlers(deps: HandlerDependencies): void {
       }
     }
   );
+
+  // ── App Logs ────────────────────────────────────────────────────────
+
+  ipcMain.handle(
+    IPCChannel.APP_GET_LOGS,
+    async (_event, lines?: number): Promise<IPCResponse<string[]>> => {
+      try {
+        const logPath = logger.getLogFilePath();
+        const content = await fs.readFile(logPath, 'utf-8');
+        const allLines = content.split('\n').filter((l) => l.trim());
+        const count = lines || 30;
+        return createResponse(allLines.slice(-count));
+      } catch (err) {
+        return createResponse<string[]>(undefined, getErrorMessage(err));
+      }
+    }
+  );
+
+  ipcMain.handle(IPCChannel.APP_EXPORT_LOGS, async (): Promise<IPCResponse<string>> => {
+    try {
+      const window = getMainWindow();
+      if (!window) throw new Error('No window');
+
+      const logPath = logger.getLogFilePath();
+      const { filePath } = await dialog.showSaveDialog(window, {
+        title: 'Export Application Logs',
+        defaultPath: `pidlab-logs-${new Date().toISOString().slice(0, 10)}.log`,
+        filters: [{ name: 'Log files', extensions: ['log', 'txt'] }],
+      });
+
+      if (!filePath) return createResponse('');
+
+      await fs.copyFile(logPath, filePath);
+      return createResponse(filePath);
+    } catch (err) {
+      return createResponse<string>(undefined, getErrorMessage(err));
+    }
+  });
 }

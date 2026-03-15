@@ -6,6 +6,11 @@ class Logger {
     log.transports.console.level = 'debug';
   }
 
+  /** Get the path to the active log file */
+  getLogFilePath(): string {
+    return log.transports.file.getFile().path;
+  }
+
   error(message: string, ...args: any[]): void {
     log.error(message, ...args);
   }

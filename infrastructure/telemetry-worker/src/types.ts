@@ -12,6 +12,7 @@ export interface TelemetryBundle {
   installationId: string;
   timestamp: string;
   appVersion: string;
+  environment?: 'production' | 'development';
   platform: string;
   profiles: {
     count: number;

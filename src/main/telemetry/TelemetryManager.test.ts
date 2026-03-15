@@ -28,6 +28,7 @@ vi.mock('zlib', () => ({ ...mockZlib, default: mockZlib }));
 
 // Mock electron
 vi.mock('electron', () => ({
+  app: { isPackaged: false },
   net: {
     fetch: vi.fn().mockResolvedValue({ ok: true }),
   },

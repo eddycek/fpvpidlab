@@ -12,6 +12,7 @@ describe('TelemetrySettingsModal', () => {
       enabled: false,
       installationId: 'abcd1234-5678-9012-3456-789012345678',
       lastUploadAt: null,
+      lastUploadError: null,
     });
   });
 
@@ -19,7 +20,7 @@ describe('TelemetrySettingsModal', () => {
     render(<TelemetrySettingsModal onClose={onClose} />);
 
     await waitFor(() => {
-      expect(screen.getByText('Telemetry Settings')).toBeInTheDocument();
+      expect(screen.getByText('Settings')).toBeInTheDocument();
     });
 
     expect(screen.getByText('Send anonymous usage data')).toBeInTheDocument();
@@ -42,6 +43,7 @@ describe('TelemetrySettingsModal', () => {
       enabled: true,
       installationId: 'abcd1234-5678-9012-3456-789012345678',
       lastUploadAt: null,
+      lastUploadError: null,
     });
 
     render(<TelemetrySettingsModal onClose={onClose} />);
@@ -78,7 +80,7 @@ describe('TelemetrySettingsModal', () => {
     render(<TelemetrySettingsModal onClose={onClose} />);
 
     await waitFor(() => {
-      expect(screen.getByText('Telemetry Settings')).toBeInTheDocument();
+      expect(screen.getByText('Settings')).toBeInTheDocument();
     });
 
     await user.click(screen.getByText('\u00d7'));
@@ -91,7 +93,7 @@ describe('TelemetrySettingsModal', () => {
     render(<TelemetrySettingsModal onClose={onClose} />);
 
     await waitFor(() => {
-      expect(screen.getByText('Telemetry Settings')).toBeInTheDocument();
+      expect(screen.getByText('Settings')).toBeInTheDocument();
     });
 
     // Click on overlay (the outer div)
