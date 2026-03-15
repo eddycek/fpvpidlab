@@ -21,18 +21,22 @@ done < "$ENV_FILE"
 # shellcheck source=/dev/null
 source "$ENV_FILE"
 
-# Ask for environment if not already set
-if [[ -z "$PIDLAB_ENV" ]]; then
-  echo "Environment: [1] dev  [2] prod"
-  read -rp "Select [1]: " ENV_CHOICE
-  case "$ENV_CHOICE" in
-    2|prod) PIDLAB_ENV="prod" ;;
-    *)      PIDLAB_ENV="dev" ;;
-  esac
+# Ask for environment if not already set (only in interactive terminal)
+if [[ -z "${PIDLAB_ENV:-}" ]]; then
+  if [[ -t 0 ]]; then
+    echo "Environment: [1] dev  [2] prod"
+    read -rp "Select [1]: " ENV_CHOICE || true
+    case "${ENV_CHOICE:-}" in
+      2|prod) PIDLAB_ENV="prod" ;;
+      *)      PIDLAB_ENV="dev" ;;
+    esac
+  else
+    PIDLAB_ENV="dev"
+  fi
   export PIDLAB_ENV
 fi
 
-echo "── Environment: ${PIDLAB_ENV^^} ──"
+echo "── Environment: $(echo "$PIDLAB_ENV" | tr '[:lower:]' '[:upper:]') ──"
 echo ""
 
 # Set API URLs and admin keys based on environment
