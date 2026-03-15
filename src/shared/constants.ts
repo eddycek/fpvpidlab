@@ -114,8 +114,9 @@ export const LICENSE = {
   /** Development license API endpoint (CF Workers subdomain — update after first deploy) */
   API_URL_DEV: 'https://pidlab-license-dev.eddycek.workers.dev',
   /** Key format regex: PIDLAB-XXXX-XXXX-XXXX (28-char alphabet) */
-  KEY_FORMAT_REGEX: /^PIDLAB-[A-HJ-NP-Z2-9]{4}-[A-HJ-NP-Z2-9]{4}-[A-HJ-NP-Z2-9]{4}$/,
-  /** Ed25519 public key (base64-encoded SPKI DER) — set after keypair generation */
+  KEY_FORMAT_REGEX: /^PIDLAB-[A-HJKMNP-Z2-9]{4}-[A-HJKMNP-Z2-9]{4}-[A-HJKMNP-Z2-9]{4}$/,
+  /** Ed25519 public key (base64 SPKI DER). MUST be set before production release.
+   *  Empty = dev mode allows bypass, production rejects all licenses. */
   ED25519_PUBLIC_KEY: '',
   /** Free tier: max 1 profile */
   FREE_PROFILE_LIMIT: 1,

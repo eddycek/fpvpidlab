@@ -22,13 +22,26 @@ vi.mock('crypto', () => {
   return { default: mocks, ...mocks };
 });
 
-// Mock electron
+// Mock electron — isPackaged toggled per test group
+const mockElectronApp = vi.hoisted(() => ({ isPackaged: true }));
 vi.mock('electron', () => ({
-  app: { isPackaged: true },
+  app: mockElectronApp,
   net: {
     fetch: vi.fn(),
   },
 }));
+
+// Mock LICENSE constant to have a dummy public key (avoids empty-key rejection in tests)
+vi.mock('@shared/constants', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  return {
+    ...actual,
+    LICENSE: {
+      ...(actual.LICENSE as Record<string, unknown>),
+      ED25519_PUBLIC_KEY: 'dummykey',
+    },
+  };
+});
 
 // Mock logger
 vi.mock('../utils/logger', () => ({
@@ -66,7 +79,7 @@ describe('LicenseManager', () => {
 
     it('loads existing license from file', async () => {
       const persisted = {
-        key: 'PIDLAB-ABCD-EFGH-JKLM',
+        key: 'PIDLAB-ABCD-EFGH-JKNM',
         signedLicense: {
           payload: {
             keyId: 'abc',
@@ -111,7 +124,7 @@ describe('LicenseManager', () => {
 
     it('returns free for revoked license', async () => {
       const persisted = {
-        key: 'PIDLAB-ABCD-EFGH-JKLM',
+        key: 'PIDLAB-ABCD-EFGH-JKNM',
         signedLicense: {
           payload: {
             keyId: 'abc',
@@ -138,7 +151,7 @@ describe('LicenseManager', () => {
 
     it('returns free for expired license', async () => {
       const persisted = {
-        key: 'PIDLAB-ABCD-EFGH-JKLM',
+        key: 'PIDLAB-ABCD-EFGH-JKNM',
         signedLicense: {
           payload: {
             keyId: 'abc',
@@ -165,7 +178,7 @@ describe('LicenseManager', () => {
 
     it('masks key in status', async () => {
       const persisted = {
-        key: 'PIDLAB-ABCD-EFGH-JKLM',
+        key: 'PIDLAB-ABCD-EFGH-JKNM',
         signedLicense: {
           payload: {
             keyId: 'abc',
@@ -210,7 +223,7 @@ describe('LicenseManager', () => {
   describe('removeLicense', () => {
     it('clears license and deletes file', async () => {
       const persisted = {
-        key: 'PIDLAB-ABCD-EFGH-JKLM',
+        key: 'PIDLAB-ABCD-EFGH-JKNM',
         signedLicense: {
           payload: {
             keyId: 'abc',
@@ -251,7 +264,7 @@ describe('LicenseManager', () => {
     it('throws when installation ID provider not set', async () => {
       await manager.initialize();
 
-      await expect(manager.activate('PIDLAB-ABCD-EFGH-JKLM')).rejects.toThrow(
+      await expect(manager.activate('PIDLAB-ABCD-EFGH-JKNM')).rejects.toThrow(
         'Installation ID provider not set'
       );
     });

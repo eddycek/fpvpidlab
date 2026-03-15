@@ -197,8 +197,14 @@ export class LicenseManager {
     try {
       const publicKeyBase64 = LICENSE.ED25519_PUBLIC_KEY;
       if (!publicKeyBase64) {
-        logger.warn('License: no public key configured, skipping offline validation');
-        return true; // Allow during development before key is set
+        // No public key = can't verify. In dev mode this is OK (isPro bypasses anyway).
+        // In production, reject — prevents forged license.json from unlocking Pro.
+        if (!app.isPackaged) {
+          logger.warn('License: no public key configured (dev mode — skipping validation)');
+          return true;
+        }
+        logger.error('License: no public key configured in production build — rejecting');
+        return false;
       }
 
       const pubKey = createPublicKey({
@@ -209,9 +215,10 @@ export class LicenseManager {
 
       const payloadBuffer = Buffer.from(JSON.stringify(signedLicense.payload));
 
-      // Convert base64url signature to buffer
+      // Convert base64url to base64 with proper padding
       const sigBase64 = signedLicense.signature.replace(/-/g, '+').replace(/_/g, '/');
-      const sigBuffer = Buffer.from(sigBase64, 'base64');
+      const padded = sigBase64 + '='.repeat((4 - (sigBase64.length % 4)) % 4);
+      const sigBuffer = Buffer.from(padded, 'base64');
 
       return verify(null, payloadBuffer, pubKey, sigBuffer);
     } catch (err) {

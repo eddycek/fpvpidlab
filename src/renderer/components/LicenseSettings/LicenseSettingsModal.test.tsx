@@ -71,10 +71,10 @@ describe('LicenseSettingsModal', () => {
     });
 
     const input = screen.getByPlaceholderText('PIDLAB-XXXX-XXXX-XXXX');
-    await user.type(input, 'PIDLAB-ABCD-EFGH-JKLM');
+    await user.type(input, 'PIDLAB-ABCD-EFGH-JKNM');
     await user.click(screen.getByRole('button', { name: 'Activate' }));
 
-    expect(window.betaflight.activateLicense).toHaveBeenCalledWith('PIDLAB-ABCD-EFGH-JKLM');
+    expect(window.betaflight.activateLicense).toHaveBeenCalledWith('PIDLAB-ABCD-EFGH-JKNM');
   });
 
   it('shows error on activation failure', async () => {
@@ -90,7 +90,7 @@ describe('LicenseSettingsModal', () => {
     });
 
     const input = screen.getByPlaceholderText('PIDLAB-XXXX-XXXX-XXXX');
-    await user.type(input, 'PIDLAB-ABCD-EFGH-JKLM');
+    await user.type(input, 'PIDLAB-ABCD-EFGH-JKNM');
     await user.click(screen.getByRole('button', { name: 'Activate' }));
 
     await waitFor(() => {

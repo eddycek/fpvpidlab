@@ -57,7 +57,7 @@ describe('useLicense', () => {
     await waitFor(() => expect(result.current.loading).toBe(false));
 
     await act(async () => {
-      await result.current.activate('PIDLAB-ABCD-EFGH-JKLM');
+      await result.current.activate('PIDLAB-ABCD-EFGH-JKNM');
     });
 
     expect(result.current.status?.type).toBe('paid');

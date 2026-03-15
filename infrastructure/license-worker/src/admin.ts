@@ -1,6 +1,5 @@
 import type { Env, LicenseRow, KeyStats } from './types';
 import { generateLicenseKey } from './keygen';
-import { signLicense } from './crypto';
 import { validateGenerateRequest } from './validation';
 
 /** Authenticate admin requests via X-Admin-Key header (constant-time) */

@@ -50,7 +50,12 @@ export function LicenseSettingsModal({ onClose }: LicenseSettingsModalProps) {
       <div className="license-modal" onClick={(e) => e.stopPropagation()}>
         <div className="license-modal-header">
           <h2>License</h2>
-          <button className="license-modal-close" onClick={onClose}>
+          <button
+            type="button"
+            className="license-modal-close"
+            onClick={onClose}
+            aria-label="Close"
+          >
             &times;
           </button>
         </div>

@@ -3,7 +3,7 @@
  *
  * Format: PIDLAB-XXXX-XXXX-XXXX
  * Alphabet: A-Z + 2-9, excluding ambiguous chars (0/O, 1/I/L)
- * 28 chars → 28^12 ≈ 1.2 × 10^17 entropy
+ * 31 chars → 31^12 ≈ 7.9 × 10^17 entropy
  */
 
 const ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
@@ -24,7 +24,7 @@ export function generateLicenseKey(): string {
 }
 
 /** Regex for validating key format */
-export const KEY_FORMAT_REGEX = /^PIDLAB-[A-HJ-NP-Z2-9]{4}-[A-HJ-NP-Z2-9]{4}-[A-HJ-NP-Z2-9]{4}$/;
+export const KEY_FORMAT_REGEX = /^PIDLAB-[A-HJKMNP-Z2-9]{4}-[A-HJKMNP-Z2-9]{4}-[A-HJKMNP-Z2-9]{4}$/;
 
 /**
  * Validate that a string matches the PIDLAB-XXXX-XXXX-XXXX format.
