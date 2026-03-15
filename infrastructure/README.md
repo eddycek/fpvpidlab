@@ -49,46 +49,64 @@ infrastructure/
 │       ├── admin.ts               ← GET /admin/stats/*
 │       ├── validation.ts          ← UUID, schema, rate-limit
 │       └── cron.ts                ← Daily report → Resend email
-├── license-worker/                ← (planned)
+├── license-worker/                ← CF Worker for license key management
+│   ├── wrangler.toml
+│   ├── package.json
+│   ├── tsconfig.json
+│   └── src/
+│       ├── index.ts               ← Router + CORS
+│       ├── types.ts               ← Env bindings, D1 row types
+│       ├── admin.ts               ← 6 admin endpoints (generate, list, get, revoke, reset, stats)
+│       ├── license.ts             ← Public endpoints (activate, validate, self-reset)
+│       ├── crypto.ts              ← Ed25519 sign/verify via WebCrypto
+│       ├── keygen.ts              ← PIDLAB-XXXX-XXXX-XXXX key generation
+│       ├── validation.ts          ← Input validation
+│       └── schema.sql             ← D1 database schema
+├── scripts/                       ← Admin CLI tools (auto-source .env.local)
+│   ├── _env.sh                    ← Shared env loader
+│   ├── generate-ed25519-keypair.sh ← Generate license signing keypair
+│   ├── generate-key.sh            ← Generate a license key
+│   ├── list-keys.sh               ← List keys with filters
+│   ├── revoke-key.sh              ← Revoke a key
+│   ├── reset-key.sh               ← Reset machine binding
+│   ├── key-stats.sh               ← License key statistics
+│   └── app-versions.sh            ← App version distribution (telemetry)
 └── payment-worker/                ← (planned)
 
 .github/workflows/
-└── infrastructure.yml             ← CI/CD: build → plan (PR) → apply (main)
-
-scripts/
-├── telemetry-stats.sh             ← Quick admin stats
-└── telemetry-report.sh            ← Full report with breakdowns
+└── infrastructure.yml             ← CI/CD: build → deploy dev (PR+main) → plan+deploy prod (main)
 ```
 
 ## CI/CD Pipeline
 
 ```
 PR opened/updated (infrastructure/** changed)
-  └─ build-worker → plan dev → plan prod     ← review in PR
+  └─ build telemetry + license workers → deploy dev → plan prod
 
 Merge to main
-  └─ build-worker → deploy dev → deploy prod  ← sequential, prod after dev
+  └─ build telemetry + license workers → deploy dev → deploy prod
 ```
 
-- **`build-worker`**: `esbuild` compiles TypeScript source into `worker-bundle.js`
-- **`plan`** (PR only): `terraform plan` for both environments — review changes before merge
-- **`deploy-dev`** (main push): `terraform apply` to dev
+- **`build-worker`** + **`build-license-worker`**: `esbuild` compiles TypeScript sources into bundles (parallel)
+- **`deploy-dev`** (PR + main): `terraform apply` to dev — immediate feedback on PRs (skips fork PRs)
+- **`plan-prod`** (PR only, internal): `terraform plan` for prod — review before merge
 - **`deploy-prod`** (main push): `terraform apply` to prod (runs after dev succeeds)
+- **Concurrency groups**: `deploy-dev` and `deploy-prod` serialize to prevent state corruption
 
 GitHub environments `dev` and `prod` can have protection rules (e.g. required approval for prod).
 
 ### GitHub Secrets
 
-5 secrets in GitHub repo settings (`Settings → Secrets and variables → Actions`):
+10 secrets in GitHub repo settings (`Settings → Secrets and variables → Actions`):
 
 #### `CLOUDFLARE_PROVISIONING`
 
 Cloudflare API token used by Terraform provider to manage all infrastructure resources.
 
 - **Used by**: `terraform apply` (CI/CD deploy-dev, deploy-prod jobs)
-- **Scope**: Workers Scripts Edit, Workers KV Storage Edit, Workers R2 Storage Edit, Workers Routes Edit, Workers Builds/Agents/Observability/Containers Edit, Cloudflare Pages Edit, Account Settings Read, User Details Read
+- **Scope**: Workers Scripts Edit, Workers KV Storage Edit, Workers R2 Storage Edit, Workers Routes Edit, D1 Edit, DNS Edit, Account Settings Read, User Details Read
 - **CF token name**: `pidlab-infra-provisioning`
-- **Created in**: Cloudflare Dashboard → My Profile → API Tokens → "Edit Cloudflare Workers" template + R2 Storage Edit
+- **Created in**: Cloudflare Dashboard → My Profile → API Tokens → "Edit Cloudflare Workers" template + R2 Storage Edit + D1 Edit + DNS Edit
 
 #### `TERRAFORM_STATE_R2_ACCESS_KEY_ID` + `TERRAFORM_STATE_R2_SECRET_ACCESS_KEY`
 
@@ -114,6 +132,23 @@ Resend email delivery API key for daily telemetry report cron job. Optional — 
 - **Used by**: Terraform (injected as Worker secret), daily cron Worker
 - **Scope**: Resend email sending only
 - **Created in**: resend.com dashboard
+
+#### `LICENSE_ED25519_PRIVATE_KEY` + `LICENSE_ED25519_PUBLIC_KEY`
+
+Ed25519 keypair for signing and verifying license tokens. The private key signs license objects on activation; the public key is bundled in the Electron app for offline verification.
+
+- **Used by**: Terraform (injected as Worker secret bindings `ED25519_PRIVATE_KEY`, `ED25519_PUBLIC_KEY`)
+- **Scope**: License signing/verification only (no Cloudflare API access)
+- **Generated with**: `infrastructure/scripts/generate-ed25519-keypair.sh`
+- **CRITICAL**: Cannot be rotated without invalidating all issued licenses. Back up in 1Password.
+
+#### `LICENSE_ADMIN_KEY_DEV` + `LICENSE_ADMIN_KEY_PROD`
+
+API keys for authenticating requests to `/admin/keys/*` endpoints on license Workers. Each environment has its own key. Passed to Workers as `ADMIN_KEY` secret binding via Terraform.
+
+- **Used by**: Terraform (injected as Worker secret), admin shell scripts (`infrastructure/scripts/generate-key.sh`, etc.)
+- **Scope**: Only used within Worker runtime — no Cloudflare API access
+- **Generated with**: `openssl rand -hex 32`
 
 ## Bootstrap (One-Time Setup)
 
@@ -225,6 +260,21 @@ npx wrangler dev
 | `GET` | `/admin/stats/versions` | `X-Admin-Key` | BF version distribution |
 | `GET` | `/admin/stats/drones` | `X-Admin-Key` | Drone size + flight style distribution |
 | `GET` | `/admin/stats/quality` | `X-Admin-Key` | Quality score histogram (5 buckets) |
+| `GET` | `/health` | None | Health check |
+
+## License Worker Endpoints
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| `POST` | `/license/activate` | None | Activate key + bind machine, returns signed license |
+| `POST` | `/license/validate` | None | Periodic validation (revocation sync) |
+| `POST` | `/license/reset` | None | Self-service machine reset (key + email required) |
+| `POST` | `/admin/keys/generate` | `X-Admin-Key` | Generate new license key |
+| `GET` | `/admin/keys` | `X-Admin-Key` | List keys (filterable by status, type, email) |
+| `GET` | `/admin/keys/{id}` | `X-Admin-Key` | Key details |
+| `PUT` | `/admin/keys/{id}/revoke` | `X-Admin-Key` | Revoke a key |
+| `PUT` | `/admin/keys/{id}/reset` | `X-Admin-Key` | Admin reset machine binding |
+| `GET` | `/admin/keys/stats` | `X-Admin-Key` | Aggregate statistics |
 | `GET` | `/health` | None | Health check |
 
 ### R2 Storage Layout
