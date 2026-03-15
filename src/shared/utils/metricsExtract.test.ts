@@ -373,6 +373,84 @@ describe('extractPIDMetrics', () => {
     expect(metrics.pitch.meanTrackingErrorRMS).toBeDefined();
     expect(metrics.yaw.meanTrackingErrorRMS).toBeDefined();
   });
+
+  it('returns no stepResponse when responses have no traces', () => {
+    const result = makePIDResult();
+    const metrics = extractPIDMetrics(result);
+    expect(metrics.stepResponse).toBeUndefined();
+  });
+
+  it('extracts stepResponse when traces are present', () => {
+    const trace = {
+      timeMs: [0, 10, 20, 30, 40, 50],
+      setpoint: [0, 200, 200, 200, 200, 200],
+      gyro: [0, 50, 180, 210, 200, 200],
+    };
+    const step = {
+      step: { axis: 'roll' as const, startIndex: 0, magnitude: 200, direction: 1 as const },
+      riseTimeMs: 20,
+      overshootPercent: 5,
+      settlingTimeMs: 40,
+      latencyMs: 5,
+      ringingCount: 0,
+      trace,
+      trackingErrorRMS: 0.1,
+      steadyStateErrorPercent: 0,
+      leadingEdgeOvershootPercent: 0,
+    };
+    const result = makePIDResult({
+      roll: {
+        responses: [step],
+        meanOvershoot: 5,
+        meanRiseTimeMs: 20,
+        meanSettlingTimeMs: 40,
+        meanLatencyMs: 5,
+        meanTrackingErrorRMS: 0.1,
+        meanSteadyStateError: 0,
+      },
+    });
+    const metrics = extractPIDMetrics(result);
+    expect(metrics.stepResponse).toBeDefined();
+    expect(metrics.stepResponse!.timeMs.length).toBeGreaterThan(0);
+    expect(metrics.stepResponse!.roll.length).toBe(metrics.stepResponse!.timeMs.length);
+    // Normalized: gyro[5]=200 / magnitude=200 = 1.0
+    expect(metrics.stepResponse!.roll[metrics.stepResponse!.roll.length - 1]).toBeCloseTo(1.0, 0);
+  });
+
+  it('handles negative step direction correctly', () => {
+    const trace = {
+      timeMs: [0, 10, 20, 30],
+      setpoint: [0, -200, -200, -200],
+      gyro: [0, -50, -190, -200],
+    };
+    const step = {
+      step: { axis: 'pitch' as const, startIndex: 0, magnitude: -200, direction: -1 as const },
+      riseTimeMs: 20,
+      overshootPercent: 5,
+      settlingTimeMs: 30,
+      latencyMs: 5,
+      ringingCount: 0,
+      trace,
+      trackingErrorRMS: 0.1,
+      steadyStateErrorPercent: 0,
+      leadingEdgeOvershootPercent: 0,
+    };
+    const result = makePIDResult({
+      pitch: {
+        responses: [step],
+        meanOvershoot: 5,
+        meanRiseTimeMs: 20,
+        meanSettlingTimeMs: 30,
+        meanLatencyMs: 5,
+        meanTrackingErrorRMS: 0.1,
+        meanSteadyStateError: 0,
+      },
+    });
+    const metrics = extractPIDMetrics(result);
+    expect(metrics.stepResponse).toBeDefined();
+    // Normalized: gyro=-200 / magnitude=-200 = +1.0 (direction handled)
+    expect(metrics.stepResponse!.pitch[metrics.stepResponse!.pitch.length - 1]).toBeCloseTo(1.0, 0);
+  });
 });
 
 describe('extractTransferFunctionMetrics', () => {

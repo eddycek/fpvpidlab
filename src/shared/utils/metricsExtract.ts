@@ -401,9 +401,6 @@ export function extractTransferFunctionMetrics(
 }
 
 /**
- * Extract compact PID metrics from a full PIDAnalysisResult.
- */
-/**
  * Find the best (most representative) step response with a trace from a list.
  * Prefers steps with moderate overshoot and non-zero rise time.
  */
@@ -423,8 +420,22 @@ function findBestStepWithTrace(responses: StepResponse[]): StepResponse | null {
 }
 
 /**
+ * Normalize a step trace to response relative to setpoint=1.0.
+ * Accounts for step direction — negative steps are flipped so the trace
+ * always settles toward +1.0.
+ */
+function normalizeStepTrace(step: StepResponse): { timeMs: number[]; response: number[] } {
+  const trace = step.trace!;
+  const mag = step.step.magnitude || 1; // signed magnitude preserves direction
+  return {
+    timeMs: trace.timeMs,
+    response: trace.gyro.map((g) => g / mag),
+  };
+}
+
+/**
  * Extract a compact step response from the best step per axis.
- * Normalizes each trace to setpoint=1.0 so axes are comparable.
+ * Each axis uses its own time base; downsampleStepResponse resamples to shared grid.
  */
 function extractBestStepResponse(result: PIDAnalysisResult): CompactStepResponse | undefined {
   const rollStep = findBestStepWithTrace(result.roll.responses);
@@ -433,22 +444,25 @@ function extractBestStepResponse(result: PIDAnalysisResult): CompactStepResponse
 
   if (!rollStep?.trace && !pitchStep?.trace && !yawStep?.trace) return undefined;
 
-  // Use roll trace as time reference (or first available)
-  const refTrace = rollStep?.trace || pitchStep?.trace || yawStep?.trace;
-  if (!refTrace) return undefined;
+  const refStep = rollStep || pitchStep || yawStep;
+  if (!refStep?.trace) return undefined;
+  const refLen = refStep.trace.timeMs.length;
 
-  // Normalize: gyro / magnitude → response relative to setpoint=1.0
-  const normalize = (step: StepResponse | null) => {
-    if (!step?.trace) return refTrace!.timeMs.map(() => 0);
-    const mag = Math.abs(step.step.magnitude) || 1;
-    return step.trace.gyro.map((g) => g / mag);
+  const getAxisData = (step: StepResponse | null) => {
+    if (!step?.trace) {
+      return {
+        timeMs: refStep!.trace!.timeMs,
+        response: new Array(refLen).fill(0),
+      };
+    }
+    return normalizeStepTrace(step);
   };
 
   return downsampleStepResponse(
     {
-      roll: { timeMs: refTrace.timeMs, response: normalize(rollStep) },
-      pitch: { timeMs: refTrace.timeMs, response: normalize(pitchStep) },
-      yaw: { timeMs: refTrace.timeMs, response: normalize(yawStep) },
+      roll: getAxisData(rollStep),
+      pitch: getAxisData(pitchStep),
+      yaw: getAxisData(yawStep),
     },
     64
   );

@@ -30,13 +30,11 @@ export function StepResponseComparison({ before, after }: StepResponseComparison
   const osImproved = osDelta < -1;
   const osRegressed = osDelta > 1;
 
-  const hasChart = before.stepResponse || after.stepResponse;
-
   return (
     <div className="completion-overshoot-comparison">
       <h4>Step Response Comparison</h4>
 
-      {hasChart && after.stepResponse && (
+      {after.stepResponse && (
         <TFStepResponseChart
           stepResponse={after.stepResponse}
           beforeStepResponse={before.stepResponse}
