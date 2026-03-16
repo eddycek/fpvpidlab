@@ -1,6 +1,6 @@
 # Architecture Overview
 
-**Last Updated:** March 16, 2026 | **Phase 4 Complete, Phase 6 Complete** | **2593 unit tests, 130 files + 30 Playwright E2E tests**
+**Last Updated:** March 16, 2026 | **Phase 4 Complete, Phase 6 Complete** | **2612 unit tests, 132 files + 30 Playwright E2E tests**
 
 ---
 
@@ -37,13 +37,13 @@
 │  ┌───────────────────────────────┼──────────────────────────────────────┐  │
 │  │              Preload Script (contextBridge, 689 lines)              │  │
 │  └───────────────────────────────┼──────────────────────────────────────┘  │
-│                                  │ IPC (62 channels, 16 event types)        │
+│                                  │ IPC (63 channels, 16 event types)        │
 │                                  │                                         │
 │  ┌───────────────────────────────┼──────────────────────────────────────┐  │
 │  │                     Main Process (Node.js)                          │  │
 │  │                                                                      │  │
 │  │  ┌────────────────────────────┴─────────────────────────────────┐   │  │
-│  │  │                    IPC Handlers (62 handlers, 12 modules)     │   │  │
+│  │  │                    IPC Handlers (63 handlers, 13 modules)     │   │  │
 │  │  │  connection:* | fc:* | snapshot:* | profile:* | blackbox:*  │   │  │
 │  │  │  analysis:* | tuning:* | pid:*                              │   │  │
 │  │  └───┬──────────┬──────────┬────────────┬──────────┬───────────┘   │  │
@@ -501,7 +501,7 @@ TuningSession {
 
 ### IPC Layer (`src/main/ipc/`)
 
-**62 IPC channels** organized by domain:
+**63 IPC channels** organized by domain:
 
 | Domain | Channels | Key Operations |
 |--------|----------|---------------|
@@ -516,6 +516,7 @@ TuningSession {
 | Telemetry (3) | `get_settings`, `set_enabled`, `send_now` | Anonymous usage telemetry settings + manual upload |
 | License (4) | `activate`, `get_status`, `remove`, `validate` | License activation, status, removal |
 | Update (2) | `check`, `install` | Auto-update check, install |
+| Diagnostic (1) | `send_report` | Build diagnostic bundle, gzip, upload to CF Worker (Pro only) |
 
 **16 Event types** (Main → Renderer):
 
@@ -837,7 +838,7 @@ Hardware error (FC timeout, USB disconnect)
 
 ## Testing Strategy
 
-**2593 unit tests across 130 files + 30 Playwright E2E tests**. See [TESTING.md](./TESTING.md) for complete inventory.
+**2612 unit tests across 132 files + 30 Playwright E2E tests**. See [TESTING.md](./TESTING.md) for complete inventory.
 
 | Area | Files | Tests |
 |------|-------|-------|
@@ -848,8 +849,9 @@ Hardware error (FC timeout, USB disconnect)
 | MSP Protocol & Client | 4 | 184 |
 | MSC (Mass Storage) | 2 | 45 |
 | Storage Managers | 7 | 127 |
-| IPC Handlers | 2 | 113 |
+| IPC Handlers | 3 | 120 |
 | Telemetry | 2 | 38 |
+| Diagnostic | 1 | 12 |
 | License | 1 | 12 |
 | Auto-Updater | 1 | 12 |
 | UI Components + Charts + Contexts | 50 | 726 |

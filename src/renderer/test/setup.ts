@@ -112,6 +112,9 @@ global.window.betaflight = {
   setTelemetryEnabled: vi.fn(),
   sendTelemetryNow: vi.fn().mockResolvedValue(undefined),
 
+  // Diagnostic Reports
+  sendDiagnosticReport: vi.fn().mockResolvedValue({ reportId: 'test-id', submitted: true }),
+
   // App Logs
   getAppLogs: vi.fn().mockResolvedValue([]),
   exportAppLogs: vi.fn().mockResolvedValue(''),

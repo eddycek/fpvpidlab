@@ -36,6 +36,14 @@ describe('LicenseSettingsModal', () => {
     expect(screen.getByRole('button', { name: 'Activate' })).toBeInTheDocument();
   });
 
+  it('shows Diagnostic reports in both columns (disabled in Free, highlighted in Pro)', async () => {
+    render(<LicenseSettingsModal onClose={onClose} />);
+
+    await waitFor(() => {
+      expect(screen.getAllByText('Diagnostic reports')).toHaveLength(2);
+    });
+  });
+
   it('renders Pro status with key info', async () => {
     vi.mocked(window.betaflight.getLicenseStatus).mockResolvedValue({
       type: 'paid',

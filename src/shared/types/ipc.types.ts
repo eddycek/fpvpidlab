@@ -36,6 +36,7 @@ import type {
 } from './tuning-history.types';
 import type { TelemetrySettings } from './telemetry.types';
 import type { LicenseInfo } from './license.types';
+import type { DiagnosticReportInput, DiagnosticReportResult } from './diagnostic.types';
 
 /** Progress during snapshot restore */
 export interface SnapshotRestoreProgress {
@@ -171,6 +172,9 @@ export enum IPCChannel {
   // Auto-update
   UPDATE_CHECK = 'update:check',
   UPDATE_INSTALL = 'update:install',
+
+  // Diagnostic Reports
+  DIAGNOSTIC_SEND_REPORT = 'diagnostic:send-report',
 
   // License
   LICENSE_ACTIVATE = 'license:activate',
@@ -327,6 +331,9 @@ export interface BetaflightAPI {
   onUpdateDownloaded(
     callback: (info: { version: string; releaseNotes?: string }) => void
   ): () => void;
+
+  // Diagnostic Reports
+  sendDiagnosticReport(input: DiagnosticReportInput): Promise<DiagnosticReportResult>;
 
   // License
   activateLicense(key: string): Promise<LicenseInfo>;

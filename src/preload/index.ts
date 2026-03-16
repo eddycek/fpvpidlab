@@ -644,6 +644,17 @@ const betaflightAPI: BetaflightAPI = {
     }
   },
 
+  // Diagnostic Reports
+  async sendDiagnosticReport(
+    input: import('@shared/types/diagnostic.types').DiagnosticReportInput
+  ): Promise<import('@shared/types/diagnostic.types').DiagnosticReportResult> {
+    const response = await ipcRenderer.invoke(IPCChannel.DIAGNOSTIC_SEND_REPORT, input);
+    if (!response.success) {
+      throw new Error(response.error || 'Failed to send diagnostic report');
+    }
+    return response.data;
+  },
+
   // App Logs
   async getAppLogs(lines?: number): Promise<string[]> {
     const response = await ipcRenderer.invoke(IPCChannel.APP_GET_LOGS, lines);

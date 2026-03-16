@@ -167,7 +167,7 @@ npm run test:ui           # Visual interface with DOM snapshots
 
 ## Test Inventory
 
-**Total: 2593 unit tests across 130 files + 30 Playwright E2E tests across 6 spec files** (last verified: March 16, 2026)
+**Total: 2612 unit tests across 132 files + 30 Playwright E2E tests across 6 spec files** (last verified: March 16, 2026)
 
 ### UI Components
 
@@ -263,6 +263,7 @@ npm run test:ui           # Visual interface with DOM snapshots
 |------|-------|-------------|
 | `ipc/handlers.test.ts` | 109 | All 51 IPC handler channels: connection, FC info, profiles, snapshots, blackbox, PID config, analysis (filter+PID+TF), tuning apply (PID+filter+FF), snapshot restore, tuning session, BB settings fix, BF PID profile selection, handler registration |
 | `ipc/handlers/telemetryHandlers.test.ts` | 4 | Telemetry IPC handlers: get settings, set enabled, send now, error when manager null |
+| `ipc/handlers/diagnosticHandlers.test.ts` | 7 | Diagnostic IPC handler: send report, bundle build, gzip upload, Pro license gate, error handling |
 
 ### MSP Protocol & Client
 
@@ -304,6 +305,12 @@ npm run test:ui           # Visual interface with DOM snapshots
 | File | Tests | Description |
 |------|-------|-------------|
 | `license/LicenseManager.test.ts` | 12 | Offline validation, status, activate, remove, demo/dev mode |
+
+### Diagnostic
+
+| File | Tests | Description |
+|------|-------|-------------|
+| `diagnostic/DiagnosticBundleBuilder.test.ts` | 12 | Diagnostic bundle building: profile/snapshot/telemetry assembly, recommendation extraction, filter/PID/TF analysis summary, verification metrics, event log, empty/missing data handling |
 
 ### Auto-Updater
 

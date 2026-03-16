@@ -87,6 +87,7 @@ npm run rebuild
 - FFT analysis: `src/main/analysis/` (noise analysis & filter tuning)
 - Step response analysis: `src/main/analysis/` (PID tuning via step metrics)
 - Telemetry: `src/main/telemetry/TelemetryManager.ts` (opt-in anonymous usage data collection + upload), `TelemetryEventCollector.ts` (structured event logging — errors, workflow, analysis)
+- Diagnostic: `src/main/diagnostic/DiagnosticBundleBuilder.ts` (builds diagnostic bundles for support reports, Pro only)
 - Debug server: `src/main/debug/DebugServer.ts` (HTTP endpoints for tooling, port 9300)
 
 **Preload Script** (`src/preload/index.ts`)
@@ -172,6 +173,7 @@ IPC handlers are split into domain modules under `src/main/ipc/handlers/`:
 | `telemetryHandlers.ts` | 3 | Telemetry settings get/set, manual upload trigger |
 | `licenseHandlers.ts` | 4 | License activate, get status, remove, validate |
 | `updateHandlers.ts` | 2 | Auto-update check, install |
+| `diagnosticHandlers.ts` | 1 | Build and upload diagnostic report bundle (Pro only) |
 | `index.ts` | — | DI container, `registerIPCHandlers()` |
 
 **Request-Response Pattern**:
@@ -585,8 +587,8 @@ Renderer components subscribe to events:
 ## Configuration & Constants
 
 ### Important Files
-- `src/shared/constants.ts` - MSP codes, Betaflight vendor IDs, preset profiles, size defaults
-- `src/shared/types/*.types.ts` - Shared type definitions (common, profile, pid, blackbox, analysis)
+- `src/shared/constants.ts` - MSP codes, Betaflight vendor IDs, preset profiles, size defaults, DIAGNOSTIC upload URLs
+- `src/shared/types/*.types.ts` - Shared type definitions (common, profile, pid, blackbox, analysis, diagnostic)
 - `src/shared/constants/flightGuide.ts` - Flight guide phases, tips, and tuning workflow steps
 - `src/shared/constants/metricTooltips.ts` - Centralized chart descriptions and metric tooltip strings (CHART_DESCRIPTIONS, METRIC_TOOLTIPS)
 - `src/main/analysis/constants.ts` - FFT thresholds, peak detection, safety bounds, propwash floor, damping ratio, I-term bounds, adaptive window, QUAD_SIZE_BOUNDS, BANDWIDTH_LOW_HZ_BY_STYLE, LPF2 thresholds, RINGING_MIN_AMPLITUDE_FRACTION (tunable)

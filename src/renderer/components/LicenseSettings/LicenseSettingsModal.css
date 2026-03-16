@@ -167,6 +167,16 @@
   color: #d97706 !important;
 }
 
+.license-comparison-disabled {
+  color: #ef4444 !important;
+  opacity: 0.7;
+}
+
+.license-comparison-disabled::before {
+  content: '\2717' !important;
+  color: #ef4444 !important;
+}
+
 .license-pitch {
   margin-bottom: 14px;
 }

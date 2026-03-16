@@ -17,6 +17,7 @@ Overview of all design documents in this directory. Completed documents are arch
 | [PAYMENT_AND_INVOICING](./PAYMENT_AND_INVOICING.md) | **Proposed** | Stripe payment gateway + Trivi API invoicing. End-to-end purchase → invoice → license delivery flow |
 | [LICENSE_KEY_SYSTEM](./LICENSE_KEY_SYSTEM.md) | **Active** | Freemium licensing via CF Workers + D1. Ed25519 keys, offline grace period, admin API |
 | [CODE_SIGNING_AND_UPDATES](./CODE_SIGNING_AND_UPDATES.md) | **Active** | macOS/Windows code signing, electron-updater auto-update, GitHub Releases provider |
+| [DIAGNOSTIC_REPORTS](./DIAGNOSTIC_REPORTS.md) | **Active** | Diagnostic report bundles for support investigation. Pro-only, gzipped upload to CF Worker |
 
 ## Completed Documents (`complete/`)
 
