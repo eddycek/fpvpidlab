@@ -1,6 +1,6 @@
 # Architecture Overview
 
-**Last Updated:** March 15, 2026 | **Phase 4 Complete, Phase 6 Complete** | **2532 unit tests, 128 files + 30 Playwright E2E tests**
+**Last Updated:** March 16, 2026 | **Phase 4 Complete, Phase 6 Complete** | **2572 unit tests, 129 files + 30 Playwright E2E tests**
 
 ---
 
@@ -822,9 +822,9 @@ Hardware error (FC timeout, USB disconnect)
 | `blackbox.types.ts` | `BlackboxInfo`, `BlackboxParseResult`, `BlackboxFlightData`, `BBLLogHeader`, `BBLEncoding`, `BBLPredictor` |
 | `analysis.types.ts` | `PowerSpectrum`, `NoiseProfile`, `FilterRecommendation`, `StepResponse` (with `ffDominated`), `StepResponseTrace`, `PIDRecommendation`, `AxisStepMetrics`, `CurrentFilterSettings`, `FeedforwardContext` |
 | `tuning.types.ts` | `TuningPhase` (14 values), `TuningType` (`'filter' | 'pid' | 'quick'`), `TuningSession`, `TuningMode`, `AppliedChange` |
-| `tuning-history.types.ts` | `CompactSpectrum`, `CompactThrottleSpectrogram`, `CompactThrottleBand`, `FilterMetricsSummary`, `PIDMetricsSummary`, `CompletedTuningRecord` |
+| `tuning-history.types.ts` | `CompactSpectrum`, `CompactThrottleSpectrogram`, `CompactThrottleBand`, `FilterMetricsSummary`, `PIDMetricsSummary`, `CompletedTuningRecord`, `RecommendationTrace`, `VerificationDelta` |
 | `ipc.types.ts` | `ApplyRecommendationsInput/Progress/Result`, `SnapshotRestoreProgress/Result`, `BetaflightAPI` (complete API interface) |
-| `telemetry.types.ts` | `TelemetrySettings`, `TelemetryBundle` |
+| `telemetry.types.ts` | `TelemetrySettings`, `TelemetryBundle`, `TelemetryBundleV2`, `TelemetrySessionRecord` |
 | `toast.types.ts` | `ToastType`, `Toast` |
 
 ## Shared Utilities (`src/shared/utils/`)
@@ -837,24 +837,24 @@ Hardware error (FC timeout, USB disconnect)
 
 ## Testing Strategy
 
-**2532 unit tests across 128 files + 30 Playwright E2E tests**. See [TESTING.md](./TESTING.md) for complete inventory.
+**2572 unit tests across 129 files + 30 Playwright E2E tests**. See [TESTING.md](./TESTING.md) for complete inventory.
 
 | Area | Files | Tests |
 |------|-------|-------|
 | Blackbox Parser | 9 | 245 |
-| FFT Analysis (+ Data Quality + Spectrogram + Delay) | 8 | 226 |
-| Step Response + PID + TF + CrossAxis + PropWash + DTerm + Bayesian | 10 | 310 |
+| FFT Analysis (+ Data Quality + Spectrogram + Delay) | 8 | 237 |
+| Step Response + PID + TF + CrossAxis + PropWash + DTerm + Bayesian | 10 | 322 |
 | Header Validation + Constants | 2 | 31 |
 | MSP Protocol & Client | 4 | 184 |
 | MSC (Mass Storage) | 2 | 45 |
 | Storage Managers | 7 | 127 |
 | IPC Handlers | 2 | 113 |
-| Telemetry | 1 | 13 |
+| Telemetry | 1 | 17 |
 | License | 1 | 12 |
 | Auto-Updater | 1 | 12 |
 | UI Components + Charts + Contexts | 50 | 726 |
 | React Hooks + Utils | 17 | 183 |
-| Shared Constants & Utils | 4 | 85 |
+| Shared Constants & Utils | 5 | 98 |
 | E2E Workflows (Vitest) | 1 | 20 |
 | Demo Mode (Vitest) | 2 | 79 |
 | **Playwright E2E** | **6** | **30** |
