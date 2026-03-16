@@ -201,6 +201,11 @@
   margin-top: 16px;
 }
 
+.completion-report-row {
+  margin-top: 8px;
+  text-align: right;
+}
+
 /* Score breakdown rows (used in TuningSessionDetail and TuningCompletionSummary) */
 .session-detail-score-breakdown {
   background: #222;

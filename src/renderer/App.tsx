@@ -704,6 +704,7 @@ function AppContent() {
                     }
                   }}
                   onReanalyzeVerification={handleReanalyzeVerification}
+                  historyRecordId={tuningHistory.history[0]?.id}
                 />
               )}
             {isConnected &&

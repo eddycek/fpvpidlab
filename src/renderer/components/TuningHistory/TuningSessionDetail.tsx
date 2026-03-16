@@ -11,6 +11,7 @@ import { TFStepResponseChart } from '../TuningWizard/charts/TFStepResponseChart'
 import { ThrottleSpectrogramChart } from '../TuningWizard/charts/ThrottleSpectrogramChart';
 import { compactToPerAxisStepResponse } from '../TuningWizard/charts/chartUtils';
 import { AppliedChangesTable } from './AppliedChangesTable';
+import { ReportIssueButton } from '../DiagnosticReport/ReportIssueButton';
 
 interface TuningSessionDetailProps {
   record: CompletedTuningRecord;
@@ -74,6 +75,7 @@ export function TuningSessionDetail({ record, onReanalyzeVerification }: TuningS
             <span>PID Profile {record.bfPidProfileIndex + 1}</span>
           </>
         )}
+        <ReportIssueButton recordId={record.id} variant="link" />
       </div>
 
       {score && (

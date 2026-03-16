@@ -11,6 +11,7 @@ import { TFStepResponseChart } from '../TuningWizard/charts/TFStepResponseChart'
 import { ThrottleSpectrogramChart } from '../TuningWizard/charts/ThrottleSpectrogramChart';
 import { compactToPerAxisStepResponse } from '../TuningWizard/charts/chartUtils';
 import { AppliedChangesTable } from './AppliedChangesTable';
+import { ReportIssueButton } from '../DiagnosticReport/ReportIssueButton';
 import './TuningCompletionSummary.css';
 
 export function OvershootComparison({
@@ -73,6 +74,8 @@ interface TuningCompletionSummaryProps {
   onStartNew: () => void;
   onStartPidTune?: () => void;
   onReanalyzeVerification?: () => void;
+  /** Record ID for diagnostic report (from latest history record) */
+  historyRecordId?: string;
 }
 
 function formatDate(iso: string): string {
@@ -112,6 +115,7 @@ export function TuningCompletionSummary({
   onStartNew,
   onStartPidTune,
   onReanalyzeVerification,
+  historyRecordId,
 }: TuningCompletionSummaryProps) {
   const isFilterTune = session.tuningType === TUNING_TYPE.FILTER || !session.tuningType;
   const isPidTune = session.tuningType === TUNING_TYPE.PID;
@@ -339,6 +343,12 @@ export function TuningCompletionSummary({
           </>
         )}
       </div>
+
+      {historyRecordId && (
+        <div className="completion-report-row">
+          <ReportIssueButton recordId={historyRecordId} variant="link" />
+        </div>
+      )}
     </div>
   );
 }

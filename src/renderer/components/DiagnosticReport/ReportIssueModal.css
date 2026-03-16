@@ -1,0 +1,130 @@
+.report-modal {
+  background: #1e1e1e;
+  border: 1px solid #333;
+  border-radius: 12px;
+  width: 440px;
+  max-width: 90vw;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+.report-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid #333;
+}
+
+.report-modal-header h2 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.report-modal-close {
+  background: none;
+  border: none;
+  color: #888;
+  font-size: 22px;
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1;
+}
+
+.report-modal-close:hover {
+  color: #fff;
+}
+
+.report-modal-body {
+  padding: 16px 20px;
+}
+
+.report-modal-description {
+  color: #999;
+  font-size: 13px;
+  margin: 0 0 14px;
+  line-height: 1.5;
+}
+
+.report-field-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+  color: #aaa;
+  margin-bottom: 4px;
+}
+
+.report-field-input {
+  width: 100%;
+  background: #2a2a2a;
+  border: 1px solid #444;
+  border-radius: 6px;
+  color: #e0e0e0;
+  font-size: 13px;
+  padding: 8px 10px;
+  margin-bottom: 12px;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.report-field-input:focus {
+  border-color: #2563eb;
+}
+
+.report-field-input::placeholder {
+  color: #666;
+}
+
+.report-field-textarea {
+  width: 100%;
+  background: #2a2a2a;
+  border: 1px solid #444;
+  border-radius: 6px;
+  color: #e0e0e0;
+  font-size: 13px;
+  padding: 8px 10px;
+  margin-bottom: 12px;
+  outline: none;
+  resize: vertical;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.report-field-textarea:focus {
+  border-color: #2563eb;
+}
+
+.report-field-textarea::placeholder {
+  color: #666;
+}
+
+.report-privacy-note {
+  background: #252525;
+  border: 1px solid #333;
+  border-radius: 6px;
+  padding: 10px 12px;
+  font-size: 11px;
+  color: #888;
+  line-height: 1.5;
+}
+
+.report-privacy-note strong {
+  color: #aaa;
+}
+
+.report-privacy-note ul {
+  margin: 4px 0;
+  padding-left: 16px;
+}
+
+.report-privacy-note p {
+  margin: 4px 0 0;
+}
+
+.report-modal-footer {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  padding: 12px 20px;
+  border-top: 1px solid #333;
+}
