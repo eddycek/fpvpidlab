@@ -23,6 +23,8 @@ Run `/doc-sync` before merging any PR that changes:
 - Types (`src/shared/types/`)
 - Constants (`src/shared/constants*`, `src/main/analysis/constants.ts`)
 - Test files (any `*.test.ts`)
+- Infrastructure / telemetry worker (`infrastructure/`)
+- Skills (`.claude/skills/`)
 
 ## Audit Procedure
 
@@ -126,6 +128,18 @@ These numbers must match across all files where they appear:
 | Analysis module count | README.md, CLAUDE.md, ARCHITECTURE.md |
 | IPC handler count | CLAUDE.md, ARCHITECTURE.md |
 | Hook count | ARCHITECTURE.md |
+| Admin endpoints | infrastructure/README.md, CLAUDE.md |
+| Admin scripts | infrastructure/README.md |
+| Skills | CLAUDE.md |
+
+### Step 4b: Infrastructure docs
+
+When `infrastructure/` files change, verify `infrastructure/README.md`:
+- Admin endpoint table lists all routes in `infrastructure/telemetry-worker/src/admin.ts`
+- Script list matches actual files in `infrastructure/scripts/`
+- Bundle type descriptions match `infrastructure/telemetry-worker/src/types.ts`
+
+Also verify `docs/README.md` design doc index is current (no missing or stale entries).
 
 ### Step 5: Verify text accuracy
 
