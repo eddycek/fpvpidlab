@@ -80,13 +80,13 @@ npm run rebuild
 
 **Main Process** (`src/main/`)
 - Entry point: `src/main/index.ts`
-- Manages MSPClient, ProfileManager, SnapshotManager, BlackboxManager, TuningSessionManager, TelemetryManager
+- Manages MSPClient, ProfileManager, SnapshotManager, BlackboxManager, TuningSessionManager, TelemetryManager, TelemetryEventCollector
 - Handles IPC communication via `src/main/ipc/handlers.ts`
 - Event-driven architecture: MSPClient emits events → IPC sends to renderer
 - Blackbox parsing: `src/main/blackbox/` (BBL binary log parser)
 - FFT analysis: `src/main/analysis/` (noise analysis & filter tuning)
 - Step response analysis: `src/main/analysis/` (PID tuning via step metrics)
-- Telemetry: `src/main/telemetry/TelemetryManager.ts` (opt-in anonymous usage data collection + upload)
+- Telemetry: `src/main/telemetry/TelemetryManager.ts` (opt-in anonymous usage data collection + upload), `TelemetryEventCollector.ts` (structured event logging — errors, workflow, analysis)
 - Debug server: `src/main/debug/DebugServer.ts` (HTTP endpoints for tooling, port 9300)
 
 **Preload Script** (`src/preload/index.ts`)
@@ -219,11 +219,12 @@ window.betaflight.onConnectionChanged((status) => {
 - Spectrum downsampling: `downsampleSpectrum()`, `extractThrottleSpectrogram()` in `src/shared/utils/metricsExtract.ts`
 - Design doc: `docs/TUNING_HISTORY_AND_COMPARISON.md`
 
-**Telemetry Storage** (`TelemetryManager.ts`):
-- Location: `{userData}/data/telemetry-settings.json`
+**Telemetry Storage** (`TelemetryManager.ts` + `TelemetryEventCollector.ts`):
+- Location: `{userData}/data/telemetry-settings.json` (settings), `{userData}/data/telemetry-events.json` (structured events)
 - Settings: `{ enabled: boolean, installationId: string, lastUploadAt: string | null }`
 - Opt-in only (disabled by default), anonymous UUID v4 installation ID
-- Bundle assembly (v2): `TelemetryBundleV2` with per-session `TelemetrySessionRecord[]` including recommendation traces (`ruleId`, setting, axis) and verification deltas
+- Bundle assembly (v3): `TelemetryBundleV3` with per-session `TelemetrySessionRecord[]` including recommendation traces (`ruleId`, setting, axis), verification deltas, and structured `TelemetryEvent[]`
+- `TelemetryEventCollector`: ring-buffer (max 200 events), persisted to disk, cleared after successful upload. Event types: `error`, `workflow`, `analysis`. Instrumented in analysis, tuning, and blackbox handlers
 - `recommendationTraces` stored on `TuningSession` during apply, archived to history
 - Upload via Electron `net.fetch()` to CF Worker endpoint (gzipped JSON)
 - Skipped in demo mode
@@ -745,6 +746,7 @@ Evaluates telemetry data against target KPIs. Fetches data from admin API endpoi
 - `rules` — Deep dive into rule effectiveness (which rules work, which don't)
 - `convergence` — Quality score trends across sessions per installation
 - `compare` — Compare metrics across drone sizes, BF versions, tuning modes
+- `events` — Drill-down into structured events for a specific installation (errors, workflow, analysis)
 
 **Target KPIs:** Apply rate >70%, verification improvement >60%, noise floor improvement -2dB+, overshoot reduction -5%+, convergence rate 73%+
 

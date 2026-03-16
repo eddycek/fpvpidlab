@@ -167,7 +167,7 @@ npm run test:ui           # Visual interface with DOM snapshots
 
 ## Test Inventory
 
-**Total: 2572 unit tests across 129 files + 30 Playwright E2E tests across 6 spec files** (last verified: March 16, 2026)
+**Total: 2593 unit tests across 130 files + 30 Playwright E2E tests across 6 spec files** (last verified: March 16, 2026)
 
 ### UI Components
 
@@ -296,7 +296,8 @@ npm run test:ui           # Visual interface with DOM snapshots
 
 | File | Tests | Description |
 |------|-------|-------------|
-| `telemetry/TelemetryManager.test.ts` | 17 | Telemetry manager initialization, settings persistence, bundle assembly (v1 + v2), upload via net.fetch, demo mode skip, error handling, TelemetryBundleV2 with per-session records |
+| `telemetry/TelemetryManager.test.ts` | 20 | Telemetry manager initialization, settings persistence, bundle assembly (v1 + v2 + v3), upload via net.fetch, demo mode skip, error handling, TelemetryBundleV3 with per-session records and structured events, event collector integration |
+| `telemetry/TelemetryEventCollector.test.ts` | 18 | Event collector emit, ring buffer, meta truncation, session ID, load/persist, clear, graceful error handling |
 
 ### License
 

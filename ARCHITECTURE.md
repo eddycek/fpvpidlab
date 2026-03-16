@@ -1,6 +1,6 @@
 # Architecture Overview
 
-**Last Updated:** March 16, 2026 | **Phase 4 Complete, Phase 6 Complete** | **2572 unit tests, 129 files + 30 Playwright E2E tests**
+**Last Updated:** March 16, 2026 | **Phase 4 Complete, Phase 6 Complete** | **2593 unit tests, 130 files + 30 Playwright E2E tests**
 
 ---
 
@@ -837,7 +837,7 @@ Hardware error (FC timeout, USB disconnect)
 
 ## Testing Strategy
 
-**2572 unit tests across 129 files + 30 Playwright E2E tests**. See [TESTING.md](./TESTING.md) for complete inventory.
+**2593 unit tests across 130 files + 30 Playwright E2E tests**. See [TESTING.md](./TESTING.md) for complete inventory.
 
 | Area | Files | Tests |
 |------|-------|-------|
@@ -849,7 +849,7 @@ Hardware error (FC timeout, USB disconnect)
 | MSC (Mass Storage) | 2 | 45 |
 | Storage Managers | 7 | 127 |
 | IPC Handlers | 2 | 113 |
-| Telemetry | 1 | 17 |
+| Telemetry | 2 | 38 |
 | License | 1 | 12 |
 | Auto-Updater | 1 | 12 |
 | UI Components + Charts + Contexts | 50 | 726 |
