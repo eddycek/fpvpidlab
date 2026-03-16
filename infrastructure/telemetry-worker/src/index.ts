@@ -1,6 +1,7 @@
 import type { Env } from './types';
 import { handleUpload } from './upload';
 import { handleAdmin } from './admin';
+import { handleDiagnosticUpload, handleDiagnosticAdmin } from './diagnostic';
 import { handleCron } from './cron';
 
 export default {
@@ -11,7 +12,7 @@ export default {
     // CORS headers for Electron app
     const corsHeaders = {
       'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Methods': 'GET, POST, PATCH, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type, Content-Encoding, X-Admin-Key',
     };
 
@@ -26,6 +27,10 @@ export default {
       // Route requests
       if (pathname === '/v1/collect') {
         response = await handleUpload(request, env);
+      } else if (pathname === '/v1/diagnostic') {
+        response = await handleDiagnosticUpload(request, env);
+      } else if (pathname.startsWith('/admin/diagnostics')) {
+        response = await handleDiagnosticAdmin(request, env, pathname);
       } else if (pathname.startsWith('/admin/')) {
         response = await handleAdmin(request, env, pathname);
       } else if (pathname === '/health') {

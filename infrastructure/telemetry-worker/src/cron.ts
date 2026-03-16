@@ -114,7 +114,10 @@ ${sortedSizes.map(([s, c]) => `  ${s}: ${c}`).join('\n') || '  (no data)'}
 Platforms:
 ${sortedPlatforms.map(([p, c]) => `  ${p}: ${c}`).join('\n') || '  (no data)'}
 
-Avg Quality Score: ${avgQuality}`;
+Avg Quality Score: ${avgQuality}
+
+Diagnostic Reports:
+${await getDiagnosticSummary(env)}`;
 
   // Send via Resend
   if (!env.RESEND_API_KEY || !env.REPORT_EMAIL) {
@@ -143,4 +146,53 @@ Avg Quality Score: ${avgQuality}`;
   } else {
     console.log(`Cron: daily report sent to ${env.REPORT_EMAIL}`);
   }
+}
+
+/** Get diagnostic reports summary for cron email */
+async function getDiagnosticSummary(env: Env): Promise<string> {
+  const byStatus: Record<string, number> = {};
+  let total = 0;
+  let lastWeek = 0;
+  const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+
+  let cursor: string | undefined;
+  try {
+    do {
+      const listed = await env.TELEMETRY_BUCKET.list({
+        prefix: 'diagnostics/',
+        delimiter: '/',
+        cursor,
+      });
+
+      for (const prefix of listed.delimitedPrefixes) {
+        if (prefix.includes('_rate')) continue;
+        const id = prefix.replace('diagnostics/', '').replace('/', '');
+        try {
+          const metaObj = await env.TELEMETRY_BUCKET.get(`diagnostics/${id}/metadata.json`);
+          if (metaObj) {
+            const meta: { status: string; createdAt: string } = await metaObj.json();
+            total++;
+            byStatus[meta.status] = (byStatus[meta.status] || 0) + 1;
+            if (new Date(meta.createdAt).getTime() > weekAgo) lastWeek++;
+          }
+        } catch {
+          // Skip
+        }
+      }
+
+      cursor = listed.truncated ? listed.cursor : undefined;
+    } while (cursor);
+  } catch {
+    return '  (unable to read)';
+  }
+
+  if (total === 0) return '  (none)';
+
+  const lines = [];
+  if (byStatus.new) lines.push(`  ${byStatus.new} new (unreviewed)`);
+  if (byStatus.reviewing) lines.push(`  ${byStatus.reviewing} reviewing`);
+  if (byStatus['needs-bbl']) lines.push(`  ${byStatus['needs-bbl']} needs BBL data`);
+  lines.push(`  ${lastWeek} received this week`);
+  lines.push(`  ${total} total`);
+  return lines.join('\n');
 }
