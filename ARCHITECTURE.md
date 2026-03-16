@@ -838,7 +838,7 @@ Hardware error (FC timeout, USB disconnect)
 
 ## Testing Strategy
 
-**2612 unit tests across 132 files + 30 Playwright E2E tests**. See [TESTING.md](./TESTING.md) for complete inventory.
+**2631 unit tests across 134 files + 30 Playwright E2E tests**. See [TESTING.md](./TESTING.md) for complete inventory.
 
 | Area | Files | Tests |
 |------|-------|-------|

@@ -167,7 +167,7 @@ npm run test:ui           # Visual interface with DOM snapshots
 
 ## Test Inventory
 
-**Total: 2612 unit tests across 132 files + 30 Playwright E2E tests across 6 spec files** (last verified: March 16, 2026)
+**Total: 2631 unit tests across 134 files + 30 Playwright E2E tests across 6 spec files** (last verified: March 16, 2026)
 
 ### UI Components
 
@@ -218,6 +218,8 @@ npm run test:ui           # Visual interface with DOM snapshots
 | `TelemetrySettings/TelemetrySettingsModal.test.tsx` | 7 | Telemetry settings modal, toggle switch, send now, installation ID display, close/overlay dismiss |
 | `LicenseSettings/LicenseSettingsModal.test.tsx` | 8 | License settings modal, activate, error, dismiss, comparison table |
 | `UpdateNotification/UpdateNotification.test.tsx` | 4 | Update notification render, events, changelog, install |
+| `DiagnosticReport/ReportIssueModal.test.tsx` | 6 | Report issue modal form fields, submit with email/note, empty submit, sending state, cancel, privacy note |
+| `DiagnosticReport/ReportIssueButton.test.tsx` | 6 | Report issue button Pro gate, Free user hidden, modal open, submit success, submit failure, button variant |
 
 ### Charts
 
