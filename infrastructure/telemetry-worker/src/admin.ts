@@ -1,11 +1,17 @@
 import type {
   Env,
-  TelemetryBundle,
+  AnyTelemetryBundle,
+  TelemetryBundleV2,
+  TelemetrySessionRecord,
   InstallationMetadata,
   AggregatedStats,
   VersionDistribution,
   DroneDistribution,
   QualityHistogram,
+  RuleStats,
+  MetricDistribution,
+  VerificationStats,
+  ConvergenceStats,
 } from './types';
 
 /** Authenticate admin requests via X-Admin-Key header */
@@ -24,8 +30,8 @@ function authenticateAdmin(request: Request, env: Env): boolean {
 /** List all installation IDs by scanning R2 prefixes */
 async function listInstallations(
   bucket: R2Bucket
-): Promise<{ id: string; metadata: InstallationMetadata; bundle: TelemetryBundle }[]> {
-  const installations: { id: string; metadata: InstallationMetadata; bundle: TelemetryBundle }[] =
+): Promise<{ id: string; metadata: InstallationMetadata; bundle: AnyTelemetryBundle }[]> {
+  const installations: { id: string; metadata: InstallationMetadata; bundle: AnyTelemetryBundle }[] =
     [];
 
   let cursor: string | undefined;
@@ -50,7 +56,7 @@ async function listInstallations(
 
         if (metaObj && bundleObj) {
           const metadata: InstallationMetadata = await metaObj.json();
-          const bundle: TelemetryBundle = await bundleObj.json();
+          const bundle: AnyTelemetryBundle = await bundleObj.json();
           installations.push({ id, metadata, bundle });
         }
       } catch {
@@ -62,6 +68,11 @@ async function listInstallations(
   } while (cursor);
 
   return installations;
+}
+
+/** Type guard: check if bundle is v2 (has sessions array) */
+function isV2Bundle(bundle: AnyTelemetryBundle): bundle is TelemetryBundleV2 {
+  return bundle.schemaVersion === 2 && 'sessions' in bundle && Array.isArray((bundle as TelemetryBundleV2).sessions);
 }
 
 /** GET /admin/stats — aggregate summary */
@@ -412,6 +423,224 @@ async function handleFull(env: Env): Promise<Response> {
   });
 }
 
+/** Helper: compute median from sorted array */
+function median(values: number[]): number {
+  if (values.length === 0) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 !== 0 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+}
+
+/** Helper: round to 1 decimal place */
+function r1(n: number): number {
+  return Math.round(n * 10) / 10;
+}
+
+/** Helper: average of axis values (roll, pitch, yaw) */
+function axisAvg(obj: { roll: number; pitch: number; yaw: number }): number {
+  return (obj.roll + obj.pitch + obj.yaw) / 3;
+}
+
+/** GET /admin/stats/rules — rule effectiveness across all v2 sessions */
+async function handleRules(env: Env): Promise<Response> {
+  const installations = await listInstallations(env.TELEMETRY_BUCKET);
+
+  const ruleMap = new Map<
+    string,
+    { fireCount: number; applyCount: number; deltas: number[]; improvements: number[] }
+  >();
+
+  for (const { bundle } of installations) {
+    if (!isV2Bundle(bundle)) continue;
+
+    for (const session of bundle.sessions) {
+      const hasVerification = session.verification != null;
+
+      for (const rule of session.rules ?? []) {
+        let entry = ruleMap.get(rule.ruleId);
+        if (!entry) {
+          entry = { fireCount: 0, applyCount: 0, deltas: [], improvements: [] };
+          ruleMap.set(rule.ruleId, entry);
+        }
+        entry.fireCount++;
+        if (rule.applied) {
+          entry.applyCount++;
+          entry.deltas.push(rule.delta);
+        }
+        if (hasVerification) {
+          entry.improvements.push(session.verification!.overallImprovement);
+        }
+      }
+    }
+  }
+
+  const rules: Record<string, RuleStats> = {};
+  for (const [ruleId, entry] of ruleMap) {
+    const avgDelta =
+      entry.deltas.length > 0 ? r1(entry.deltas.reduce((a, b) => a + b, 0) / entry.deltas.length) : 0;
+    const avgImprovement =
+      entry.improvements.length > 0
+        ? r1(entry.improvements.reduce((a, b) => a + b, 0) / entry.improvements.length)
+        : 0;
+
+    rules[ruleId] = {
+      fireCount: entry.fireCount,
+      applyCount: entry.applyCount,
+      applyRate: entry.fireCount > 0 ? r1((entry.applyCount / entry.fireCount) * 100) : 0,
+      avgDelta,
+      avgImprovement,
+      sessionsWithVerification: entry.improvements.length,
+    };
+  }
+
+  // Sort by fireCount descending
+  const sorted = Object.entries(rules).sort(([, a], [, b]) => b.fireCount - a.fireCount);
+
+  return Response.json({ rules: Object.fromEntries(sorted), totalRules: sorted.length });
+}
+
+/** GET /admin/stats/metrics — metric distributions from v2 sessions */
+async function handleMetrics(env: Env): Promise<Response> {
+  const installations = await listInstallations(env.TELEMETRY_BUCKET);
+
+  const noiseFloors: number[] = [];
+  const overshoots: number[] = [];
+  const bandwidths: number[] = [];
+  const phaseMargins: number[] = [];
+
+  for (const { bundle } of installations) {
+    if (!isV2Bundle(bundle)) continue;
+
+    for (const session of bundle.sessions) {
+      const m = session.metrics;
+      if (m.noiseFloorDb) noiseFloors.push(axisAvg(m.noiseFloorDb));
+      if (m.meanOvershootPct) overshoots.push(axisAvg(m.meanOvershootPct));
+      if (m.bandwidthHz) bandwidths.push(axisAvg(m.bandwidthHz));
+      if (m.phaseMarginDeg) phaseMargins.push(axisAvg(m.phaseMarginDeg));
+    }
+  }
+
+  function buildDistribution(
+    values: number[],
+    bucketStart: number,
+    bucketEnd: number,
+    bucketSize: number,
+    unit: string
+  ): MetricDistribution {
+    const buckets: Record<string, number> = {};
+    for (let lo = bucketStart; lo < bucketEnd; lo += bucketSize) {
+      buckets[`${lo}${unit} to ${lo + bucketSize}${unit}`] = 0;
+    }
+    for (const v of values) {
+      const idx = Math.floor((v - bucketStart) / bucketSize) * bucketSize + bucketStart;
+      const clamped = Math.max(bucketStart, Math.min(idx, bucketEnd - bucketSize));
+      const key = `${clamped}${unit} to ${clamped + bucketSize}${unit}`;
+      buckets[key] = (buckets[key] || 0) + 1;
+    }
+    return {
+      buckets,
+      mean: values.length > 0 ? r1(values.reduce((a, b) => a + b, 0) / values.length) : 0,
+      median: r1(median(values)),
+      count: values.length,
+    };
+  }
+
+  return Response.json({
+    noiseFloor: buildDistribution(noiseFloors, -60, -10, 5, 'dB'),
+    overshoot: buildDistribution(overshoots, 0, 50, 5, '%'),
+    bandwidth: buildDistribution(bandwidths, 0, 100, 10, 'Hz'),
+    phaseMargin: buildDistribution(phaseMargins, 0, 90, 10, 'deg'),
+  });
+}
+
+/** GET /admin/stats/verification — verification success rates from v2 sessions */
+async function handleVerification(env: Env): Promise<Response> {
+  const installations = await listInstallations(env.TELEMETRY_BUCKET);
+
+  let totalVerified = 0;
+  let improved = 0;
+  const byMode: Record<string, { count: number; improved: number; totalImprovement: number }> = {};
+
+  for (const { bundle } of installations) {
+    if (!isV2Bundle(bundle)) continue;
+
+    for (const session of bundle.sessions) {
+      if (!session.verification) continue;
+
+      totalVerified++;
+      const isImproved = session.verification.overallImprovement > 0;
+      if (isImproved) improved++;
+
+      if (!byMode[session.mode]) {
+        byMode[session.mode] = { count: 0, improved: 0, totalImprovement: 0 };
+      }
+      byMode[session.mode].count++;
+      if (isImproved) byMode[session.mode].improved++;
+      byMode[session.mode].totalImprovement += session.verification.overallImprovement;
+    }
+  }
+
+  const result: VerificationStats = {
+    totalVerified,
+    improved,
+    improvementRate: totalVerified > 0 ? r1((improved / totalVerified) * 100) : 0,
+    byMode: {},
+  };
+
+  for (const [mode, data] of Object.entries(byMode)) {
+    result.byMode[mode] = {
+      count: data.count,
+      improved: data.improved,
+      avgImprovement: data.count > 0 ? r1(data.totalImprovement / data.count) : 0,
+    };
+  }
+
+  return Response.json(result);
+}
+
+/** GET /admin/stats/convergence — quality score trends across sessions per installation */
+async function handleConvergence(env: Env): Promise<Response> {
+  const installations = await listInstallations(env.TELEMETRY_BUCKET);
+
+  const firstScores: number[] = [];
+  const secondScores: number[] = [];
+  const thirdPlusScores: number[] = [];
+  let multiSessionCount = 0;
+  let convergedCount = 0;
+
+  for (const { bundle } of installations) {
+    if (!isV2Bundle(bundle)) continue;
+
+    const scores = bundle.sessions
+      .filter((s: TelemetrySessionRecord) => s.qualityScore != null)
+      .map((s: TelemetrySessionRecord) => s.qualityScore!);
+
+    if (scores.length < 2) continue;
+    multiSessionCount++;
+
+    firstScores.push(scores[0]);
+    secondScores.push(scores[1]);
+    for (let i = 2; i < scores.length; i++) {
+      thirdPlusScores.push(scores[i]);
+    }
+
+    // Converged = last score > first score
+    if (scores[scores.length - 1] > scores[0]) {
+      convergedCount++;
+    }
+  }
+
+  const result: ConvergenceStats = {
+    installationsWithMultipleSessions: multiSessionCount,
+    avgFirstSessionScore: firstScores.length > 0 ? r1(firstScores.reduce((a, b) => a + b, 0) / firstScores.length) : 0,
+    avgSecondSessionScore: secondScores.length > 0 ? r1(secondScores.reduce((a, b) => a + b, 0) / secondScores.length) : 0,
+    avgThirdPlusScore: thirdPlusScores.length > 0 ? r1(thirdPlusScores.reduce((a, b) => a + b, 0) / thirdPlusScores.length) : 0,
+    convergenceRate: multiSessionCount > 0 ? r1((convergedCount / multiSessionCount) * 100) : 0,
+  };
+
+  return Response.json(result);
+}
+
 /** Route admin requests */
 export async function handleAdmin(
   request: Request,
@@ -443,6 +672,14 @@ export async function handleAdmin(
       return handleProfiles(env);
     case '/admin/stats/full':
       return handleFull(env);
+    case '/admin/stats/rules':
+      return handleRules(env);
+    case '/admin/stats/metrics':
+      return handleMetrics(env);
+    case '/admin/stats/verification':
+      return handleVerification(env);
+    case '/admin/stats/convergence':
+      return handleConvergence(env);
     default:
       return new Response('Not found', { status: 404 });
   }

@@ -1,4 +1,4 @@
-import type { TelemetryBundle, InstallationMetadata, Env } from './types';
+import type { AnyTelemetryBundle, InstallationMetadata, Env } from './types';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const MAX_PAYLOAD_SIZE = 10 * 1024 * 1024; // 10 MB decompressed
@@ -9,12 +9,14 @@ export function isValidUUID(id: string): boolean {
   return UUID_REGEX.test(id);
 }
 
-/** Validate telemetry bundle schema — required fields present and correct types */
-export function validateBundle(data: unknown): data is TelemetryBundle {
+/** Validate telemetry bundle schema — required fields present and correct types.
+ *  Accepts both v1 (schemaVersion 1) and v2 (schemaVersion 2) bundles. */
+export function validateBundle(data: unknown): data is AnyTelemetryBundle {
   if (!data || typeof data !== 'object') return false;
   const bundle = data as Record<string, unknown>;
 
   if (typeof bundle.schemaVersion !== 'number') return false;
+  if (bundle.schemaVersion !== 1 && bundle.schemaVersion !== 2) return false;
   if (typeof bundle.installationId !== 'string' || !isValidUUID(bundle.installationId)) return false;
   if (typeof bundle.timestamp !== 'string') return false;
   if (typeof bundle.appVersion !== 'string') return false;
@@ -29,6 +31,11 @@ export function validateBundle(data: unknown): data is TelemetryBundle {
   if (!bundle.tuningSessions || typeof bundle.tuningSessions !== 'object') return false;
   const sessions = bundle.tuningSessions as Record<string, unknown>;
   if (typeof sessions.totalCompleted !== 'number') return false;
+
+  // V2: sessions array must be present
+  if (bundle.schemaVersion === 2) {
+    if (!Array.isArray(bundle.sessions)) return false;
+  }
 
   return true;
 }

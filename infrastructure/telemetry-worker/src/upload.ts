@@ -1,4 +1,4 @@
-import type { Env, TelemetryBundle, InstallationMetadata } from './types';
+import type { Env, AnyTelemetryBundle, InstallationMetadata } from './types';
 import { isValidUUID, validateBundle, checkPayloadSize, checkRateLimit } from './validation';
 
 /** Handle POST /v1/collect — telemetry upload endpoint */
@@ -29,7 +29,7 @@ export async function handleUpload(request: Request, env: Env): Promise<Response
     return new Response('Invalid telemetry bundle schema', { status: 400 });
   }
 
-  const bundle: TelemetryBundle = data;
+  const bundle: AnyTelemetryBundle = data;
 
   // Validate installation ID format
   if (!isValidUUID(bundle.installationId)) {

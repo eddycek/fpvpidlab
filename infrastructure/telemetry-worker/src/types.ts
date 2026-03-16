@@ -73,3 +73,88 @@ export interface QualityHistogram {
   averageScore: number | null;
   totalScores: number;
 }
+
+/** Per-session analytics record (from app v2 bundles) */
+export interface TelemetrySessionRecord {
+  mode: 'filter' | 'pid' | 'quick';
+  durationSec: number;
+  droneSize?: string;
+  flightStyle?: string;
+  bfVersion?: string;
+  dataQualityScore?: number;
+  dataQualityTier?: string;
+  rules: Array<{
+    ruleId: string;
+    confidence: 'high' | 'medium' | 'low';
+    applied: boolean;
+    delta: number;
+  }>;
+  metrics: {
+    noiseFloorDb?: { roll: number; pitch: number; yaw: number };
+    meanOvershootPct?: { roll: number; pitch: number; yaw: number };
+    meanRiseTimeMs?: { roll: number; pitch: number; yaw: number };
+    bandwidthHz?: { roll: number; pitch: number; yaw: number };
+    phaseMarginDeg?: { roll: number; pitch: number; yaw: number };
+  };
+  verification?: {
+    noiseFloorDeltaDb?: { roll: number; pitch: number; yaw: number };
+    overshootDeltaPct?: { roll: number; pitch: number; yaw: number };
+    overallImprovement: number;
+  };
+  qualityScore?: number;
+}
+
+/** V2 bundle extends v1 with per-session data */
+export interface TelemetryBundleV2 extends Omit<TelemetryBundle, 'schemaVersion'> {
+  schemaVersion: 2;
+  sessions: TelemetrySessionRecord[];
+}
+
+/** Union type for any supported bundle version */
+export type AnyTelemetryBundle = TelemetryBundle | TelemetryBundleV2;
+
+/** Rule effectiveness stats */
+export interface RuleStats {
+  fireCount: number;
+  applyCount: number;
+  applyRate: number;
+  avgDelta: number;
+  avgImprovement: number;
+  sessionsWithVerification: number;
+}
+
+/** Histogram bucket counts */
+export interface MetricBucket {
+  [range: string]: number;
+}
+
+/** Metric distribution with histogram and summary stats */
+export interface MetricDistribution {
+  buckets: MetricBucket;
+  mean: number;
+  median: number;
+  count: number;
+}
+
+/** Verification success rate stats */
+export interface VerificationStats {
+  totalVerified: number;
+  improved: number;
+  improvementRate: number;
+  byMode: {
+    [mode: string]: {
+      count: number;
+      improved: number;
+      avgImprovement: number;
+    };
+  };
+}
+
+/** Quality score convergence stats across sessions */
+export interface ConvergenceStats {
+  installationsWithMultipleSessions: number;
+  avgFirstSessionScore: number;
+  avgSecondSessionScore: number;
+  avgThirdPlusScore: number;
+  convergenceRate: number;
+}

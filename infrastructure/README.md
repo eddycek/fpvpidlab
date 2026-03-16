@@ -79,7 +79,11 @@ infrastructure/
 │   ├── telemetry-sessions.sh      ← Tuning sessions breakdown
 │   ├── telemetry-features.sh      ← Feature adoption rates
 │   ├── telemetry-blackbox.sh      ← Blackbox usage
-│   └── telemetry-profiles.sh      ← Profile count distribution
+│   ├── telemetry-profiles.sh      ← Profile count distribution
+│   ├── telemetry-rules.sh         ← Rule effectiveness (v2)
+│   ├── telemetry-metrics.sh       ← Metric distributions (v2)
+│   ├── telemetry-verification.sh  ← Verification success rates (v2)
+│   └── telemetry-convergence.sh   ← Quality score convergence (v2)
 └── payment-worker/                ← (planned)
 
 .github/workflows/
@@ -264,6 +268,12 @@ PIDLAB_ENV=prod ./infrastructure/scripts/generate-key.sh
 ./infrastructure/scripts/telemetry-features.sh       # Feature adoption (analysis, snapshots, history)
 ./infrastructure/scripts/telemetry-blackbox.sh       # Blackbox: logs downloaded, compression, storage
 ./infrastructure/scripts/telemetry-profiles.sh       # Profile count distribution
+
+# V2 analytics (requires v2 bundles with per-session data):
+./infrastructure/scripts/telemetry-rules.sh          # Rule effectiveness: fire/apply rates, avg delta
+./infrastructure/scripts/telemetry-metrics.sh         # Metric distributions: noise, overshoot, bandwidth
+./infrastructure/scripts/telemetry-verification.sh    # Verification success rates by tuning mode
+./infrastructure/scripts/telemetry-convergence.sh     # Quality score convergence across sessions
 ```
 
 ### Health Checks
@@ -303,6 +313,10 @@ curl -sf https://pidlab-license-dev.eddycek-ve.workers.dev/health
 | `GET` | `/admin/stats/blackbox` | `X-Admin-Key` | Blackbox: total logs, compression, storage types |
 | `GET` | `/admin/stats/profiles` | `X-Admin-Key` | Profile count distribution + average per install |
 | `GET` | `/admin/stats/full` | `X-Admin-Key` | All of the above in a single response |
+| `GET` | `/admin/stats/rules` | `X-Admin-Key` | Rule effectiveness: fire/apply rates, avg delta (v2) |
+| `GET` | `/admin/stats/metrics` | `X-Admin-Key` | Metric distributions: noise, overshoot, bandwidth (v2) |
+| `GET` | `/admin/stats/verification` | `X-Admin-Key` | Verification success rates by tuning mode (v2) |
+| `GET` | `/admin/stats/convergence` | `X-Admin-Key` | Quality score convergence across sessions (v2) |
 | `GET` | `/health` | None | Health check |
 
 ## License Worker Endpoints
