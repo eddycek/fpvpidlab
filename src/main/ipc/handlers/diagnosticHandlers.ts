@@ -1,5 +1,4 @@
 import { ipcMain } from 'electron';
-import { gzipSync } from 'zlib';
 import { app, net } from 'electron';
 import { IPCChannel } from '@shared/types/ipc.types';
 import { DIAGNOSTIC } from '@shared/constants';
@@ -59,9 +58,8 @@ export function registerDiagnosticHandlers(deps: HandlerDependencies): void {
           input.userNote
         );
 
-        // Upload
+        // Upload (plain JSON — bundle is ~100KB, gzip unnecessary)
         const json = JSON.stringify(bundle);
-        const compressed = gzipSync(Buffer.from(json));
 
         const defaultUrl = app.isPackaged ? DIAGNOSTIC.UPLOAD_URL : DIAGNOSTIC.UPLOAD_URL_DEV;
         const uploadUrl = process.env.DIAGNOSTIC_URL || defaultUrl;
@@ -70,9 +68,8 @@ export function registerDiagnosticHandlers(deps: HandlerDependencies): void {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Content-Encoding': 'gzip',
           },
-          body: compressed,
+          body: json,
         });
 
         if (!response.ok) {

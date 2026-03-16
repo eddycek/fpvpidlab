@@ -342,13 +342,14 @@ export function TuningCompletionSummary({
             </button>
           </>
         )}
+        {historyRecordId && (
+          <ReportIssueButton
+            recordId={historyRecordId}
+            variant="button"
+            className="report-issue-btn"
+          />
+        )}
       </div>
-
-      {historyRecordId && (
-        <div className="completion-report-row">
-          <ReportIssueButton recordId={historyRecordId} variant="link" />
-        </div>
-      )}
     </div>
   );
 }

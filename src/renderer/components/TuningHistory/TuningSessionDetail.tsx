@@ -75,7 +75,6 @@ export function TuningSessionDetail({ record, onReanalyzeVerification }: TuningS
             <span>PID Profile {record.bfPidProfileIndex + 1}</span>
           </>
         )}
-        <ReportIssueButton recordId={record.id} variant="link" />
       </div>
 
       {score && (
@@ -218,6 +217,10 @@ export function TuningSessionDetail({ record, onReanalyzeVerification }: TuningS
           </div>
         </div>
       )}
+
+      <div className="session-detail-actions">
+        <ReportIssueButton recordId={record.id} variant="button" className="report-issue-btn" />
+      </div>
     </div>
   );
 }

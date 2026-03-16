@@ -201,9 +201,20 @@
   margin-top: 16px;
 }
 
-.completion-report-row {
-  margin-top: 8px;
-  text-align: right;
+.report-issue-btn {
+  margin-left: auto;
+  color: #d97706 !important;
+  border-color: #d97706 !important;
+}
+
+.report-issue-btn:hover {
+  background: rgba(217, 119, 6, 0.1) !important;
+}
+
+.session-detail-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 12px;
 }
 
 /* Score breakdown rows (used in TuningSessionDetail and TuningCompletionSummary) */
