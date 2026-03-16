@@ -75,3 +75,48 @@ export interface TelemetryBundle {
     historyViewUsed: boolean;
   };
 }
+
+/** Per-session analytics record for telemetry (privacy-safe) */
+export interface TelemetrySessionRecord {
+  mode: 'filter' | 'pid' | 'quick';
+  durationSec: number;
+  droneSize?: string;
+  flightStyle?: string;
+  bfVersion?: string;
+
+  dataQualityScore?: number;
+  dataQualityTier?: string;
+
+  /** Rules that fired during this session (compact) */
+  rules: Array<{
+    ruleId: string;
+    confidence: 'high' | 'medium' | 'low';
+    applied: boolean;
+    delta: number;
+  }>;
+
+  /** Key metrics (NO absolute PID/filter values — only noise/response metrics) */
+  metrics: {
+    noiseFloorDb?: { roll: number; pitch: number; yaw: number };
+    meanOvershootPct?: { roll: number; pitch: number; yaw: number };
+    meanRiseTimeMs?: { roll: number; pitch: number; yaw: number };
+    bandwidthHz?: { roll: number; pitch: number; yaw: number };
+    phaseMarginDeg?: { roll: number; pitch: number; yaw: number };
+  };
+
+  /** Verification results (if verification flight was performed) */
+  verification?: {
+    noiseFloorDeltaDb?: { roll: number; pitch: number; yaw: number };
+    overshootDeltaPct?: { roll: number; pitch: number; yaw: number };
+    overallImprovement: number;
+  };
+
+  qualityScore?: number;
+}
+
+/** Telemetry bundle v2 with per-session analytics */
+export interface TelemetryBundleV2 extends Omit<TelemetryBundle, 'schemaVersion'> {
+  schemaVersion: 2;
+  /** Per-session analytics records (all sessions, newest first) */
+  sessions: TelemetrySessionRecord[];
+}

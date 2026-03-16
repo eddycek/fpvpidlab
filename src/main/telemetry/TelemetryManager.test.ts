@@ -127,10 +127,11 @@ describe('TelemetryManager', () => {
       await manager.initialize();
       const bundle = await manager.assembleBundle();
 
-      expect(bundle.schemaVersion).toBe(1);
+      expect(bundle.schemaVersion).toBe(2);
       expect(bundle.installationId).toBe('test-uuid-1234');
       expect(bundle.profiles.count).toBe(0);
       expect(bundle.tuningSessions.totalCompleted).toBe(0);
+      expect(bundle.sessions).toEqual([]);
     });
 
     it('collects profile data from profileManager', async () => {
@@ -191,6 +192,268 @@ describe('TelemetryManager', () => {
       expect(bundle.tuningSessions.byMode.filter).toBe(1);
       expect(bundle.tuningSessions.byMode.quick).toBe(1);
       expect(bundle.tuningSessions.recentQualityScores).toEqual([85, 72]);
+    });
+
+    it('populates sessions from tuning history with metrics', async () => {
+      mockFs.readFile.mockRejectedValue(new Error('ENOENT'));
+      mockFs.writeFile.mockResolvedValue(undefined);
+      mockFs.mkdir.mockResolvedValue(undefined);
+
+      await manager.initialize();
+
+      const mockProfileManager = {
+        listProfiles: vi
+          .fn()
+          .mockResolvedValue([{ id: 'p1', size: '5"', flightStyle: 'balanced' }]),
+        getProfile: vi.fn().mockResolvedValue({
+          fcSerialNumber: 'SN1',
+          size: '5"',
+          flightStyle: 'balanced',
+          fcInfo: { version: '4.5.1' },
+        }),
+      };
+      const mockHistoryManager = {
+        getHistory: vi.fn().mockResolvedValue([
+          {
+            tuningType: 'filter',
+            startedAt: '2026-03-16T10:00:00.000Z',
+            completedAt: '2026-03-16T10:30:00.000Z',
+            appliedFilterChanges: [
+              { setting: 'gyro_lpf1_static_hz', previousValue: 300, newValue: 250 },
+            ],
+            appliedPIDChanges: [],
+            appliedFeedforwardChanges: [],
+            filterMetrics: {
+              noiseLevel: 'medium',
+              roll: { noiseFloorDb: -25, peakCount: 2 },
+              pitch: { noiseFloorDb: -22, peakCount: 1 },
+              yaw: { noiseFloorDb: -30, peakCount: 0 },
+              segmentsUsed: 3,
+              summary: 'test',
+              dataQuality: { overall: 75, tier: 'good' },
+            },
+            pidMetrics: null,
+            transferFunctionMetrics: null,
+            verificationMetrics: null,
+            verificationPidMetrics: null,
+          },
+          {
+            tuningType: 'quick',
+            startedAt: '2026-03-16T11:00:00.000Z',
+            completedAt: '2026-03-16T11:15:00.000Z',
+            appliedFilterChanges: [],
+            appliedPIDChanges: [{ setting: 'pid_roll_p', previousValue: 45, newValue: 50 }],
+            appliedFeedforwardChanges: [],
+            filterMetrics: null,
+            pidMetrics: {
+              roll: {
+                meanOvershoot: 12,
+                meanRiseTimeMs: 30,
+                meanSettlingTimeMs: 80,
+                meanLatencyMs: 5,
+              },
+              pitch: {
+                meanOvershoot: 10,
+                meanRiseTimeMs: 28,
+                meanSettlingTimeMs: 75,
+                meanLatencyMs: 4,
+              },
+              yaw: {
+                meanOvershoot: 8,
+                meanRiseTimeMs: 35,
+                meanSettlingTimeMs: 90,
+                meanLatencyMs: 6,
+              },
+              stepsDetected: 15,
+              currentPIDs: {
+                roll: { p: 45, i: 80, d: 30 },
+                pitch: { p: 47, i: 82, d: 32 },
+                yaw: { p: 35, i: 90, d: 0 },
+              },
+              summary: 'test',
+            },
+            transferFunctionMetrics: {
+              roll: {
+                bandwidthHz: 45,
+                phaseMarginDeg: 55,
+                gainMarginDb: 6,
+                overshootPercent: 12,
+                settlingTimeMs: 80,
+                riseTimeMs: 30,
+              },
+              pitch: {
+                bandwidthHz: 42,
+                phaseMarginDeg: 50,
+                gainMarginDb: 5,
+                overshootPercent: 10,
+                settlingTimeMs: 75,
+                riseTimeMs: 28,
+              },
+              yaw: {
+                bandwidthHz: 30,
+                phaseMarginDeg: 60,
+                gainMarginDb: 8,
+                overshootPercent: 8,
+                settlingTimeMs: 90,
+                riseTimeMs: 35,
+              },
+            },
+            verificationMetrics: null,
+            verificationPidMetrics: null,
+          },
+        ]),
+      };
+      manager.setProfileManager(mockProfileManager);
+      manager.setTuningHistoryManager(mockHistoryManager);
+
+      const bundle = await manager.assembleBundle();
+
+      expect(bundle.sessions).toHaveLength(2);
+
+      // First session — filter tune
+      const s0 = bundle.sessions[0];
+      expect(s0.mode).toBe('filter');
+      expect(s0.durationSec).toBe(1800); // 30 min
+      expect(s0.droneSize).toBe('5"');
+      expect(s0.flightStyle).toBe('balanced');
+      expect(s0.bfVersion).toBe('4.5.1');
+      expect(s0.dataQualityScore).toBe(75);
+      expect(s0.dataQualityTier).toBe('good');
+      expect(s0.rules).toHaveLength(1);
+      expect(s0.rules[0].ruleId).toBe('gyro_lpf1_static_hz');
+      expect(s0.rules[0].delta).toBe(-50);
+      expect(s0.rules[0].applied).toBe(true);
+      expect(s0.metrics.noiseFloorDb).toEqual({ roll: -25, pitch: -22, yaw: -30 });
+
+      // Second session — quick tune with PID + TF metrics
+      const s1 = bundle.sessions[1];
+      expect(s1.mode).toBe('quick');
+      expect(s1.durationSec).toBe(900); // 15 min
+      expect(s1.metrics.meanOvershootPct).toEqual({ roll: 12, pitch: 10, yaw: 8 });
+      expect(s1.metrics.bandwidthHz).toEqual({ roll: 45, pitch: 42, yaw: 30 });
+      expect(s1.metrics.phaseMarginDeg).toEqual({ roll: 55, pitch: 50, yaw: 60 });
+    });
+
+    it('produces empty sessions array when no tuning history', async () => {
+      mockFs.readFile.mockRejectedValue(new Error('ENOENT'));
+      mockFs.writeFile.mockResolvedValue(undefined);
+      mockFs.mkdir.mockResolvedValue(undefined);
+
+      await manager.initialize();
+
+      const mockProfileManager = {
+        listProfiles: vi.fn().mockResolvedValue([{ id: 'p1', size: '5"' }]),
+        getProfile: vi.fn().mockResolvedValue({ fcSerialNumber: 'SN1', fcInfo: {} }),
+      };
+      const mockHistoryManager = {
+        getHistory: vi.fn().mockResolvedValue([]),
+      };
+      manager.setProfileManager(mockProfileManager);
+      manager.setTuningHistoryManager(mockHistoryManager);
+
+      const bundle = await manager.assembleBundle();
+      expect(bundle.sessions).toEqual([]);
+    });
+
+    it('handles records without optional fields defensively', async () => {
+      mockFs.readFile.mockRejectedValue(new Error('ENOENT'));
+      mockFs.writeFile.mockResolvedValue(undefined);
+      mockFs.mkdir.mockResolvedValue(undefined);
+
+      await manager.initialize();
+
+      const mockProfileManager = {
+        listProfiles: vi.fn().mockResolvedValue([{ id: 'p1' }]),
+        getProfile: vi.fn().mockResolvedValue({ fcSerialNumber: 'SN1', fcInfo: {} }),
+      };
+      const mockHistoryManager = {
+        getHistory: vi.fn().mockResolvedValue([
+          {
+            // Minimal record — no tuningType, no metrics, no applied changes
+            startedAt: '2026-03-16T10:00:00.000Z',
+            completedAt: '2026-03-16T10:05:00.000Z',
+            appliedFilterChanges: [],
+            appliedPIDChanges: [],
+            appliedFeedforwardChanges: [],
+            filterMetrics: null,
+            pidMetrics: null,
+            transferFunctionMetrics: null,
+            verificationMetrics: null,
+            verificationPidMetrics: null,
+          },
+        ]),
+      };
+      manager.setProfileManager(mockProfileManager);
+      manager.setTuningHistoryManager(mockHistoryManager);
+
+      const bundle = await manager.assembleBundle();
+
+      expect(bundle.sessions).toHaveLength(1);
+      const s = bundle.sessions[0];
+      expect(s.mode).toBe('filter'); // default for old records
+      expect(s.durationSec).toBe(300);
+      expect(s.rules).toEqual([]);
+      expect(s.metrics).toEqual({});
+      expect(s.verification).toBeUndefined();
+      expect(s.qualityScore).toBeUndefined();
+    });
+
+    it('extracts verification deltas from filter verification', async () => {
+      mockFs.readFile.mockRejectedValue(new Error('ENOENT'));
+      mockFs.writeFile.mockResolvedValue(undefined);
+      mockFs.mkdir.mockResolvedValue(undefined);
+
+      await manager.initialize();
+
+      const mockProfileManager = {
+        listProfiles: vi.fn().mockResolvedValue([{ id: 'p1' }]),
+        getProfile: vi.fn().mockResolvedValue({ fcSerialNumber: 'SN1', fcInfo: {} }),
+      };
+      const mockHistoryManager = {
+        getHistory: vi.fn().mockResolvedValue([
+          {
+            tuningType: 'filter',
+            startedAt: '2026-03-16T10:00:00.000Z',
+            completedAt: '2026-03-16T10:30:00.000Z',
+            appliedFilterChanges: [],
+            appliedPIDChanges: [],
+            appliedFeedforwardChanges: [],
+            filterMetrics: {
+              roll: { noiseFloorDb: -20, peakCount: 2 },
+              pitch: { noiseFloorDb: -18, peakCount: 1 },
+              yaw: { noiseFloorDb: -25, peakCount: 0 },
+              noiseLevel: 'medium',
+              segmentsUsed: 3,
+              summary: 'test',
+            },
+            verificationMetrics: {
+              roll: { noiseFloorDb: -26, peakCount: 1 },
+              pitch: { noiseFloorDb: -24, peakCount: 0 },
+              yaw: { noiseFloorDb: -30, peakCount: 0 },
+              noiseLevel: 'low',
+              segmentsUsed: 3,
+              summary: 'improved',
+            },
+            pidMetrics: null,
+            transferFunctionMetrics: null,
+            verificationPidMetrics: null,
+          },
+        ]),
+      };
+      manager.setProfileManager(mockProfileManager);
+      manager.setTuningHistoryManager(mockHistoryManager);
+
+      const bundle = await manager.assembleBundle();
+      const s = bundle.sessions[0];
+
+      expect(s.verification).toBeDefined();
+      expect(s.verification!.noiseFloorDeltaDb).toEqual({
+        roll: -6,
+        pitch: -6,
+        yaw: -5,
+      });
+      // Negative noise delta = improvement, so overallImprovement should be positive
+      expect(s.verification!.overallImprovement).toBeCloseTo(17 / 3);
     });
 
     it('detects snapshot restore usage', async () => {

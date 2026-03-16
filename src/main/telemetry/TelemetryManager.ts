@@ -4,7 +4,12 @@ import { createHash, randomUUID } from 'crypto';
 import { gzipSync } from 'zlib';
 import { app, net } from 'electron';
 import { APP_VERSION, TELEMETRY } from '@shared/constants';
-import type { TelemetrySettings, TelemetryBundle } from '@shared/types/telemetry.types';
+import type {
+  TelemetrySettings,
+  TelemetryBundleV2,
+  TelemetrySessionRecord,
+} from '@shared/types/telemetry.types';
+import type { CompletedTuningRecord } from '@shared/types/tuning-history.types';
 import { logger } from '../utils/logger';
 
 const SETTINGS_FILE = 'telemetry-settings.json';
@@ -107,11 +112,11 @@ export class TelemetryManager {
     await this.upload();
   }
 
-  async assembleBundle(): Promise<TelemetryBundle> {
+  async assembleBundle(): Promise<TelemetryBundleV2> {
     if (!this.settings) throw new Error('TelemetryManager not initialized');
 
-    const bundle: TelemetryBundle = {
-      schemaVersion: 1,
+    const bundle: TelemetryBundleV2 = {
+      schemaVersion: 2,
       installationId: this.settings.installationId,
       timestamp: new Date().toISOString(),
       appVersion: APP_VERSION,
@@ -131,6 +136,7 @@ export class TelemetryManager {
         snapshotCompareUsed: false,
         historyViewUsed: false,
       },
+      sessions: [],
     };
 
     // Profiles
@@ -254,7 +260,188 @@ export class TelemetryManager {
       bundle.features.historyViewUsed = true;
     }
 
+    // Per-session analytics
+    bundle.sessions = await this.extractSessionRecords();
+
     return bundle;
+  }
+
+  private async extractSessionRecords(): Promise<TelemetrySessionRecord[]> {
+    if (!this.profileManager || !this.tuningHistoryManager) return [];
+
+    const sessions: TelemetrySessionRecord[] = [];
+
+    try {
+      const profiles = await this.profileManager.listProfiles();
+
+      // Build a map of profileId → profile for metadata lookup
+      const profileMap = new Map<string, any>();
+      for (const meta of profiles) {
+        try {
+          const profile = await this.profileManager.getProfile(meta.id);
+          if (profile) profileMap.set(meta.id, profile);
+        } catch {
+          // Skip profiles that fail to load
+        }
+      }
+
+      for (const meta of profiles) {
+        const history: CompletedTuningRecord[] = await this.tuningHistoryManager.getHistory(
+          meta.id
+        );
+        const profile = profileMap.get(meta.id);
+
+        for (const record of history) {
+          const session = this.buildSessionRecord(record, profile, meta);
+          sessions.push(session);
+        }
+      }
+    } catch (err) {
+      logger.warn('Telemetry: failed to extract session records:', err);
+    }
+
+    return sessions;
+  }
+
+  private buildSessionRecord(
+    record: CompletedTuningRecord,
+    profile: any,
+    meta: any
+  ): TelemetrySessionRecord {
+    // Mode — default to 'filter' for old records without tuningType
+    const mode: TelemetrySessionRecord['mode'] = record.tuningType ?? 'filter';
+
+    // Duration from timestamps
+    let durationSec = 0;
+    if (record.startedAt && record.completedAt) {
+      const start = new Date(record.startedAt).getTime();
+      const end = new Date(record.completedAt).getTime();
+      if (!isNaN(start) && !isNaN(end) && end > start) {
+        durationSec = Math.round((end - start) / 1000);
+      }
+    }
+
+    // Profile metadata
+    const droneSize = meta?.size ?? profile?.size;
+    const flightStyle = meta?.flightStyle ?? profile?.flightStyle;
+    const bfVersion = profile?.fcInfo?.version;
+
+    // Data quality — pick from whichever metrics exist
+    const dq =
+      record.filterMetrics?.dataQuality ??
+      record.pidMetrics?.dataQuality ??
+      record.transferFunctionMetrics?.dataQuality;
+    const dataQualityScore = dq?.overall;
+    const dataQualityTier = dq?.tier;
+
+    // Rules from applied changes (no ruleId/confidence on historical records,
+    // so derive what we can — setting name as ruleId, all marked as applied)
+    const rules: TelemetrySessionRecord['rules'] = [];
+    const allChanges = [
+      ...(record.appliedFilterChanges ?? []),
+      ...(record.appliedPIDChanges ?? []),
+      ...(record.appliedFeedforwardChanges ?? []),
+    ];
+    for (const change of allChanges) {
+      rules.push({
+        ruleId: change.setting ?? 'unknown',
+        confidence: 'medium',
+        applied: true,
+        delta: (change.newValue ?? 0) - (change.previousValue ?? 0),
+      });
+    }
+
+    // Metrics extraction — noise floors from filter metrics
+    const metrics: TelemetrySessionRecord['metrics'] = {};
+
+    if (record.filterMetrics) {
+      const fm = record.filterMetrics;
+      metrics.noiseFloorDb = {
+        roll: fm.roll?.noiseFloorDb ?? 0,
+        pitch: fm.pitch?.noiseFloorDb ?? 0,
+        yaw: fm.yaw?.noiseFloorDb ?? 0,
+      };
+    }
+
+    if (record.pidMetrics) {
+      const pm = record.pidMetrics;
+      metrics.meanOvershootPct = {
+        roll: pm.roll?.meanOvershoot ?? 0,
+        pitch: pm.pitch?.meanOvershoot ?? 0,
+        yaw: pm.yaw?.meanOvershoot ?? 0,
+      };
+      metrics.meanRiseTimeMs = {
+        roll: pm.roll?.meanRiseTimeMs ?? 0,
+        pitch: pm.pitch?.meanRiseTimeMs ?? 0,
+        yaw: pm.yaw?.meanRiseTimeMs ?? 0,
+      };
+    }
+
+    if (record.transferFunctionMetrics) {
+      const tf = record.transferFunctionMetrics;
+      metrics.bandwidthHz = {
+        roll: tf.roll?.bandwidthHz ?? 0,
+        pitch: tf.pitch?.bandwidthHz ?? 0,
+        yaw: tf.yaw?.bandwidthHz ?? 0,
+      };
+      metrics.phaseMarginDeg = {
+        roll: tf.roll?.phaseMarginDeg ?? 0,
+        pitch: tf.pitch?.phaseMarginDeg ?? 0,
+        yaw: tf.yaw?.phaseMarginDeg ?? 0,
+      };
+    }
+
+    // Verification — compare pre/post noise floors or overshoot
+    let verification: TelemetrySessionRecord['verification'] | undefined;
+    if (record.verificationMetrics && record.filterMetrics) {
+      const pre = record.filterMetrics;
+      const post = record.verificationMetrics;
+      const noiseFloorDeltaDb = {
+        roll: (post.roll?.noiseFloorDb ?? 0) - (pre.roll?.noiseFloorDb ?? 0),
+        pitch: (post.pitch?.noiseFloorDb ?? 0) - (pre.pitch?.noiseFloorDb ?? 0),
+        yaw: (post.yaw?.noiseFloorDb ?? 0) - (pre.yaw?.noiseFloorDb ?? 0),
+      };
+      const avg = (noiseFloorDeltaDb.roll + noiseFloorDeltaDb.pitch + noiseFloorDeltaDb.yaw) / 3;
+      verification = {
+        noiseFloorDeltaDb,
+        overallImprovement: -avg, // negative dB delta = improvement
+      };
+    }
+
+    if (record.verificationPidMetrics && record.pidMetrics) {
+      const pre = record.pidMetrics;
+      const post = record.verificationPidMetrics;
+      const overshootDeltaPct = {
+        roll: (post.roll?.meanOvershoot ?? 0) - (pre.roll?.meanOvershoot ?? 0),
+        pitch: (post.pitch?.meanOvershoot ?? 0) - (pre.pitch?.meanOvershoot ?? 0),
+        yaw: (post.yaw?.meanOvershoot ?? 0) - (pre.yaw?.meanOvershoot ?? 0),
+      };
+      if (!verification) {
+        verification = { overallImprovement: 0 };
+      }
+      verification.overshootDeltaPct = overshootDeltaPct;
+      const avg = (overshootDeltaPct.roll + overshootDeltaPct.pitch + overshootDeltaPct.yaw) / 3;
+      // Negative overshoot delta = improvement (less overshoot)
+      verification.overallImprovement =
+        verification.overallImprovement !== 0 ? (verification.overallImprovement - avg) / 2 : -avg;
+    }
+
+    // Quality score from record (field may not exist on older records)
+    const qualityScore = (record as any).qualityScore as number | undefined;
+
+    return {
+      mode,
+      durationSec,
+      droneSize,
+      flightStyle,
+      bfVersion,
+      dataQualityScore,
+      dataQualityTier,
+      rules,
+      metrics,
+      verification,
+      qualityScore,
+    };
   }
 
   private async upload(): Promise<void> {
