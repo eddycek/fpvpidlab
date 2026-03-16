@@ -13,16 +13,28 @@ allowed-tools: Read, Grep, Glob, Bash
 You evaluate PIDlab's telemetry data to determine whether the application is meeting its
 goals: improving users' flight performance through automated PID and filter tuning.
 
+## Argument Parsing
+
+Parse `$ARGUMENTS` for **environment** and **mode**. Arguments can appear in any order.
+
+- **Environment**: `dev` or `prod` — defaults to **`prod`**
+- **Mode**: `evaluate`, `rules`, `convergence`, `compare` — defaults to **`evaluate`**
+
+Examples:
+- `/telemetry-evaluator` → prod + evaluate
+- `/telemetry-evaluator dev` → dev + evaluate
+- `/telemetry-evaluator rules` → prod + rules
+- `/telemetry-evaluator dev rules` → dev + rules
+- `/telemetry-evaluator convergence prod` → prod + convergence
+
 ## Data Access
 
-All data comes from the telemetry admin API. You MUST set the environment before sourcing `_env.sh`
+All data comes from the telemetry admin API. You MUST set `PIDLAB_ENV` before sourcing `_env.sh`
 because it prompts interactively (which Claude Code cannot answer).
-
-**Default to `prod`** unless the user explicitly says "dev":
 
 ```bash
 # Set environment BEFORE sourcing (avoids interactive prompt)
-export PIDLAB_ENV=prod   # or "dev" if user requests it
+export PIDLAB_ENV=prod   # or "dev" — determined from $ARGUMENTS above
 source infrastructure/scripts/_env.sh
 ```
 
@@ -44,15 +56,15 @@ Available endpoints:
 
 ## Modes
 
-Determine the mode from `$ARGUMENTS`:
+Determine the mode from parsed `$ARGUMENTS` (see above):
 
 ### Mode: `evaluate` (default)
 
 Full KPI evaluation report.
 
-1. Fetch all data (set `PIDLAB_ENV` before sourcing to avoid interactive prompt):
+1. Fetch all data (use environment parsed from arguments):
    ```bash
-   export PIDLAB_ENV=prod
+   export PIDLAB_ENV=<env>   # "prod" or "dev" from argument parsing
    source infrastructure/scripts/_env.sh
    curl -sf -H "X-Admin-Key: $PIDLAB_TELEMETRY_ADMIN_KEY" "$PIDLAB_TELEMETRY_API_URL/admin/stats/full" | jq . > /tmp/telemetry-full.json
    curl -sf -H "X-Admin-Key: $PIDLAB_TELEMETRY_ADMIN_KEY" "$PIDLAB_TELEMETRY_API_URL/admin/stats/rules" | jq . > /tmp/telemetry-rules.json
@@ -67,7 +79,7 @@ Full KPI evaluation report.
 
 ```markdown
 # PIDlab Telemetry Evaluation Report
-Generated: <date>
+Generated: <date> | Environment: <DEV/PROD>
 
 ## Overall Score: XX/100 (<tier>)
 
