@@ -13,7 +13,7 @@ PIDlab reads your Blackbox log, analyzes the data (FFT noise spectrum, step resp
 - **Flight style adaptation** — Smooth (cinematic), Balanced (freestyle), Aggressive (racing) thresholds
 - **24 analysis modules** — FFT, step response, Wiener deconvolution, prop wash, D-term effectiveness, cross-axis coupling, throttle spectrograms, group delay, feedforward, dynamic lowpass, Bayesian optimizer, and more
 - **Works offline** — demo mode with simulated FC for testing without hardware
-- **Anonymous telemetry** — opt-in usage telemetry (tuning mode usage, drone sizes, quality scores; no flight data or PIDs ever sent)
+- **Anonymous telemetry** — opt-in usage telemetry with per-session analytics (tuning mode usage, drone sizes, quality scores, recommendation rule tracing, verification deltas; no flight data or PIDs ever sent)
 - **Freemium license system** — free tier (1 profile), Pro tier (unlimited profiles). Ed25519-signed offline-first license validation
 - **Auto-updater** — silent background download from GitHub Releases, install on quit. Changelog modal with "What's new" details
 - **Settings with log viewer** — tabbed settings modal (Telemetry + Logs). Color-coded log viewer with export-to-file
@@ -292,7 +292,7 @@ npm run rebuild                      # Rebuild native modules (serialport)
 
 All UI changes must include tests. Tests automatically run before commits. Coverage thresholds enforced: 80% lines/functions/statements, 75% branches.
 
-**Unit tests:** 2532 tests across 128 files — MSP protocol, storage managers, IPC handlers, UI components, hooks, BBL parser fuzz, analysis pipeline validation, telemetry, license, auto-updater.
+**Unit tests:** 2572 tests across 129 files — MSP protocol, storage managers, IPC handlers, UI components, hooks, BBL parser fuzz, analysis pipeline validation, telemetry, license, auto-updater.
 
 **Playwright E2E:** 30 tests across 6 spec files — launches real Electron app in demo mode, walks through complete tuning cycles (Filter Tune, PID Tune, Flash Tune, and stress-test edge cases).
 

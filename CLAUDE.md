@@ -223,7 +223,8 @@ window.betaflight.onConnectionChanged((status) => {
 - Location: `{userData}/data/telemetry-settings.json`
 - Settings: `{ enabled: boolean, installationId: string, lastUploadAt: string | null }`
 - Opt-in only (disabled by default), anonymous UUID v4 installation ID
-- Bundle assembly aggregates data from ProfileManager, TuningHistoryManager, BlackboxManager, SnapshotManager
+- Bundle assembly (v2): `TelemetryBundleV2` with per-session `TelemetrySessionRecord[]` including recommendation traces (`ruleId`, setting, axis) and verification deltas
+- `recommendationTraces` stored on `TuningSession` during apply, archived to history
 - Upload via Electron `net.fetch()` to CF Worker endpoint (gzipped JSON)
 - Skipped in demo mode
 - IPC: `TELEMETRY_GET_SETTINGS`, `TELEMETRY_SET_ENABLED`, `TELEMETRY_SEND_NOW`
@@ -403,7 +404,7 @@ Completed tuning sessions are archived with self-contained metrics for compariso
 - **TuningSessionDetail**: Expanded view with mode-aware verification charts, same logic as TuningCompletionSummary
 - **useTuningHistory hook**: Loads history for current profile, reloads on profile change and session dismissal
 - Verification: Filter Tune → throttle sweep (spectrogram), PID Tune → stick snaps (step response), Flash Tune → hover (noise spectrum)
-- Types in `src/shared/types/tuning-history.types.ts` (CompactSpectrum, CompactThrottleSpectrogram, CompactThrottleBand, FilterMetricsSummary, PIDMetricsSummary, CompletedTuningRecord)
+- Types in `src/shared/types/tuning-history.types.ts` (CompactSpectrum, CompactThrottleSpectrogram, CompactThrottleBand, FilterMetricsSummary, PIDMetricsSummary, CompletedTuningRecord, RecommendationTrace, VerificationDelta)
 - Design doc: `docs/TUNING_HISTORY_AND_COMPARISON.md`
 
 ### Auto-Apply Recommendations

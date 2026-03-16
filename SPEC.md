@@ -312,7 +312,7 @@ Automated build pipeline producing installable applications for all platforms.
 - Data quality scoring: 0-100 quality score for flight data, confidence adjustment, quality warnings
 - Flight quality score with trend chart: visual quality tracking across tuning sessions in history panel
 - Feedforward write-back via CLI apply stage
-- Anonymous telemetry collection: opt-in client-side telemetry (TelemetryManager, settings modal, IPC handlers). Collects tuning mode usage, drone sizes, quality scores — no flight data or PIDs (PR #261)
+- Anonymous telemetry collection: opt-in client-side telemetry (TelemetryManager, settings modal, IPC handlers). Collects tuning mode usage, drone sizes, quality scores — no flight data or PIDs (PR #261). Telemetry enrichment (PRs #286–#290): structured `ruleId` on all recommendations, `RecommendationTrace` and `VerificationDelta` types, `TelemetryBundleV2` with per-session records, CF Worker v2 admin endpoints, `/telemetry-evaluator` skill
 
 **Completed (PRs #266–#268):**
 - Code signing (macOS notarization, Windows Authenticode)
@@ -357,7 +357,7 @@ Automated end-to-end tests running in CI pipeline against a real FC connected to
 
 ## Progress Summary
 
-**Last Updated:** March 15, 2026 | **Tests:** 2532 unit tests across 128 files + ~30 Playwright E2E tests | **PRs Merged:** #1–#268
+**Last Updated:** March 16, 2026 | **Tests:** 2572 unit tests across 129 files + ~30 Playwright E2E tests | **PRs Merged:** #1–#290
 
 | Phase | Status | Notes |
 |-------|--------|-------|
