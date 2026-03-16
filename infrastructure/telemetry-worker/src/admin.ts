@@ -2,7 +2,9 @@ import type {
   Env,
   AnyTelemetryBundle,
   TelemetryBundleV2,
+  TelemetryBundleV3,
   TelemetrySessionRecord,
+  TelemetryEvent,
   InstallationMetadata,
   AggregatedStats,
   VersionDistribution,
@@ -12,6 +14,7 @@ import type {
   MetricDistribution,
   VerificationStats,
   ConvergenceStats,
+  ErrorStats,
 } from './types';
 
 /** Authenticate admin requests via X-Admin-Key header */
@@ -70,9 +73,14 @@ async function listInstallations(
   return installations;
 }
 
-/** Type guard: check if bundle is v2 (has sessions array) */
+/** Type guard: check if bundle is v2+ (has sessions array) */
 function isV2Bundle(bundle: AnyTelemetryBundle): bundle is TelemetryBundleV2 {
-  return bundle.schemaVersion === 2 && 'sessions' in bundle && Array.isArray((bundle as TelemetryBundleV2).sessions);
+  return bundle.schemaVersion >= 2 && 'sessions' in bundle && Array.isArray((bundle as TelemetryBundleV2).sessions);
+}
+
+/** Type guard: check if bundle is v3 (has events array) */
+function isV3Bundle(bundle: AnyTelemetryBundle): bundle is TelemetryBundleV3 {
+  return bundle.schemaVersion >= 3 && 'events' in bundle && Array.isArray((bundle as TelemetryBundleV3).events);
 }
 
 /** GET /admin/stats — aggregate summary */
@@ -641,6 +649,125 @@ async function handleConvergence(env: Env): Promise<Response> {
   return Response.json(result);
 }
 
+/** GET /admin/stats/errors — aggregated error metrics from v3 events */
+async function handleErrors(env: Env): Promise<Response> {
+  const installations = await listInstallations(env.TELEMETRY_BUCKET);
+
+  const byType: Record<string, number> = {};
+  const errorMap = new Map<string, { count: number; installations: Set<string> }>();
+  const funnelMap = new Map<
+    string,
+    { started: number; completed: number; abandonedAt: Record<string, number> }
+  >();
+  let totalEvents = 0;
+
+  for (const { id, bundle } of installations) {
+    if (!isV3Bundle(bundle)) continue;
+
+    for (const event of bundle.events) {
+      totalEvents++;
+      byType[event.type] = (byType[event.type] || 0) + 1;
+
+      // Error breakdown
+      if (event.type === 'error') {
+        let entry = errorMap.get(event.name);
+        if (!entry) {
+          entry = { count: 0, installations: new Set() };
+          errorMap.set(event.name, entry);
+        }
+        entry.count++;
+        entry.installations.add(id);
+      }
+
+      // Funnel tracking
+      if (event.type === 'workflow') {
+        const mode = String(event.meta?.mode ?? 'unknown');
+        if (!funnelMap.has(mode)) {
+          funnelMap.set(mode, { started: 0, completed: 0, abandonedAt: {} });
+        }
+        const funnel = funnelMap.get(mode)!;
+        if (event.name === 'tuning_started') funnel.started++;
+        if (event.name === 'tuning_completed') funnel.completed++;
+        if (event.name === 'tuning_abandoned') {
+          const phase = String(event.meta?.atPhase ?? 'unknown');
+          funnel.abandonedAt[phase] = (funnel.abandonedAt[phase] || 0) + 1;
+        }
+      }
+    }
+  }
+
+  const errorBreakdown: Record<string, { count: number; uniqueInstallations: number }> = {};
+  for (const [name, entry] of errorMap) {
+    errorBreakdown[name] = { count: entry.count, uniqueInstallations: entry.installations.size };
+  }
+
+  const funnelDropoff: ErrorStats['funnelDropoff'] = {};
+  for (const [mode, data] of funnelMap) {
+    funnelDropoff[mode] = data;
+  }
+
+  return Response.json({
+    totalEvents,
+    byType,
+    errorBreakdown,
+    funnelDropoff,
+  } satisfies ErrorStats);
+}
+
+/** GET /admin/events?id=<installationId> — events for a specific installation */
+async function handleEvents(request: Request, env: Env): Promise<Response> {
+  const url = new URL(request.url);
+  const installationId = url.searchParams.get('id');
+  if (!installationId) {
+    return Response.json({ error: 'Missing required parameter: id' }, { status: 400 });
+  }
+
+  const bundleObj = await env.TELEMETRY_BUCKET.get(`${installationId}/latest.json`);
+  if (!bundleObj) {
+    return Response.json({ error: 'Installation not found' }, { status: 404 });
+  }
+
+  const bundle: AnyTelemetryBundle = await bundleObj.json();
+  if (!isV3Bundle(bundle)) {
+    return Response.json({
+      installationId,
+      totalEvents: 0,
+      events: [],
+      sessions: [],
+      note: 'Installation has not uploaded v3 bundle yet',
+    });
+  }
+
+  let events: TelemetryEvent[] = bundle.events;
+
+  // Optional filters
+  const sessionFilter = url.searchParams.get('session');
+  const typeFilter = url.searchParams.get('type');
+
+  if (sessionFilter) {
+    events = events.filter((e) => e.sessionId === sessionFilter);
+  }
+  if (typeFilter) {
+    events = events.filter((e) => e.type === typeFilter);
+  }
+
+  // Build sessions summary for correlation
+  const sessionSummaries = bundle.sessions
+    .filter((s: TelemetrySessionRecord) => s.sessionId)
+    .map((s: TelemetrySessionRecord) => ({
+      sessionId: s.sessionId,
+      mode: s.mode,
+      qualityScore: s.qualityScore,
+    }));
+
+  return Response.json({
+    installationId,
+    totalEvents: events.length,
+    events,
+    sessions: sessionSummaries,
+  });
+}
+
 /** Route admin requests */
 export async function handleAdmin(
   request: Request,
@@ -680,6 +807,10 @@ export async function handleAdmin(
       return handleVerification(env);
     case '/admin/stats/convergence':
       return handleConvergence(env);
+    case '/admin/stats/errors':
+      return handleErrors(env);
+    case '/admin/events':
+      return handleEvents(request, env);
     default:
       return new Response('Not found', { status: 404 });
   }

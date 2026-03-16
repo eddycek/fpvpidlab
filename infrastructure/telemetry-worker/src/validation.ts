@@ -16,7 +16,8 @@ export function validateBundle(data: unknown): data is AnyTelemetryBundle {
   const bundle = data as Record<string, unknown>;
 
   if (typeof bundle.schemaVersion !== 'number') return false;
-  if (bundle.schemaVersion !== 1 && bundle.schemaVersion !== 2) return false;
+  if (bundle.schemaVersion !== 1 && bundle.schemaVersion !== 2 && bundle.schemaVersion !== 3)
+    return false;
   if (typeof bundle.installationId !== 'string' || !isValidUUID(bundle.installationId)) return false;
   if (typeof bundle.timestamp !== 'string') return false;
   if (typeof bundle.appVersion !== 'string') return false;
@@ -32,9 +33,14 @@ export function validateBundle(data: unknown): data is AnyTelemetryBundle {
   const sessions = bundle.tuningSessions as Record<string, unknown>;
   if (typeof sessions.totalCompleted !== 'number') return false;
 
-  // V2: sessions array must be present
-  if (bundle.schemaVersion === 2) {
+  // V2+: sessions array must be present
+  if (bundle.schemaVersion >= 2) {
     if (!Array.isArray(bundle.sessions)) return false;
+  }
+
+  // V3: events array must be present
+  if (bundle.schemaVersion === 3) {
+    if (!Array.isArray(bundle.events)) return false;
   }
 
   return true;

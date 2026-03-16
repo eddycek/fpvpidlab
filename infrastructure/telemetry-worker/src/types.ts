@@ -74,8 +74,18 @@ export interface QualityHistogram {
   totalScores: number;
 }
 
-/** Per-session analytics record (from app v2 bundles) */
+/** Structured telemetry event */
+export interface TelemetryEvent {
+  type: 'error' | 'workflow' | 'analysis';
+  name: string;
+  ts: string;
+  sessionId?: string;
+  meta?: Record<string, string | number | boolean>;
+}
+
+/** Per-session analytics record (from app v2+ bundles) */
 export interface TelemetrySessionRecord {
+  sessionId?: string;
   mode: 'filter' | 'pid' | 'quick';
   durationSec: number;
   droneSize?: string;
@@ -110,8 +120,14 @@ export interface TelemetryBundleV2 extends Omit<TelemetryBundle, 'schemaVersion'
   sessions: TelemetrySessionRecord[];
 }
 
+/** V3 bundle extends v2 with structured events */
+export interface TelemetryBundleV3 extends Omit<TelemetryBundleV2, 'schemaVersion'> {
+  schemaVersion: 3;
+  events: TelemetryEvent[];
+}
+
 /** Union type for any supported bundle version */
-export type AnyTelemetryBundle = TelemetryBundle | TelemetryBundleV2;
+export type AnyTelemetryBundle = TelemetryBundle | TelemetryBundleV2 | TelemetryBundleV3;
 
 /** Rule effectiveness stats */
 export interface RuleStats {
@@ -148,6 +164,17 @@ export interface VerificationStats {
       avgImprovement: number;
     };
   };
+}
+
+/** Error aggregation stats from v3 events */
+export interface ErrorStats {
+  totalEvents: number;
+  byType: Record<string, number>;
+  errorBreakdown: Record<string, { count: number; uniqueInstallations: number }>;
+  funnelDropoff: Record<
+    string,
+    { started: number; completed: number; abandonedAt: Record<string, number> }
+  >;
 }
 
 /** Quality score convergence stats across sessions */
