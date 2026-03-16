@@ -241,3 +241,32 @@ describe('recommendDynamicLowpass', () => {
     expect(recs[1].setting).toBe('dterm_lpf1_dyn_max_hz');
   });
 });
+
+describe('ruleId assignment', () => {
+  it('should assign F-DLPF-GYRO to gyro dynamic lowpass recommendations', () => {
+    const analysis = {
+      recommended: true,
+      noiseIncreaseDeltaDb: 10,
+      throttleNoiseCorrelation: 0.9,
+      bandsAnalyzed: 5,
+      summary: 'Dynamic lowpass recommended.',
+    };
+    const recs = recommendDynamicLowpass(analysis, 200);
+    expect(recs).toHaveLength(2);
+    expect(recs[0].ruleId).toBe('F-DLPF-GYRO');
+    expect(recs[1].ruleId).toBe('F-DLPF-GYRO');
+  });
+
+  it('should assign F-DLPF-DTERM to D-term dynamic lowpass recommendations', () => {
+    const analysis = {
+      recommended: true,
+      noiseIncreaseDeltaDb: 10,
+      throttleNoiseCorrelation: 0.9,
+      bandsAnalyzed: 5,
+      summary: 'Dynamic lowpass recommended.',
+    };
+    const recs = recommendDynamicLowpass(analysis, 200, 150);
+    const dtermRecs = recs.filter((r) => r.ruleId === 'F-DLPF-DTERM');
+    expect(dtermRecs).toHaveLength(2);
+  });
+});

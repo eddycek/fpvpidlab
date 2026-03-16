@@ -131,6 +131,7 @@ export function recommendDynamicLowpass(
           'higher cutoff at low throttle for less latency. This gives you the best of both worlds.',
         impact: 'both',
         confidence: 'medium',
+        ruleId: 'F-DLPF-GYRO',
       },
       {
         setting: 'gyro_lpf1_dyn_max_hz',
@@ -141,6 +142,7 @@ export function recommendDynamicLowpass(
           'giving minimal latency when noise is naturally lower.',
         impact: 'latency',
         confidence: 'medium',
+        ruleId: 'F-DLPF-GYRO',
       }
     );
   }
@@ -158,6 +160,7 @@ export function recommendDynamicLowpass(
           'sharp stick response at cruise speeds.',
         impact: 'both',
         confidence: 'medium',
+        ruleId: 'F-DLPF-DTERM',
       },
       {
         setting: 'dterm_lpf1_dyn_max_hz',
@@ -168,6 +171,7 @@ export function recommendDynamicLowpass(
           'for minimal latency in the D-term path.',
         impact: 'latency',
         confidence: 'medium',
+        ruleId: 'F-DLPF-DTERM',
       }
     );
   }

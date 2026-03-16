@@ -56,6 +56,8 @@ export interface FilterRecommendation {
   impact: 'latency' | 'noise' | 'both';
   /** How confident the recommendation is */
   confidence: 'high' | 'medium' | 'low';
+  /** Structured rule identifier for telemetry tracking (e.g. "F-NF-H-GYRO") */
+  ruleId?: string;
 }
 
 /** Data quality score for analysis input data */
@@ -374,6 +376,8 @@ export interface PIDRecommendation {
   /** When true, this is an advisory — recommendedValue equals currentValue (no change).
    * UI should display as a note/warning, not as an actionable recommendation. */
   informational?: boolean;
+  /** Structured rule identifier for telemetry tracking (e.g. "P-OS-D-roll") */
+  ruleId?: string;
 }
 
 /** Bayesian optimizer suggestion for next PID gains to try */

@@ -840,3 +840,131 @@ describe('Conditional dynamic notch Q with resonance', () => {
     expect(qRec!.confidence).toBe('high');
   });
 });
+
+describe('ruleId assignment', () => {
+  it('should assign F-NF-H-GYRO and F-NF-H-DTERM for high noise', () => {
+    const noise = makeNoiseProfile({ level: 'high', rollFloor: -25, pitchFloor: -20 });
+    const current: CurrentFilterSettings = {
+      ...DEFAULT_FILTER_SETTINGS,
+      gyro_lpf1_static_hz: 250,
+      dterm_lpf1_static_hz: 150,
+    };
+    const recs = recommend(noise, current);
+    expect(recs.find((r) => r.ruleId === 'F-NF-H-GYRO')).toBeDefined();
+    expect(recs.find((r) => r.ruleId === 'F-NF-H-DTERM')).toBeDefined();
+  });
+
+  it('should assign F-NF-L-GYRO and F-NF-L-DTERM for low noise', () => {
+    const noise = makeNoiseProfile({ level: 'low', rollFloor: -65, pitchFloor: -60 });
+    const current: CurrentFilterSettings = {
+      ...DEFAULT_FILTER_SETTINGS,
+      gyro_lpf1_static_hz: 150,
+      dterm_lpf1_static_hz: 100,
+    };
+    const recs = recommend(noise, current);
+    expect(recs.find((r) => r.ruleId === 'F-NF-L-GYRO')).toBeDefined();
+    expect(recs.find((r) => r.ruleId === 'F-NF-L-DTERM')).toBeDefined();
+  });
+
+  it('should assign F-NF-M-GYRO and F-NF-M-DTERM for medium noise with far-off settings', () => {
+    const noise = makeNoiseProfile({ level: 'medium', rollFloor: -50, pitchFloor: -50 });
+    const current: CurrentFilterSettings = {
+      ...DEFAULT_FILTER_SETTINGS,
+      gyro_lpf1_static_hz: 100,
+      dterm_lpf1_static_hz: 70,
+    };
+    const recs = recommend(noise, current);
+    expect(recs.find((r) => r.ruleId === 'F-NF-M-GYRO')).toBeDefined();
+    expect(recs.find((r) => r.ruleId === 'F-NF-M-DTERM')).toBeDefined();
+  });
+
+  it('should assign F-RES-GYRO for resonance peak below gyro LPF', () => {
+    const noise = makeNoiseProfile({
+      level: 'medium',
+      rollPeaks: [{ frequency: 80, amplitude: 15, type: 'frame_resonance' }],
+    });
+    const current: CurrentFilterSettings = {
+      ...DEFAULT_FILTER_SETTINGS,
+      gyro_lpf1_static_hz: 250,
+      dyn_notch_min_hz: 150,
+    };
+    const recs = recommend(noise, current);
+    expect(recs.find((r) => r.ruleId === 'F-RES-GYRO')).toBeDefined();
+  });
+
+  it('should assign F-DN-MIN and F-DN-MAX for notch range adjustments', () => {
+    const noise = makeNoiseProfile({
+      level: 'medium',
+      rollPeaks: [
+        { frequency: 80, amplitude: 15, type: 'frame_resonance' },
+        { frequency: 700, amplitude: 15, type: 'electrical' },
+      ],
+    });
+    const current: CurrentFilterSettings = {
+      ...DEFAULT_FILTER_SETTINGS,
+      dyn_notch_min_hz: 150,
+      dyn_notch_max_hz: 600,
+    };
+    const recs = recommend(noise, current);
+    expect(recs.find((r) => r.ruleId === 'F-DN-MIN')).toBeDefined();
+    expect(recs.find((r) => r.ruleId === 'F-DN-MAX')).toBeDefined();
+  });
+
+  it('should assign F-DN-COUNT and F-DN-Q for RPM-aware notch tuning', () => {
+    const noise = makeNoiseProfile({ level: 'medium' });
+    const current: CurrentFilterSettings = {
+      ...DEFAULT_FILTER_SETTINGS,
+      rpm_filter_harmonics: 3,
+      dyn_notch_count: 3,
+      dyn_notch_q: 300,
+    };
+    const recs = recommend(noise, current);
+    expect(recs.find((r) => r.ruleId === 'F-DN-COUNT')).toBeDefined();
+    expect(recs.find((r) => r.ruleId === 'F-DN-Q')).toBeDefined();
+  });
+
+  it('should assign F-LPF2-DIS-GYRO when disabling LPF2 with RPM + clean noise', () => {
+    const noise = makeNoiseProfile({ level: 'low', rollFloor: -55, pitchFloor: -50 });
+    const current: CurrentFilterSettings = {
+      ...DEFAULT_FILTER_SETTINGS,
+      gyro_lpf2_static_hz: 250,
+      dterm_lpf2_static_hz: 150,
+      rpm_filter_harmonics: 3,
+    };
+    const recs = recommend(noise, current);
+    expect(recs.find((r) => r.ruleId === 'F-LPF2-DIS-GYRO')).toBeDefined();
+    expect(recs.find((r) => r.ruleId === 'F-LPF2-DIS-DTERM')).toBeDefined();
+  });
+
+  it('should assign F-LPF2-EN-GYRO when enabling LPF2 for high noise without RPM', () => {
+    const noise = makeNoiseProfile({ level: 'high', rollFloor: -25, pitchFloor: -20 });
+    const current: CurrentFilterSettings = {
+      ...DEFAULT_FILTER_SETTINGS,
+      gyro_lpf2_static_hz: 0,
+      dterm_lpf2_static_hz: 0,
+      rpm_filter_harmonics: 0,
+    };
+    const recs = recommend(noise, current);
+    expect(recs.find((r) => r.ruleId === 'F-LPF2-EN-GYRO')).toBeDefined();
+    expect(recs.find((r) => r.ruleId === 'F-LPF2-EN-DTERM')).toBeDefined();
+  });
+
+  it('should preserve ruleId through deduplication', () => {
+    // High noise + resonance peak both target gyro_lpf1 → deduplicated
+    const noise = makeNoiseProfile({
+      level: 'high',
+      rollFloor: -25,
+      pitchFloor: -25,
+      rollPeaks: [{ frequency: 180, amplitude: 15, type: 'frame_resonance' }],
+    });
+    const current: CurrentFilterSettings = {
+      ...DEFAULT_FILTER_SETTINGS,
+      gyro_lpf1_static_hz: 250,
+    };
+    const recs = recommend(noise, current);
+    const gyroRec = recs.find((r) => r.setting === 'gyro_lpf1_static_hz');
+    expect(gyroRec).toBeDefined();
+    // After dedup, the more aggressive rec wins — it should still have a ruleId
+    expect(gyroRec!.ruleId).toBeDefined();
+  });
+});

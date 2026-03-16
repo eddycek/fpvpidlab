@@ -1919,3 +1919,184 @@ describe('extractTPAContext', () => {
     expect(ctx.active).toBe(false);
   });
 });
+
+describe('ruleId assignment', () => {
+  it('should assign P-OS-D-{axis} for severe overshoot D increase', () => {
+    const profile = makeProfile({ meanOvershoot: 35 });
+    const recs = recommendPID(profile, emptyProfile(), emptyProfile(), DEFAULT_PIDS);
+    const dRec = recs.find((r) => r.ruleId === 'P-OS-D-roll');
+    expect(dRec).toBeDefined();
+    expect(dRec!.setting).toBe('pid_roll_d');
+  });
+
+  it('should assign P-OS-P-{axis} for extreme overshoot P decrease', () => {
+    // Extreme overshoot (>2x threshold) triggers P reduction
+    const profile = makeProfile({ meanOvershoot: 60 });
+    const recs = recommendPID(profile, emptyProfile(), emptyProfile(), DEFAULT_PIDS);
+    const pRec = recs.find((r) => r.ruleId === 'P-OS-P-roll');
+    expect(pRec).toBeDefined();
+    expect(pRec!.recommendedValue).toBeLessThan(DEFAULT_PIDS.roll.P);
+  });
+
+  it('should assign P-SLUG-P-{axis} for sluggish response', () => {
+    // Use PIDs with healthy D/P ratio to avoid damping ratio recs interfering
+    // meanRiseTimeMs must exceed sluggishRise threshold (80ms for balanced)
+    const pids: PIDConfiguration = {
+      roll: { P: 40, I: 80, D: 25 },
+      pitch: { P: 40, I: 80, D: 25 },
+      yaw: { P: 45, I: 80, D: 0 },
+    };
+    const profile = makeProfile({
+      meanOvershoot: 2,
+      meanRiseTimeMs: 120,
+      meanSteadyStateError: 0,
+    });
+    const recs = recommendPID(profile, emptyProfile(), emptyProfile(), pids);
+    const slugRec = recs.find((r) => r.ruleId === 'P-SLUG-P-roll');
+    expect(slugRec).toBeDefined();
+    expect(slugRec!.recommendedValue).toBeGreaterThan(pids.roll.P);
+  });
+
+  it('should assign P-RING-D-{axis} for ringing', () => {
+    // Ringing without overshoot (so no P-OS-D conflict)
+    const profile = makeProfile({
+      meanOvershoot: 5,
+      responses: [makeResponse({ overshootPercent: 5, ringingCount: 5 })],
+    });
+    const recs = recommendPID(profile, emptyProfile(), emptyProfile(), DEFAULT_PIDS);
+    const ringRec = recs.find((r) => r.ruleId === 'P-RING-D-roll');
+    expect(ringRec).toBeDefined();
+  });
+
+  it('should assign P-SSE-I-{axis} for steady-state error', () => {
+    const profile = makeProfile({
+      meanOvershoot: 5,
+      meanSteadyStateError: 8,
+    });
+    const recs = recommendPID(profile, emptyProfile(), emptyProfile(), DEFAULT_PIDS);
+    const iRec = recs.find((r) => r.ruleId === 'P-SSE-I-roll');
+    expect(iRec).toBeDefined();
+    expect(iRec!.recommendedValue).toBeGreaterThan(DEFAULT_PIDS.roll.I);
+  });
+
+  it('should assign P-HI-P-{axis} for high P informational warning', () => {
+    const highPPids: PIDConfiguration = {
+      roll: { P: 80, I: 80, D: 40 },
+      pitch: { P: 80, I: 80, D: 40 },
+      yaw: { P: 45, I: 80, D: 0 },
+    };
+    const good = makeProfile({ meanOvershoot: 5, meanRiseTimeMs: 30 });
+    const recs = recommendPID(good, good, emptyProfile(), highPPids);
+    const hiPRec = recs.find((r) => r.ruleId === 'P-HI-P-roll');
+    expect(hiPRec).toBeDefined();
+    expect(hiPRec!.informational).toBe(true);
+  });
+
+  it('should assign P-LO-P-{axis} for low P informational warning', () => {
+    const lowPPids: PIDConfiguration = {
+      roll: { P: 25, I: 80, D: 30 },
+      pitch: { P: 25, I: 80, D: 30 },
+      yaw: { P: 45, I: 80, D: 0 },
+    };
+    const good = makeProfile({ meanOvershoot: 5, meanRiseTimeMs: 30 });
+    const recs = recommendPID(good, good, emptyProfile(), lowPPids);
+    const loPRec = recs.find((r) => r.ruleId === 'P-LO-P-roll');
+    expect(loPRec).toBeDefined();
+    expect(loPRec!.informational).toBe(true);
+  });
+
+  it('should assign P-DR-UD-{axis} for underdamped D/P ratio', () => {
+    const lowDPids: PIDConfiguration = {
+      roll: { P: 60, I: 80, D: 20 },
+      pitch: { P: 60, I: 80, D: 20 },
+      yaw: { P: 45, I: 80, D: 0 },
+    };
+    const good = makeProfile({ meanOvershoot: 5, meanRiseTimeMs: 30 });
+    const recs = recommendPID(good, good, emptyProfile(), lowDPids);
+    const drRec = recs.find((r) => r.ruleId?.startsWith('P-DR-UD-'));
+    expect(drRec).toBeDefined();
+  });
+
+  it('should assign P-FF-BOOST for FF-dominated overshoot', () => {
+    const ffProfile = makeProfile({
+      meanOvershoot: 25,
+      responses: [
+        makeResponse({ overshootPercent: 25, ffDominated: true }),
+        makeResponse({ overshootPercent: 22, ffDominated: true }),
+      ],
+    });
+    const ffContext: FeedforwardContext = { active: true, boost: 15 };
+    const recs = recommendPID(
+      ffProfile,
+      emptyProfile(),
+      emptyProfile(),
+      DEFAULT_PIDS,
+      undefined,
+      ffContext
+    );
+    const ffRec = recs.find((r) => r.ruleId === 'P-FF-BOOST');
+    expect(ffRec).toBeDefined();
+    expect(ffRec!.setting).toBe('feedforward_boost');
+  });
+
+  it('should assign TF-1-D-{axis} for low phase margin', () => {
+    const tfMetrics: TransferFunctionContext = {
+      roll: {
+        bandwidthHz: 40,
+        phaseMarginDeg: 25,
+        gainMarginDb: 10,
+        overshootPercent: 15,
+        settlingTimeMs: 100,
+        riseTimeMs: 30,
+        dcGainDb: 0,
+      },
+    };
+    const recs = recommendPID(
+      emptyProfile(),
+      emptyProfile(),
+      emptyProfile(),
+      DEFAULT_PIDS,
+      undefined,
+      undefined,
+      'balanced',
+      tfMetrics
+    );
+    const tfRec = recs.find((r) => r.ruleId === 'TF-1-D-roll');
+    expect(tfRec).toBeDefined();
+  });
+
+  it('should assign TF-4-I-{axis} for DC gain deficit', () => {
+    const tfMetrics: TransferFunctionContext = {
+      roll: {
+        bandwidthHz: 40,
+        phaseMarginDeg: 60,
+        gainMarginDb: 10,
+        overshootPercent: 5,
+        settlingTimeMs: 80,
+        riseTimeMs: 30,
+        dcGainDb: -4,
+      },
+    };
+    const recs = recommendPID(
+      emptyProfile(),
+      emptyProfile(),
+      emptyProfile(),
+      DEFAULT_PIDS,
+      undefined,
+      undefined,
+      'balanced',
+      tfMetrics
+    );
+    const tfRec = recs.find((r) => r.ruleId === 'TF-4-I-roll');
+    expect(tfRec).toBeDefined();
+  });
+
+  it('should have ruleId on all generated recommendations', () => {
+    const profile = makeProfile({ meanOvershoot: 35, meanSteadyStateError: 8 });
+    const recs = recommendPID(profile, profile, emptyProfile(), DEFAULT_PIDS);
+    for (const rec of recs) {
+      expect(rec.ruleId).toBeDefined();
+      expect(rec.ruleId!.length).toBeGreaterThan(0);
+    }
+  });
+});

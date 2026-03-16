@@ -147,6 +147,7 @@ function recommendNoiseFloorAdjustments(
           propwashNote,
         impact: 'both',
         confidence: 'high',
+        ruleId: 'F-NF-H-GYRO',
       });
     }
 
@@ -161,6 +162,7 @@ function recommendNoiseFloorAdjustments(
           rpmNote,
         impact: 'both',
         confidence: 'high',
+        ruleId: 'F-NF-H-DTERM',
       });
     }
   } else if (overallLevel === 'low') {
@@ -180,6 +182,7 @@ function recommendNoiseFloorAdjustments(
           propwashNote,
         impact: 'latency',
         confidence: 'medium',
+        ruleId: 'F-NF-L-GYRO',
       });
     }
 
@@ -194,6 +197,7 @@ function recommendNoiseFloorAdjustments(
           rpmNote,
         impact: 'latency',
         confidence: 'medium',
+        ruleId: 'F-NF-L-DTERM',
       });
     }
   } else {
@@ -215,6 +219,7 @@ function recommendNoiseFloorAdjustments(
           propwashNote,
         impact: 'both',
         confidence: 'low',
+        ruleId: 'F-NF-M-GYRO',
       });
     }
 
@@ -229,6 +234,7 @@ function recommendNoiseFloorAdjustments(
           rpmNote,
         impact: 'both',
         confidence: 'low',
+        ruleId: 'F-NF-M-DTERM',
       });
     }
   }
@@ -317,6 +323,7 @@ function recommendResonanceFixes(
         reason: reasonText,
         impact: 'both',
         confidence: 'high',
+        ruleId: 'F-RES-GYRO',
       });
     }
   }
@@ -337,6 +344,7 @@ function recommendResonanceFixes(
           'Lowering the D-term filter will reduce motor heat and improve flight smoothness.',
         impact: 'both',
         confidence: 'high',
+        ruleId: 'F-RES-DTERM',
       });
     }
   }
@@ -380,6 +388,7 @@ function recommendDynamicNotchAdjustments(
           `minimum of ${current.dyn_notch_min_hz} Hz. Lowering the minimum lets the notch filter track and remove it.`,
         impact: 'noise',
         confidence: 'medium',
+        ruleId: 'F-DN-MIN',
       });
     }
   }
@@ -398,6 +407,7 @@ function recommendDynamicNotchAdjustments(
           `maximum of ${current.dyn_notch_max_hz} Hz. Raising the maximum lets the notch filter catch it.`,
         impact: 'noise',
         confidence: 'medium',
+        ruleId: 'F-DN-MAX',
       });
     }
   }
@@ -437,6 +447,7 @@ function recommendDynamicNotchForRPM(
         'catch frame resonances, so fewer notches are needed. This reduces CPU load and filter delay.',
       impact: 'latency',
       confidence: 'high',
+      ruleId: 'F-DN-COUNT',
     });
   }
 
@@ -451,6 +462,7 @@ function recommendDynamicNotchForRPM(
         'This means less signal distortion while still catching frame resonances.',
       impact: 'latency',
       confidence: 'high',
+      ruleId: 'F-DN-Q',
     });
   } else if (hasStrongResonance && currentQ !== undefined && currentQ > 300) {
     // Strong resonance present — keep Q at 300 (wider) for better tracking
@@ -463,6 +475,7 @@ function recommendDynamicNotchForRPM(
         'ensures the notch can effectively track and suppress the resonance.',
       impact: 'noise',
       confidence: 'medium',
+      ruleId: 'F-DN-Q',
     });
   }
 }
@@ -577,6 +590,7 @@ function recommendLpf2Adjustments(
           'disabled to reduce phase delay and improve response.',
         impact: 'latency',
         confidence: 'medium',
+        ruleId: 'F-LPF2-DIS-GYRO',
       });
     }
     if (current.dterm_lpf2_static_hz > 0) {
@@ -589,6 +603,7 @@ function recommendLpf2Adjustments(
           'disabled to reduce latency and improve stick feel.',
         impact: 'latency',
         confidence: 'medium',
+        ruleId: 'F-LPF2-DIS-DTERM',
       });
     }
   }
@@ -605,6 +620,7 @@ function recommendLpf2Adjustments(
           'provides additional noise rejection that helps with motor temperatures.',
         impact: 'noise',
         confidence: 'low',
+        ruleId: 'F-LPF2-EN-GYRO',
       });
     }
     if (current.dterm_lpf2_static_hz === 0) {
@@ -617,6 +633,7 @@ function recommendLpf2Adjustments(
           'helps reduce motor heating from noisy D-term output.',
         impact: 'noise',
         confidence: 'low',
+        ruleId: 'F-LPF2-EN-DTERM',
       });
     }
   }

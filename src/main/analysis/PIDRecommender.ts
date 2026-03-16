@@ -125,6 +125,7 @@ export function recommendPID(
           reason: `Overshoot on ${axisName} appears to be caused by feedforward, not P/D imbalance (${Math.round(profile.meanOvershoot)}%). Reducing feedforward_boost will tame the overshoot without losing PID responsiveness.`,
           impact: 'stability',
           confidence: 'medium',
+          ruleId: 'P-FF-BOOST',
         });
       }
       // Skip P/D overshoot rules for this axis (continue to other rules)
@@ -143,6 +144,7 @@ export function recommendPID(
           reason: `Significant overshoot detected on ${axisName} (${Math.round(profile.meanOvershoot)}%). Increasing D-term dampens the bounce-back for a smoother, more controlled feel.`,
           impact: 'both',
           confidence: 'high',
+          ruleId: `P-OS-D-${axisName}`,
         });
       }
       // Reduce P when overshoot is extreme (>2x threshold) or D is already high
@@ -161,6 +163,7 @@ export function recommendPID(
             reason: `${severity > 4 ? 'Extreme' : 'Significant'} overshoot on ${axisName} (${Math.round(profile.meanOvershoot)}%). Reducing P-term helps prevent the quad from overshooting its target.${ffNote}`,
             impact: 'both',
             confidence: meanFFEnergyRatio !== undefined && meanFFEnergyRatio > 0.6 ? 'low' : 'high',
+            ruleId: `P-OS-P-${axisName}`,
           });
         }
       }
@@ -175,6 +178,7 @@ export function recommendPID(
           reason: `Your quad overshoots on ${axisName} stick inputs (${Math.round(profile.meanOvershoot)}%). Increasing D-term will dampen the response.`,
           impact: 'stability',
           confidence: 'medium',
+          ruleId: `P-OS-D-${axisName}`,
         });
       }
     }
@@ -195,6 +199,7 @@ export function recommendPID(
           reason: `Response is sluggish on ${axisName} (${Math.round(profile.meanRiseTimeMs)}ms rise time). A P increase will make your quad feel more locked in.`,
           impact: 'response',
           confidence: 'medium',
+          ruleId: `P-SLUG-P-${axisName}`,
         });
       }
     }
@@ -214,6 +219,7 @@ export function recommendPID(
             reason: `Oscillation detected on ${axisName} after stick moves (${maxRinging} cycles). More D-term will calm the wobble.`,
             impact: 'stability',
             confidence: 'medium',
+            ruleId: `P-RING-D-${axisName}`,
           });
         }
       }
@@ -236,6 +242,7 @@ export function recommendPID(
             reason: `${axisName.charAt(0).toUpperCase() + axisName.slice(1)} takes ${Math.round(profile.meanSettlingTimeMs)}ms to settle. A slight D increase will help it lock in faster.`,
             impact: 'stability',
             confidence: 'low',
+            ruleId: `P-SETT-D-${axisName}`,
           });
         }
       }
@@ -255,6 +262,7 @@ export function recommendPID(
           reason: `${axisName.charAt(0).toUpperCase() + axisName.slice(1)} drifts from target during holds (${ssError.toFixed(1)}% error). Increasing I-term improves tracking accuracy and wind resistance.`,
           impact: 'stability',
           confidence: ssError > thresholds.steadyStateErrorMax * 2 ? 'high' : 'medium',
+          ruleId: `P-SSE-I-${axisName}`,
         });
       }
     } else if (
@@ -272,6 +280,7 @@ export function recommendPID(
           reason: `${axisName.charAt(0).toUpperCase() + axisName.slice(1)} has slow settling (${Math.round(profile.meanSettlingTimeMs)}ms) with overshoot. Reducing I-term can help the quad settle faster.`,
           impact: 'stability',
           confidence: 'low',
+          ruleId: `P-SSE-I-DEC-${axisName}`,
         });
       }
     }
@@ -348,6 +357,7 @@ function detectHighP(
         impact: 'both',
         confidence: 'low',
         informational: true,
+        ruleId: `P-HI-P-${axisName}`,
       });
     }
   }
@@ -383,6 +393,7 @@ function detectLowP(
         impact: 'response',
         confidence: 'low',
         informational: true,
+        ruleId: `P-LO-P-${axisName}`,
       });
     }
   }
@@ -419,6 +430,7 @@ function validateDampingRatio(
           reason: `D/P ratio on ${axisName} is low (${ratio.toFixed(2)}). Increasing D improves dampening and reduces bounce-back without sacrificing response.`,
           impact: 'stability',
           confidence: 'medium',
+          ruleId: `P-DR-UD-${axisName}`,
         });
       }
     } else if (ratio > DAMPING_RATIO_MAX && dRec && !pRec) {
@@ -432,6 +444,7 @@ function validateDampingRatio(
           reason: `Adding a small P increase on ${axisName} to maintain healthy D/P balance (${ratio.toFixed(2)}) after the D-term adjustment.`,
           impact: 'response',
           confidence: 'low',
+          ruleId: `P-DR-OD-${axisName}`,
         });
       }
     } else if (ratio > DAMPING_RATIO_MAX && !dRec && !pRec) {
@@ -445,6 +458,7 @@ function validateDampingRatio(
           reason: `D/P ratio on ${axisName} is high (${ratio.toFixed(2)}). Reducing D helps with motor temperature and noise without losing stability.`,
           impact: 'both',
           confidence: 'medium',
+          ruleId: `P-DR-OD-${axisName}`,
         });
       }
     }
@@ -544,6 +558,7 @@ function applyPropWashContext(
           'Increasing D-term will help dampen the oscillation during descents.',
         impact: 'stability',
         confidence: 'medium',
+        ruleId: `P-PW-D-${worstAxis}`,
       });
     }
   }
@@ -758,6 +773,7 @@ function generateFrequencyDomainRecs(
         reason: `Transfer function shows low phase margin on ${axisName} (${Math.round(tf.phaseMarginDeg)}°). Increasing D-term adds damping to prevent oscillation.`,
         impact: 'stability',
         confidence: 'medium',
+        ruleId: `TF-1-D-${axisName}`,
       });
     }
   }
@@ -777,6 +793,7 @@ function generateFrequencyDomainRecs(
           reason: `Synthetic step response shows ${Math.round(tf.overshootPercent)}% overshoot on ${axisName}. Increasing D-term will dampen the response.`,
           impact: 'both',
           confidence: 'medium',
+          ruleId: `TF-2-D-${axisName}`,
         });
       }
     }
@@ -792,6 +809,7 @@ function generateFrequencyDomainRecs(
           reason: `High overshoot on ${axisName} (${Math.round(tf.overshootPercent)}%) from transfer function analysis. Reducing P-term helps prevent overshooting.`,
           impact: 'both',
           confidence: 'medium',
+          ruleId: `TF-2-P-${axisName}`,
         });
       }
     }
@@ -808,6 +826,7 @@ function generateFrequencyDomainRecs(
           reason: `Transfer function indicates moderate overshoot on ${axisName} (${Math.round(tf.overshootPercent)}%). A D-term increase will improve damping.`,
           impact: 'stability',
           confidence: 'medium',
+          ruleId: `TF-2-D-${axisName}`,
         });
       }
     }
@@ -830,6 +849,7 @@ function generateFrequencyDomainRecs(
           reason: `Low bandwidth on ${axisName} (${Math.round(tf.bandwidthHz)} Hz) suggests sluggish response. Increasing P-term will improve responsiveness.`,
           impact: 'response',
           confidence: 'medium',
+          ruleId: `TF-3-P-${axisName}`,
         });
       }
     }
@@ -854,6 +874,7 @@ function generateFrequencyDomainRecs(
             'Increasing I-term improves long-term tracking accuracy.',
           impact: 'response',
           confidence: deficit > 3 ? 'medium' : 'low',
+          ruleId: `TF-4-I-${axisName}`,
         });
       }
     }
