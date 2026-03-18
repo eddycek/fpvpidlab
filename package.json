@@ -20,6 +20,7 @@
     "demo:generate-history:pid": "vite build && npx playwright test e2e/demo-generate-history.spec.ts --grep 'pid sessions'",
     "demo:generate-history:flash": "vite build && npx playwright test e2e/demo-generate-history.spec.ts --grep 'flash sessions'",
     "demo:generate-history:stress": "vite build && npx playwright test e2e/demo-generate-stress.spec.ts",
+    "test:e2e:diagnostic": "vite build && npx playwright test e2e/demo-diagnostic-report.spec.ts",
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:run": "vitest run",

@@ -37,8 +37,8 @@ export function useTuningHistory(): UseTuningHistoryReturn {
   // Reload when tuning session changes (may have just completed)
   useEffect(() => {
     return window.betaflight.onTuningSessionChanged((session) => {
-      if (session === null) {
-        // Session was reset/dismissed — history may have been updated
+      if (session === null || session?.phase === 'completed') {
+        // Session completed or dismissed — history may have been updated
         reload();
       }
     });
