@@ -108,7 +108,7 @@ export async function handleDiagnosticUpload(request: Request, env: Env): Promis
 
 /** Send notification email for new diagnostic report */
 async function sendNewReportEmail(env: Env, meta: DiagnosticMetadata): Promise<void> {
-  if (!env.RESEND_API_KEY || !env.REPORT_EMAIL) return;
+  if (!env.RESEND_API_KEY || !env.REPORT_EMAIL || !env.REPORT_FROM_EMAIL) return;
 
   const p = meta.preview;
   const subject = `[PIDlab] New diagnostic report — ${p.mode} ${p.droneSize ?? ''}`.trim();
@@ -133,7 +133,7 @@ Review: /diagnose ${meta.reportId}`;
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: 'PIDlab Telemetry <telemetry@pidlab.app>',
+        from: env.REPORT_FROM_EMAIL,
         to: [env.REPORT_EMAIL],
         subject,
         text,
@@ -150,7 +150,7 @@ async function sendResolutionEmail(
   userEmail: string,
   message: string
 ): Promise<void> {
-  if (!env.RESEND_API_KEY) return;
+  if (!env.RESEND_API_KEY || !env.REPORT_FROM_EMAIL) return;
 
   try {
     await fetch('https://api.resend.com/emails', {
@@ -160,7 +160,7 @@ async function sendResolutionEmail(
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: 'PIDlab Telemetry <telemetry@pidlab.app>',
+        from: env.REPORT_FROM_EMAIL,
         to: [userEmail],
         subject: 'Your PIDlab report has been resolved',
         text: `Hi,

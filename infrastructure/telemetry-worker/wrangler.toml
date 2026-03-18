@@ -12,7 +12,7 @@ bucket_name = "pidlab-telemetry-dev"
 # crons = ["0 7 * * *"]
 
 # Secrets set via `wrangler secret put`:
-# ADMIN_KEY, RESEND_API_KEY, REPORT_EMAIL
+# ADMIN_KEY, RESEND_API_KEY, REPORT_EMAIL, REPORT_FROM_EMAIL
 
 [env.prod]
 name = "pidlab-telemetry"

@@ -3,7 +3,10 @@ export interface Env {
   TELEMETRY_BUCKET: R2Bucket;
   ADMIN_KEY: string;
   RESEND_API_KEY: string;
+  /** Recipient email for reports and notifications */
   REPORT_EMAIL: string;
+  /** Sender email address (must be verified in Resend) */
+  REPORT_FROM_EMAIL: string;
 }
 
 /** Telemetry bundle schema (mirrors client-side TelemetryBundle) */

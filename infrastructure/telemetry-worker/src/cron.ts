@@ -120,7 +120,7 @@ Diagnostic Reports:
 ${await getDiagnosticSummary(env)}`;
 
   // Send via Resend
-  if (!env.RESEND_API_KEY || !env.REPORT_EMAIL) {
+  if (!env.RESEND_API_KEY || !env.REPORT_EMAIL || !env.REPORT_FROM_EMAIL) {
     console.log('Cron: missing RESEND_API_KEY or REPORT_EMAIL, skipping email');
     console.log(report);
     return;
@@ -133,7 +133,7 @@ ${await getDiagnosticSummary(env)}`;
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      from: 'PIDlab Telemetry <telemetry@pidlab.app>',
+      from: env.REPORT_FROM_EMAIL,
       to: [env.REPORT_EMAIL],
       subject: `PIDlab Telemetry Report — ${date}`,
       text: report,
