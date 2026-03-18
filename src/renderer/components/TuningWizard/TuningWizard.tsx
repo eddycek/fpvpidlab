@@ -142,7 +142,7 @@ export function TuningWizard({ logId, mode = 'full', onExit, onApplyComplete }: 
               wizard.selectSession(idx);
               wizard.setStep(
                 mode === TUNING_MODE.FLASH
-                  ? 'quick_analysis'
+                  ? 'flash_analysis'
                   : mode === TUNING_MODE.PID
                     ? 'pid'
                     : 'filter'
@@ -173,7 +173,7 @@ export function TuningWizard({ logId, mode = 'full', onExit, onApplyComplete }: 
             onContinue={() => wizard.setStep('summary')}
           />
         );
-      case 'quick_analysis':
+      case 'flash_analysis':
         return (
           <QuickAnalysisStep
             filterResult={wizard.filterResult}

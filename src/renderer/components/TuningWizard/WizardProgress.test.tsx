@@ -86,7 +86,7 @@ describe('WizardProgress', () => {
   });
 
   it('renders 3 steps in quick mode (Session, Analysis, Summary)', () => {
-    render(<WizardProgress currentStep="quick_analysis" mode={TUNING_MODE.FLASH} />);
+    render(<WizardProgress currentStep="flash_analysis" mode={TUNING_MODE.FLASH} />);
 
     expect(screen.getByText('Session')).toBeInTheDocument();
     expect(screen.getByText('Analysis')).toBeInTheDocument();
@@ -98,7 +98,7 @@ describe('WizardProgress', () => {
 
   it('quick mode marks session as done when on analysis step', () => {
     const { container } = render(
-      <WizardProgress currentStep="quick_analysis" mode={TUNING_MODE.FLASH} />
+      <WizardProgress currentStep="flash_analysis" mode={TUNING_MODE.FLASH} />
     );
 
     const doneSteps = container.querySelectorAll('.wizard-progress-step.done');

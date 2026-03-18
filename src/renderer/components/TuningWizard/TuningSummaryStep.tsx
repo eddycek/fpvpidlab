@@ -17,7 +17,7 @@ import type { ApplyState } from '../../hooks/useTuningWizard';
 interface TuningSummaryStepProps {
   filterResult: FilterAnalysisResult | null;
   pidResult: PIDAnalysisResult | null;
-  /** Transfer function result — used as PID source in quick mode */
+  /** Transfer function result — used as PID source in flash mode */
   tfResult?: PIDAnalysisResult | null;
   mode?: TuningMode;
   onExit: () => void;
@@ -48,7 +48,7 @@ function getApplyButtonLabel(mode: TuningMode, applyState: ApplyState, hasRecs: 
       return 'Apply Filters';
     case 'pid':
       return 'Apply PIDs';
-    case 'quick':
+    case 'flash':
       return 'Apply All Changes';
     default:
       return 'Apply Changes';
@@ -84,7 +84,7 @@ function getSuccessMessage(
           Fly a normal flight to verify the feel, then reconnect to download the verification log.
         </>
       );
-    case 'quick':
+    case 'flash':
       return (
         <>
           <strong>All changes applied!</strong>
@@ -125,7 +125,7 @@ export function TuningSummaryStep({
   const showFilter = mode !== TUNING_MODE.PID;
   const showPid = mode !== TUNING_MODE.FILTER;
   const filterRecs = showFilter ? (filterResult?.recommendations ?? []) : [];
-  // In quick mode, PID recs come from transfer function analysis
+  // In flash mode, PID recs come from transfer function analysis
   const pidSource = mode === TUNING_MODE.FLASH ? tfResult : pidResult;
   const pidRecs = showPid ? (pidSource?.recommendations ?? []) : [];
   const allRecs: (FilterRecommendation | PIDRecommendation)[] = [...filterRecs, ...pidRecs];

@@ -171,7 +171,7 @@ function FlashTuneContent({ fcVersion }: { fcVersion?: string }) {
         </p>
       </div>
 
-      <FlightGuideContent mode="quick" fcVersion={fcVersion} />
+      <FlightGuideContent mode="flash" fcVersion={fcVersion} />
     </>
   );
 }
@@ -284,7 +284,7 @@ export function TuningWorkflowModal({ onClose, mode }: TuningWorkflowModalProps)
         {showQuick && (
           <>
             <hr className="workflow-divider" />
-            <FlightGuideContent mode="quick" fcVersion={fcVersion} />
+            <FlightGuideContent mode="flash" fcVersion={fcVersion} />
           </>
         )}
 

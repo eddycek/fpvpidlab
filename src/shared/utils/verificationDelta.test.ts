@@ -37,9 +37,9 @@ describe('computeVerificationDelta', () => {
     expect(result.overallImprovement).toBe(35);
   });
 
-  it('Flash/quick mode: bandwidth + phase margin improvement', () => {
+  it('Flash mode: bandwidth + phase margin improvement', () => {
     const input: VerificationInput = {
-      mode: 'quick',
+      mode: 'flash',
       before: {
         bandwidthHz: axis(100),
         phaseMarginDeg: axis(30),
@@ -77,7 +77,7 @@ describe('computeVerificationDelta', () => {
 
   it('missing metrics: only some fields present', () => {
     const input: VerificationInput = {
-      mode: 'quick',
+      mode: 'flash',
       before: {
         bandwidthHz: axis(100),
         // no noiseFloorDb, overshoot, riseTime, phaseMargin

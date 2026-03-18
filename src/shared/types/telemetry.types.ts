@@ -44,7 +44,7 @@ export interface TelemetryBundle {
     byMode: {
       filter: number;
       pid: number;
-      quick: number;
+      flash: number;
     };
     /** Last 10 quality scores (newest first) */
     recentQualityScores: number[];
@@ -88,7 +88,7 @@ export interface TelemetryEvent {
 /** Per-session analytics record for telemetry (privacy-safe) */
 export interface TelemetrySessionRecord {
   sessionId?: string;
-  mode: 'filter' | 'pid' | 'quick';
+  mode: 'filter' | 'pid' | 'flash';
   durationSec: number;
   droneSize?: string;
   flightStyle?: string;

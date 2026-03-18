@@ -15,7 +15,7 @@ import { markIntentionalDisconnect } from './useConnection';
 
 export type ApplyState = 'idle' | 'confirming' | 'applying' | 'done' | 'error';
 
-export type WizardStep = 'guide' | 'session' | 'filter' | 'pid' | 'quick_analysis' | 'summary';
+export type WizardStep = 'guide' | 'session' | 'filter' | 'pid' | 'flash_analysis' | 'summary';
 
 export interface UseTuningWizardReturn {
   mode: TuningMode;
@@ -130,7 +130,7 @@ export function useTuningWizard(logId: string, mode: TuningMode = 'full'): UseTu
         setSessionSelected(true);
         // Skip to the correct step based on mode
         if (mode === TUNING_MODE.FLASH) {
-          setStep('quick_analysis');
+          setStep('flash_analysis');
         } else if (mode === TUNING_MODE.PID) {
           setStep('pid');
         } else {

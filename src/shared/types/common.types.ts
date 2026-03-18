@@ -53,7 +53,7 @@ export interface ConfigurationSnapshot {
     createdBy: 'user' | 'auto';
     notes?: string;
     tuningSessionNumber?: number;
-    tuningType?: 'filter' | 'pid' | 'quick';
+    tuningType?: 'filter' | 'pid' | 'flash';
     snapshotRole?: 'pre-tuning' | 'post-tuning';
     bfPidProfileIndex?: number; // active BF PID profile when snapshot was created
   };
@@ -71,7 +71,7 @@ export interface SnapshotMetadata {
     boardName: string;
   };
   tuningSessionNumber?: number;
-  tuningType?: 'filter' | 'pid' | 'quick';
+  tuningType?: 'filter' | 'pid' | 'flash';
   snapshotRole?: 'pre-tuning' | 'post-tuning';
   bfPidProfileIndex?: number;
 }

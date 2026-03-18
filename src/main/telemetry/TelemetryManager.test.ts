@@ -181,7 +181,7 @@ describe('TelemetryManager', () => {
       const mockHistoryManager = {
         getHistory: vi.fn().mockResolvedValue([
           { tuningType: 'filter', qualityScore: 85 },
-          { tuningType: 'quick', qualityScore: 72 },
+          { tuningType: 'flash', qualityScore: 72 },
         ]),
       };
       manager.setProfileManager(mockProfileManager);
@@ -191,7 +191,7 @@ describe('TelemetryManager', () => {
 
       expect(bundle.tuningSessions.totalCompleted).toBe(2);
       expect(bundle.tuningSessions.byMode.filter).toBe(1);
-      expect(bundle.tuningSessions.byMode.quick).toBe(1);
+      expect(bundle.tuningSessions.byMode.flash).toBe(1);
       expect(bundle.tuningSessions.recentQualityScores).toEqual([85, 72]);
     });
 
@@ -239,7 +239,7 @@ describe('TelemetryManager', () => {
             verificationPidMetrics: null,
           },
           {
-            tuningType: 'quick',
+            tuningType: 'flash',
             startedAt: '2026-03-16T11:00:00.000Z',
             completedAt: '2026-03-16T11:15:00.000Z',
             appliedFilterChanges: [],
@@ -326,9 +326,9 @@ describe('TelemetryManager', () => {
       expect(s0.rules[0].applied).toBe(true);
       expect(s0.metrics.noiseFloorDb).toEqual({ roll: -25, pitch: -22, yaw: -30 });
 
-      // Second session — quick tune with PID + TF metrics
+      // Second session — flash tune with PID + TF metrics
       const s1 = bundle.sessions[1];
-      expect(s1.mode).toBe('quick');
+      expect(s1.mode).toBe('flash');
       expect(s1.durationSec).toBe(900); // 15 min
       expect(s1.metrics.meanOvershootPct).toEqual({ roll: 12, pitch: 10, yaw: 8 });
       expect(s1.metrics.bandwidthHz).toEqual({ roll: 45, pitch: 42, yaw: 30 });

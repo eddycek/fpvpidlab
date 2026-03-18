@@ -101,7 +101,7 @@ describe('DiagnosticBundleBuilder', () => {
 
   it('extracts transfer function metrics', async () => {
     const record = makeRecord({
-      tuningType: 'quick',
+      tuningType: 'flash',
       filterMetrics: null,
       transferFunctionMetrics: {
         roll: { bandwidthHz: 45, phaseMarginDeg: 55, dcGainDb: -2 },

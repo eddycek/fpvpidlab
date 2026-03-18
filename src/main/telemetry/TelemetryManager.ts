@@ -131,7 +131,7 @@ export class TelemetryManager {
       profiles: { count: 0, sizes: [], flightStyles: [] },
       tuningSessions: {
         totalCompleted: 0,
-        byMode: { filter: 0, pid: 0, quick: 0 },
+        byMode: { filter: 0, pid: 0, flash: 0 },
         recentQualityScores: [],
       },
       fcInfo: { bfVersions: [], fcSerialHashes: [], boardTargets: [] },
@@ -199,7 +199,7 @@ export class TelemetryManager {
           for (const record of history) {
             if (record.tuningType === 'filter') bundle.tuningSessions.byMode.filter++;
             else if (record.tuningType === 'pid') bundle.tuningSessions.byMode.pid++;
-            else if (record.tuningType === 'quick') bundle.tuningSessions.byMode.quick++;
+            else if (record.tuningType === 'flash') bundle.tuningSessions.byMode.flash++;
 
             if (record.qualityScore != null) {
               recentScores.push(record.qualityScore);

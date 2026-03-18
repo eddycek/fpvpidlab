@@ -96,7 +96,7 @@ async function handleStats(env: Env): Promise<Response> {
     active24h: 0,
     active7d: 0,
     active30d: 0,
-    modeDistribution: { filter: 0, pid: 0, quick: 0 },
+    modeDistribution: { filter: 0, pid: 0, flash: 0 },
     platformDistribution: {},
   };
 
@@ -110,7 +110,7 @@ async function handleStats(env: Env): Promise<Response> {
 
     stats.modeDistribution.filter += bundle.tuningSessions.byMode.filter;
     stats.modeDistribution.pid += bundle.tuningSessions.byMode.pid;
-    stats.modeDistribution.quick += bundle.tuningSessions.byMode.quick;
+    stats.modeDistribution.flash += bundle.tuningSessions.byMode.flash;
 
     stats.platformDistribution[bundle.platform] =
       (stats.platformDistribution[bundle.platform] || 0) + 1;
@@ -220,15 +220,15 @@ async function handleSessions(env: Env): Promise<Response> {
   const installations = await listInstallations(env.TELEMETRY_BUCKET);
 
   let totalCompleted = 0;
-  const byMode = { filter: 0, pid: 0, quick: 0 };
-  const perInstall: { id: string; total: number; filter: number; pid: number; quick: number; scores: number[] }[] = [];
+  const byMode = { filter: 0, pid: 0, flash: 0 };
+  const perInstall: { id: string; total: number; filter: number; pid: number; flash: number; scores: number[] }[] = [];
 
   for (const { id, bundle } of installations) {
     const s = bundle.tuningSessions;
     totalCompleted += s.totalCompleted;
     byMode.filter += s.byMode.filter;
     byMode.pid += s.byMode.pid;
-    byMode.quick += s.byMode.quick;
+    byMode.flash += s.byMode.flash;
 
     if (s.totalCompleted > 0) {
       perInstall.push({
@@ -236,7 +236,7 @@ async function handleSessions(env: Env): Promise<Response> {
         total: s.totalCompleted,
         filter: s.byMode.filter,
         pid: s.byMode.pid,
-        quick: s.byMode.quick,
+        flash: flashCount,
         scores: s.recentQualityScores,
       });
     }
@@ -347,7 +347,7 @@ async function handleFull(env: Env): Promise<Response> {
   const appVersions: Record<string, number> = {};
   const bfVersions: Record<string, number> = {};
   const boardTargets: Record<string, number> = {};
-  const sessions = { totalCompleted: 0, byMode: { filter: 0, pid: 0, quick: 0 } };
+  const sessions = { totalCompleted: 0, byMode: { filter: 0, pid: 0, flash: 0 } };
   const profiles = { totalProfiles: 0, sizes: {} as Record<string, number>, flightStyles: {} as Record<string, number>, distribution: {} as Record<number, number> };
   const features = { analysisOverview: 0, snapshotRestore: 0, snapshotCompare: 0, historyView: 0 };
   const blackbox = { totalLogsDownloaded: 0, installationsWithCompression: 0, storageTypes: {} as Record<string, number> };
@@ -370,11 +370,11 @@ async function handleFull(env: Env): Promise<Response> {
     for (const v of bundle.fcInfo?.bfVersions ?? []) bfVersions[v] = (bfVersions[v] || 0) + 1;
     for (const t of bundle.fcInfo?.boardTargets ?? []) boardTargets[t] = (boardTargets[t] || 0) + 1;
 
-    const s = bundle.tuningSessions ?? { totalCompleted: 0, byMode: { filter: 0, pid: 0, quick: 0 }, recentQualityScores: [] };
+    const s = bundle.tuningSessions ?? { totalCompleted: 0, byMode: { filter: 0, pid: 0, flash: 0 }, recentQualityScores: [] };
     sessions.totalCompleted += s.totalCompleted;
     sessions.byMode.filter += s.byMode.filter;
     sessions.byMode.pid += s.byMode.pid;
-    sessions.byMode.quick += s.byMode.quick;
+    sessions.byMode.flash += s.byMode.flash;
 
     const pc = bundle.profiles?.count ?? 0;
     profiles.totalProfiles += pc;

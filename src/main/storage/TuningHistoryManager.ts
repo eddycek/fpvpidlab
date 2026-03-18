@@ -173,7 +173,8 @@ export class TuningHistoryManager {
     const filePath = this.historyPath(profileId);
     try {
       const json = await fs.readFile(filePath, 'utf-8');
-      return JSON.parse(json) as CompletedTuningRecord[];
+      const records = JSON.parse(json) as CompletedTuningRecord[];
+      return records;
     } catch (error: any) {
       if (error.code === 'ENOENT') {
         return [];
