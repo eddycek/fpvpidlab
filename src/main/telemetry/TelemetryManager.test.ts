@@ -20,12 +20,6 @@ const mockCrypto = vi.hoisted(() => ({
 }));
 vi.mock('crypto', () => ({ ...mockCrypto, default: mockCrypto }));
 
-// Mock zlib
-const mockZlib = vi.hoisted(() => ({
-  gzipSync: (buf: Buffer) => buf,
-}));
-vi.mock('zlib', () => ({ ...mockZlib, default: mockZlib }));
-
 // Mock electron
 vi.mock('electron', () => ({
   app: { isPackaged: false },

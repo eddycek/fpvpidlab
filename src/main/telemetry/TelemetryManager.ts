@@ -1,7 +1,6 @@
 import { join } from 'path';
 import fs from 'fs/promises';
 import { createHash, randomUUID } from 'crypto';
-import { gzipSync } from 'zlib';
 import { app, net } from 'electron';
 import { APP_VERSION, TELEMETRY } from '@shared/constants';
 import type {
@@ -470,7 +469,6 @@ export class TelemetryManager {
     try {
       const bundle = await this.assembleBundle();
       const json = JSON.stringify(bundle);
-      const compressed = gzipSync(Buffer.from(json));
 
       let lastError: Error | null = null;
 
@@ -482,9 +480,8 @@ export class TelemetryManager {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'Content-Encoding': 'gzip',
             },
-            body: compressed,
+            body: json,
           });
 
           if (response.ok) {
