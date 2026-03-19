@@ -357,18 +357,18 @@ export function registerAnalysisHandlers(deps: HandlerDependencies): void {
         );
 
         emitEvent('analysis', 'complete', {
-          mode: 'quick',
+          mode: 'flash',
           durationMs: result.analysisTimeMs ?? 0,
           recCount: result.recommendations.length,
         });
         if (result.recommendations.length === 0) {
-          emitEvent('analysis', 'no_recommendations', { mode: 'quick' });
+          emitEvent('analysis', 'no_recommendations', { mode: 'flash' });
         }
 
         return createResponse<PIDAnalysisResult>(result);
       } catch (error) {
         emitEvent('error', 'analysis_failed', {
-          mode: 'quick',
+          mode: 'flash',
           stage: 'tf',
           message: getErrorMessage(error),
         });

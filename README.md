@@ -172,7 +172,7 @@ The fast approach — analyzes any single flight (freestyle, cruise, hover) usin
 - Parallel filter + transfer function analysis with combined one-click apply
 - Bode plot (magnitude + phase) with bandwidth, gain margin, and phase margin markers
 - Synthetic step response metrics: overshoot, rise time, settling time derived from H(f)
-- 6-phase state machine (quick_flight_pending → ... → completed)
+- 6-phase state machine (flash_flight_pending → ... → completed)
 - Best for experienced pilots iterating on an existing tune
 
 ### Tuning History

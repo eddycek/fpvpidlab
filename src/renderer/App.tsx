@@ -219,8 +219,8 @@ function AppContent() {
         if (flashUsedSize != null && flashUsedSize > 0) {
           // Flash has data — advance directly to log_ready (user wants to use existing data)
           const logReadyPhase =
-            currentPhaseSkip === TUNING_PHASE.QUICK_FLIGHT_PENDING
-              ? TUNING_PHASE.QUICK_LOG_READY
+            currentPhaseSkip === TUNING_PHASE.FLASH_FLIGHT_PENDING
+              ? TUNING_PHASE.FLASH_LOG_READY
               : currentPhaseSkip === TUNING_PHASE.FILTER_FLIGHT_PENDING
                 ? TUNING_PHASE.FILTER_LOG_READY
                 : TUNING_PHASE.PID_LOG_READY;
@@ -245,8 +245,8 @@ function AppContent() {
             await tuning.updatePhase(TUNING_PHASE.FILTER_ANALYSIS, { filterLogId: imported.id });
           } else if (importPhase === TUNING_PHASE.PID_LOG_READY) {
             await tuning.updatePhase(TUNING_PHASE.PID_ANALYSIS, { pidLogId: imported.id });
-          } else if (importPhase === TUNING_PHASE.QUICK_LOG_READY) {
-            await tuning.updatePhase(TUNING_PHASE.QUICK_ANALYSIS, { quickLogId: imported.id });
+          } else if (importPhase === TUNING_PHASE.FLASH_LOG_READY) {
+            await tuning.updatePhase(TUNING_PHASE.FLASH_ANALYSIS, { quickLogId: imported.id });
           } else if (
             importPhase === TUNING_PHASE.VERIFICATION_PENDING ||
             importPhase === TUNING_PHASE.FILTER_VERIFICATION_PENDING ||
@@ -290,8 +290,8 @@ function AppContent() {
               pidLogId: metadata.id,
               eraseCompleted: undefined,
             });
-          } else if (phase === TUNING_PHASE.QUICK_LOG_READY) {
-            await tuning.updatePhase(TUNING_PHASE.QUICK_ANALYSIS, {
+          } else if (phase === TUNING_PHASE.FLASH_LOG_READY) {
+            await tuning.updatePhase(TUNING_PHASE.FLASH_ANALYSIS, {
               quickLogId: metadata.id,
               eraseCompleted: undefined,
             });
@@ -433,7 +433,7 @@ function AppContent() {
           appliedFeedforwardChanges: [],
           pidMetrics: changes.pidMetrics,
         });
-      } else if (phase === TUNING_PHASE.QUICK_ANALYSIS) {
+      } else if (phase === TUNING_PHASE.FLASH_ANALYSIS) {
         await tuning.updatePhase(TUNING_PHASE.COMPLETED, {
           appliedFilterChanges: [],
           appliedPIDChanges: [],
@@ -457,8 +457,8 @@ function AppContent() {
         appliedFeedforwardChanges: changes.feedforwardChanges,
         pidMetrics: changes.pidMetrics,
       });
-    } else if (phase === TUNING_PHASE.QUICK_ANALYSIS) {
-      await tuning.updatePhase(TUNING_PHASE.QUICK_APPLIED, {
+    } else if (phase === TUNING_PHASE.FLASH_ANALYSIS) {
+      await tuning.updatePhase(TUNING_PHASE.FLASH_APPLIED, {
         appliedFilterChanges: changes.filterChanges,
         appliedPIDChanges: changes.pidChanges,
         appliedFeedforwardChanges: changes.feedforwardChanges,
@@ -599,7 +599,7 @@ function AppContent() {
         setWizardMode('filter');
       } else if (phase === TUNING_PHASE.PID_ANALYSIS) {
         setWizardMode('pid');
-      } else if (phase === TUNING_PHASE.QUICK_ANALYSIS) {
+      } else if (phase === TUNING_PHASE.FLASH_ANALYSIS) {
         setWizardMode(TUNING_MODE.FLASH);
       } else {
         setWizardMode('filter');

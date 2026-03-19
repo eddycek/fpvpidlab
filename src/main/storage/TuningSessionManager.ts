@@ -51,7 +51,7 @@ export class TuningSessionManager {
     let initialPhase: TuningPhase;
     switch (tuningType) {
       case TUNING_TYPE.FLASH:
-        initialPhase = TUNING_PHASE.QUICK_FLIGHT_PENDING;
+        initialPhase = TUNING_PHASE.FLASH_FLIGHT_PENDING;
         break;
       case TUNING_TYPE.PID:
         initialPhase = TUNING_PHASE.PID_FLIGHT_PENDING;

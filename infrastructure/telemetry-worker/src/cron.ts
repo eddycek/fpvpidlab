@@ -11,7 +11,7 @@ export async function handleCron(env: Env): Promise<void> {
   let active24h = 0;
   let active7d = 0;
   let newInstallations24h = 0;
-  const modeDistribution = { filter: 0, pid: 0, quick: 0 };
+  const modeDistribution = { filter: 0, pid: 0, flash: 0 };
   const bfVersions: Record<string, number> = {};
   const droneSizes: Record<string, number> = {};
   const platforms: Record<string, number> = {};
@@ -51,7 +51,7 @@ export async function handleCron(env: Env): Promise<void> {
 
         modeDistribution.filter += bundle.tuningSessions.byMode.filter;
         modeDistribution.pid += bundle.tuningSessions.byMode.pid;
-        modeDistribution.quick += bundle.tuningSessions.byMode.quick;
+        modeDistribution.flash += bundle.tuningSessions.byMode.flash ?? 0;
 
         for (const v of bundle.fcInfo.bfVersions) {
           bfVersions[v] = (bfVersions[v] || 0) + 1;
@@ -74,7 +74,7 @@ export async function handleCron(env: Env): Promise<void> {
   } while (cursor);
 
   // Format report
-  const totalModes = modeDistribution.filter + modeDistribution.pid + modeDistribution.quick;
+  const totalModes = modeDistribution.filter + modeDistribution.pid + modeDistribution.flash;
   const pct = (n: number) => (totalModes > 0 ? Math.round((n / totalModes) * 100) : 0);
 
   const sortedVersions = Object.entries(bfVersions)
@@ -103,7 +103,7 @@ Total installations:         ${totalInstallations.toLocaleString()}
 Tuning Mode Distribution:
   Filter Tune:  ${pct(modeDistribution.filter)}% (${modeDistribution.filter})
   PID Tune:     ${pct(modeDistribution.pid)}% (${modeDistribution.pid})
-  Flash Tune:   ${pct(modeDistribution.quick)}% (${modeDistribution.quick})
+  Flash Tune:   ${pct(modeDistribution.flash)}% (${modeDistribution.flash})
 
 BF Versions:
 ${sortedVersions.map(([v, c]) => `  ${v}: ${c}`).join('\n') || '  (no data)'}

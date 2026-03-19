@@ -59,7 +59,7 @@ export const TUNING_TYPE = {
   /** PID Tune — PID-only session (stick snaps) */
   PID: 'pid' as const,
   /** Flash Tune — 1-flight session via Wiener deconvolution */
-  FLASH: 'quick' as const,
+  FLASH: 'flash' as const,
 };
 
 /**
@@ -71,7 +71,7 @@ export const TUNING_MODE = {
   PID: 'pid' as const,
   FULL: 'full' as const,
   /** Flash Tune wizard mode — combined filter + transfer function analysis */
-  FLASH: 'quick' as const,
+  FLASH: 'flash' as const,
 };
 
 /**
@@ -92,10 +92,10 @@ export const TUNING_PHASE = {
   PID_APPLIED: 'pid_applied' as const,
   PID_VERIFICATION_PENDING: 'pid_verification_pending' as const,
   // Flash Tune phases
-  QUICK_FLIGHT_PENDING: 'quick_flight_pending' as const,
-  QUICK_LOG_READY: 'quick_log_ready' as const,
-  QUICK_ANALYSIS: 'quick_analysis' as const,
-  QUICK_APPLIED: 'quick_applied' as const,
+  FLASH_FLIGHT_PENDING: 'flash_flight_pending' as const,
+  FLASH_LOG_READY: 'flash_log_ready' as const,
+  FLASH_ANALYSIS: 'flash_analysis' as const,
+  FLASH_APPLIED: 'flash_applied' as const,
   // Shared phases
   VERIFICATION_PENDING: 'verification_pending' as const,
   COMPLETED: 'completed' as const,

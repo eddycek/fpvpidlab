@@ -59,7 +59,7 @@ export class SnapshotManager {
             tuningSessionNumber: extraMetadata.tuningSessionNumber,
           }),
           ...(extraMetadata?.tuningType != null && {
-            tuningType: extraMetadata.tuningType as 'filter' | 'pid' | 'quick',
+            tuningType: extraMetadata.tuningType as 'filter' | 'pid' | 'flash',
           }),
           ...(extraMetadata?.snapshotRole != null && {
             snapshotRole: extraMetadata.snapshotRole as 'pre-tuning' | 'post-tuning',

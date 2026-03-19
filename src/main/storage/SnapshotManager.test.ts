@@ -145,7 +145,7 @@ describe('SnapshotManager', () => {
 
     await manager.createSnapshot('Pre-tuning #2 (Flash Tune)', 'auto', {
       tuningSessionNumber: 2,
-      tuningType: 'quick',
+      tuningType: 'flash',
       snapshotRole: 'pre-tuning',
     });
 
@@ -153,7 +153,7 @@ describe('SnapshotManager', () => {
     const meta = list.find((s) => s.label.includes('Pre-tuning #2'));
     expect(meta).toBeDefined();
     expect(meta!.tuningSessionNumber).toBe(2);
-    expect(meta!.tuningType).toBe('quick');
+    expect(meta!.tuningType).toBe('flash');
     expect(meta!.snapshotRole).toBe('pre-tuning');
   });
 

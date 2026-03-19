@@ -46,7 +46,7 @@ const TIER_COLORS: Record<string, string> = {
 const TYPE_COLORS = {
   filter: '#4dabf7',
   pid: '#b197fc',
-  quick: '#ff922b',
+  flash: '#ff922b',
 } as const;
 
 function formatDateFull(iso: string): string {
@@ -148,7 +148,7 @@ export function QualityTrendChart({ history }: QualityTrendChartProps) {
         };
         if (rawType === 'filter') point.filterScore = score.overall;
         else if (rawType === 'pid') point.pidScore = score.overall;
-        else if (rawType === 'quick') point.flashScore = score.overall;
+        else if (rawType === 'flash') point.flashScore = score.overall;
         points.push(point);
       }
     }
@@ -227,9 +227,9 @@ export function QualityTrendChart({ history }: QualityTrendChartProps) {
             <Line
               type="monotone"
               dataKey="flashScore"
-              stroke={TYPE_COLORS.quick}
+              stroke={TYPE_COLORS.flash}
               strokeWidth={2}
-              dot={{ fill: TYPE_COLORS.quick, r: 4 }}
+              dot={{ fill: TYPE_COLORS.flash, r: 4 }}
               connectNulls
               isAnimationActive={false}
             />
@@ -245,7 +245,7 @@ export function QualityTrendChart({ history }: QualityTrendChartProps) {
             PID Tune
           </span>
           <span className="quality-trend-legend-item">
-            <span className="quality-trend-legend-dot" style={{ background: TYPE_COLORS.quick }} />
+            <span className="quality-trend-legend-dot" style={{ background: TYPE_COLORS.flash }} />
             Flash Tune
           </span>
         </div>

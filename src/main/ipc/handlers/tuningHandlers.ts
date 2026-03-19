@@ -338,7 +338,7 @@ export function registerTuningHandlers(deps: HandlerDependencies): void {
         const session = await tuningSessionManager.createSession(profileId, resolvedType);
         const initialPhase =
           resolvedType === TUNING_TYPE.FLASH
-            ? TUNING_PHASE.QUICK_FLIGHT_PENDING
+            ? TUNING_PHASE.FLASH_FLIGHT_PENDING
             : resolvedType === TUNING_TYPE.PID
               ? TUNING_PHASE.PID_FLIGHT_PENDING
               : TUNING_PHASE.FILTER_FLIGHT_PENDING;

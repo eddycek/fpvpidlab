@@ -679,11 +679,11 @@ describe('TuningStatusBanner', () => {
     expect(badge?.textContent).toBe('Filter Tune');
   });
 
-  it('shows Flash Tune badge for quick sessions', () => {
+  it('shows Flash Tune badge for flash sessions', () => {
     renderBanner({
       ...baseSession,
-      tuningType: 'quick',
-      phase: TUNING_PHASE.QUICK_FLIGHT_PENDING,
+      tuningType: 'flash',
+      phase: TUNING_PHASE.FLASH_FLIGHT_PENDING,
     });
 
     expect(screen.getByText('Flash Tune')).toBeInTheDocument();
@@ -712,7 +712,7 @@ describe('TuningStatusBanner', () => {
     renderBanner(
       {
         ...baseSession,
-        tuningType: 'quick',
+        tuningType: 'flash',
         phase: TUNING_PHASE.VERIFICATION_PENDING,
         eraseCompleted: true,
       },

@@ -41,7 +41,7 @@ function getPhasesForMode(mode: FlightGuideMode) {
       return FILTER_FLIGHT_PHASES;
     case 'pid':
       return PID_FLIGHT_PHASES;
-    case 'quick':
+    case 'flash':
       return QUICK_FLIGHT_PHASES;
     case 'filter_verification':
       return FILTER_VERIFICATION_FLIGHT_PHASES;
@@ -62,7 +62,7 @@ function getTipsForMode(mode: FlightGuideMode) {
       return FILTER_FLIGHT_TIPS;
     case 'pid':
       return PID_FLIGHT_TIPS;
-    case 'quick':
+    case 'flash':
       return QUICK_FLIGHT_TIPS;
     case 'filter_verification':
       return FILTER_VERIFICATION_FLIGHT_TIPS;

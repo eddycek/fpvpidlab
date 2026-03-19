@@ -145,10 +145,10 @@ describe('TuningSessionManager', () => {
     });
   });
 
-  describe('quick tuning support', () => {
-    it('creates quick session with quick_flight_pending phase', async () => {
+  describe('flash tuning support', () => {
+    it('creates flash session with flash_flight_pending phase', async () => {
       const session = await manager.createSession('profile-1', TUNING_TYPE.FLASH);
-      expect(session.phase).toBe(TUNING_PHASE.QUICK_FLIGHT_PENDING);
+      expect(session.phase).toBe(TUNING_PHASE.FLASH_FLIGHT_PENDING);
       expect(session.tuningType).toBe(TUNING_TYPE.FLASH);
     });
 
@@ -164,16 +164,16 @@ describe('TuningSessionManager', () => {
       expect(session.tuningType).toBe(TUNING_TYPE.FILTER);
     });
 
-    it('supports quick phase transitions', async () => {
+    it('supports flash phase transitions', async () => {
       await manager.createSession('profile-1', TUNING_TYPE.FLASH);
-      const updated = await manager.updatePhase('profile-1', TUNING_PHASE.QUICK_LOG_READY);
-      expect(updated.phase).toBe(TUNING_PHASE.QUICK_LOG_READY);
+      const updated = await manager.updatePhase('profile-1', TUNING_PHASE.FLASH_LOG_READY);
+      expect(updated.phase).toBe(TUNING_PHASE.FLASH_LOG_READY);
       expect(updated.tuningType).toBe(TUNING_TYPE.FLASH);
     });
 
-    it('preserves quickLogId across updates', async () => {
+    it('preserves flashLogId across updates', async () => {
       await manager.createSession('profile-1', TUNING_TYPE.FLASH);
-      await manager.updatePhase('profile-1', TUNING_PHASE.QUICK_ANALYSIS, {
+      await manager.updatePhase('profile-1', TUNING_PHASE.FLASH_ANALYSIS, {
         quickLogId: 'quick-log-123',
       });
       const session = await manager.getSession('profile-1');

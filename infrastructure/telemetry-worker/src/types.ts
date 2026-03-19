@@ -30,7 +30,7 @@ export interface TelemetryBundle {
   };
   tuningSessions: {
     totalCompleted: number;
-    byMode: { filter: number; pid: number; quick: number };
+    byMode: { filter: number; pid: number; flash: number };
     recentQualityScores: number[];
   };
   fcInfo: {
@@ -64,7 +64,7 @@ export interface AggregatedStats {
   active24h: number;
   active7d: number;
   active30d: number;
-  modeDistribution: { filter: number; pid: number; quick: number };
+  modeDistribution: { filter: number; pid: number; flash: number };
   platformDistribution: Record<string, number>;
 }
 
@@ -95,7 +95,7 @@ export interface TelemetryEvent {
 /** Per-session analytics record (from app v2+ bundles) */
 export interface TelemetrySessionRecord {
   sessionId?: string;
-  mode: 'filter' | 'pid' | 'quick';
+  mode: 'filter' | 'pid' | 'flash';
   durationSec: number;
   droneSize?: string;
   flightStyle?: string;

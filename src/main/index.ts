@@ -239,7 +239,7 @@ async function initialize(): Promise<void> {
             if (
               session.phase === TUNING_PHASE.FILTER_FLIGHT_PENDING ||
               session.phase === TUNING_PHASE.PID_FLIGHT_PENDING ||
-              session.phase === TUNING_PHASE.QUICK_FLIGHT_PENDING
+              session.phase === TUNING_PHASE.FLASH_FLIGHT_PENDING
             ) {
               const bbInfo = await mspClient.getBlackboxInfo();
 
@@ -248,8 +248,8 @@ async function initialize(): Promise<void> {
               // so we skip auto-transition for SD card — user confirms via UI
               if (bbInfo.storageType === 'flash' && bbInfo.hasLogs && bbInfo.usedSize > 0) {
                 const nextPhase =
-                  session.phase === TUNING_PHASE.QUICK_FLIGHT_PENDING
-                    ? TUNING_PHASE.QUICK_LOG_READY
+                  session.phase === TUNING_PHASE.FLASH_FLIGHT_PENDING
+                    ? TUNING_PHASE.FLASH_LOG_READY
                     : session.phase === TUNING_PHASE.FILTER_FLIGHT_PENDING
                       ? TUNING_PHASE.FILTER_LOG_READY
                       : TUNING_PHASE.PID_LOG_READY;
@@ -264,8 +264,8 @@ async function initialize(): Promise<void> {
               } else if (bbInfo.storageType === 'sdcard' && session.eraseSkipped) {
                 // User skipped erase — treat reconnect as "flew and came back"
                 const nextPhase =
-                  session.phase === TUNING_PHASE.QUICK_FLIGHT_PENDING
-                    ? TUNING_PHASE.QUICK_LOG_READY
+                  session.phase === TUNING_PHASE.FLASH_FLIGHT_PENDING
+                    ? TUNING_PHASE.FLASH_LOG_READY
                     : session.phase === TUNING_PHASE.FILTER_FLIGHT_PENDING
                       ? TUNING_PHASE.FILTER_LOG_READY
                       : TUNING_PHASE.PID_LOG_READY;

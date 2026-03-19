@@ -17,7 +17,7 @@ import type {
 } from './tuning-history.types';
 
 /** Which analysis mode the wizard is operating in */
-export type TuningMode = 'filter' | 'pid' | 'full' | 'quick';
+export type TuningMode = 'filter' | 'pid' | 'full' | 'flash';
 
 /** Extended mode for flight guide (includes verification flights) */
 export type FlightGuideMode =
@@ -28,7 +28,7 @@ export type FlightGuideMode =
   | 'flash_verification';
 
 /** Tuning session type: filter-only, pid-only, or flash (combined via Wiener deconvolution) */
-export type TuningType = 'filter' | 'pid' | 'quick';
+export type TuningType = 'filter' | 'pid' | 'flash';
 
 /** Phases of the tuning session state machine */
 export type TuningPhase =
@@ -45,10 +45,10 @@ export type TuningPhase =
   | 'pid_applied' // PIDs applied, ready for verification
   | 'pid_verification_pending' // PID Tune: waiting for verification stick snap flight
   // Flash Tune phases
-  | 'quick_flight_pending' // Quick Tune: waiting for user to fly any flight
-  | 'quick_log_ready' // Quick Tune: FC reconnected, ready to download log
-  | 'quick_analysis' // Quick Tune: log downloaded, analyzing (filter + Wiener in parallel)
-  | 'quick_applied' // Quick Tune: all changes applied, ready for verification
+  | 'flash_flight_pending' // Flash Tune: waiting for user to fly any flight
+  | 'flash_log_ready' // Flash Tune: FC reconnected, ready to download log
+  | 'flash_analysis' // Flash Tune: log downloaded, analyzing (filter + Wiener in parallel)
+  | 'flash_applied' // Flash Tune: all changes applied, ready for verification
   // Shared phases
   | 'verification_pending' // DEPRECATED — only for legacy sessions
   | 'completed'; // Tuning done
@@ -68,7 +68,7 @@ export interface TuningSession {
   /** Current phase of the tuning process */
   phase: TuningPhase;
 
-  /** Filter, PID, or Flash (quick) tuning. Defaults to 'filter' for backward compat. */
+  /** Filter, PID, or Flash tuning. Defaults to 'filter' for backward compat. */
   tuningType?: TuningType;
 
   /** When the session was started (ISO string) */

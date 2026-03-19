@@ -336,18 +336,18 @@ Rates flight data quality 0-100 before generating recommendations. Integrated in
 
 Three tuning modes: **Filter Tune** (2 flights: analysis + verification), **PID Tune** (2 flights: analysis + verification), and **Flash Tune** (2 flights: analysis + verification). Verification is mandatory.
 
-**TuningType**: `'filter' | 'pid' | 'quick'`
+**TuningType**: `'filter' | 'pid' | 'flash'`
 
 **Filter Tune State Machine**: filter_flight_pending → filter_log_ready → filter_analysis → filter_applied → filter_verification_pending → completed
 
 **PID Tune State Machine**: pid_flight_pending → pid_log_ready → pid_analysis → pid_applied → pid_verification_pending → completed
 
-**Flash Tune State Machine**: quick_flight_pending → quick_log_ready → quick_analysis → quick_applied → verification_pending → completed
+**Flash Tune State Machine**: flash_flight_pending → flash_log_ready → flash_analysis → flash_applied → verification_pending → completed
 
 - **TuningSessionManager** (`src/main/storage/`): CRUD for per-profile session files at `{userData}/data/tuning/{profileId}.json`
 - **useTuningSession hook**: Manages session lifecycle with IPC and event subscription
 - **TuningStatusBanner**: Dashboard banner showing current phase, 4-step indicator (Prepare → Flight → Tune → Verify), action buttons, BF PID profile badge
-- **TuningMode**: `'filter' | 'pid' | 'quick'` — wizard components adapt UI/flow per mode
+- **TuningMode**: `'filter' | 'pid' | 'flash'` — wizard components adapt UI/flow per mode
 - **StartTuningModal**: Mode selection (Filter Tune/PID Tune/Flash Tune) with BF PID profile selector when FC has multiple profiles. Selected profile stored on `TuningSession.bfPidProfileIndex`
 - **Verification flow** (mandatory): After apply, user clicks "Erase & Verify" → fly verification flight → download → analyze verification → completed. Filter Tune: throttle sweep → spectrogram comparison. PID Tune: stick snaps → step response comparison. Flash Tune: hover → noise comparison.
 - **Archive on completion**: When phase transitions to `completed`, session is archived to `TuningHistoryManager` before becoming dismissable
@@ -549,7 +549,7 @@ await waitFor(() => {
 - **Restore safety backup** auto-creates "Pre-restore (auto)" snapshot before applying
 - **Server-side filtering** by current profile's snapshotIds
 - **Dynamic numbering** `#1` (oldest) through `#N` (newest) — recalculates on deletion
-- **Tuning metadata** on auto snapshots: `tuningSessionNumber`, `tuningType` ('filter'/'pid'/'quick'), `snapshotRole` ('pre-tuning'/'post-tuning'). Contextual labels like "Pre-tuning #3 (Filter Tune)". Role badges: pre-tuning (orange), post-tuning (green)
+- **Tuning metadata** on auto snapshots: `tuningSessionNumber`, `tuningType` ('filter'/'pid'/'flash'), `snapshotRole` ('pre-tuning'/'post-tuning'). Contextual labels like "Pre-tuning #3 (Filter Tune)". Role badges: pre-tuning (orange), post-tuning (green)
 - **Compare** smart matching: for tuning snapshots, auto-selects pre/post-tuning pair from the same session number. Falls back to comparing with previous snapshot (or empty config for oldest). Uses `snapshotDiffUtils.ts` to parse CLI diff, compute changes, and group by command type. Displayed in `SnapshotDiffModal` with GitHub-style color coding (green=added, yellow=changed). Settings reverted to factory default show as "Changed to (default)".
 
 ### BlackboxStatus Readonly Mode
@@ -569,7 +569,7 @@ await waitFor(() => {
 - Shared logic in `src/renderer/utils/bbSettingsUtils.ts` (`computeBBSettingsStatus`)
 
 ### Smart Reconnect Detection
-- On reconnect with existing profile, checks if tuning session is in `*_flight_pending` phase (including `quick_flight_pending`)
+- On reconnect with existing profile, checks if tuning session is in `*_flight_pending` phase (including `flash_flight_pending`)
 - If flash has data (`bbInfo.hasLogs && bbInfo.usedSize > 0`), auto-transitions to `*_log_ready`
 - Implemented in `src/main/index.ts` after `createBaselineIfMissing()`
 

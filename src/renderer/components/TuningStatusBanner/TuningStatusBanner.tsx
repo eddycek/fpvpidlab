@@ -62,7 +62,7 @@ function getPhaseUI(
     | 'filter_verification_pending'
     | 'pid_verification_pending'
     | 'verification_pending'
-    | 'quick_applied'
+    | 'flash_applied'
   >,
   PhaseUI
 > {
@@ -110,20 +110,20 @@ function getPhaseUI(
       action: 'open_pid_wizard',
     },
     // Flash Tune phases
-    quick_flight_pending: {
+    flash_flight_pending: {
       stepIndex: 0,
       text: `Erase Blackbox data from ${storageName}, then rip a pack — any flight style works.`,
       buttonLabel: eraseLabel,
       action: 'erase_flash',
       guideTip: TUNING_MODE.FLASH,
     },
-    quick_log_ready: {
+    flash_log_ready: {
       stepIndex: 1,
       text: `Flight done! Download the Blackbox log to start ${TUNING_TYPE_LABELS[TUNING_TYPE.FLASH]} analysis.`,
       buttonLabel: 'Download Log',
       action: 'download_log',
     },
-    quick_analysis: {
+    flash_analysis: {
       stepIndex: 2,
       text: `Log downloaded. Run the ${TUNING_TYPE_LABELS[TUNING_TYPE.FLASH]} Wizard to analyze and apply all changes.`,
       buttonLabel: `Open ${TUNING_TYPE_LABELS[TUNING_TYPE.FLASH]} Wizard`,
@@ -185,8 +185,8 @@ export function TuningStatusBanner({
 
   const isFilterApplied = session.phase === TUNING_PHASE.FILTER_APPLIED;
   const isPidApplied = session.phase === TUNING_PHASE.PID_APPLIED;
-  const isQuickApplied = session.phase === TUNING_PHASE.QUICK_APPLIED;
-  const isApplied = isFilterApplied || isPidApplied || isQuickApplied;
+  const isFlashApplied = session.phase === TUNING_PHASE.FLASH_APPLIED;
+  const isApplied = isFilterApplied || isPidApplied || isFlashApplied;
 
   const isFilterVerification = session.phase === TUNING_PHASE.FILTER_VERIFICATION_PENDING;
   const isPidVerification = session.phase === TUNING_PHASE.PID_VERIFICATION_PENDING;
@@ -196,7 +196,7 @@ export function TuningStatusBanner({
   const isFlightPending =
     session.phase === TUNING_PHASE.FILTER_FLIGHT_PENDING ||
     session.phase === TUNING_PHASE.PID_FLIGHT_PENDING ||
-    session.phase === TUNING_PHASE.QUICK_FLIGHT_PENDING;
+    session.phase === TUNING_PHASE.FLASH_FLIGHT_PENDING;
   const isFlashTune = session.tuningType === TUNING_TYPE.FLASH;
 
   // Determine step index and text
@@ -220,7 +220,7 @@ export function TuningStatusBanner({
           | 'filter_verification_pending'
           | 'pid_verification_pending'
           | 'verification_pending'
-          | 'quick_applied'
+          | 'flash_applied'
         >
       ];
     stepIndex = ui.stepIndex;
@@ -240,7 +240,7 @@ export function TuningStatusBanner({
     ((isFlightPending || isVerification) && !!session.eraseCompleted);
 
   const flightType =
-    session.phase === TUNING_PHASE.QUICK_FLIGHT_PENDING
+    session.phase === TUNING_PHASE.FLASH_FLIGHT_PENDING
       ? TUNING_TYPE_LABELS[TUNING_TYPE.FLASH]
       : session.phase === TUNING_PHASE.FILTER_FLIGHT_PENDING
         ? 'filter'

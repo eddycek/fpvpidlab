@@ -112,7 +112,7 @@ const telemetryManager = new TelemetryManager(`${userData}/data`);         // {u
 
 **Smart reconnect detection** (after step 4):
 ```
-If tuning session exists AND phase is filter_flight_pending, pid_flight_pending, or quick_flight_pending:
+If tuning session exists AND phase is filter_flight_pending, pid_flight_pending, or flash_flight_pending:
   Read flash info via MSP_DATAFLASH_SUMMARY
   If flash has data (usedSize > 0):
     Transition to filter_log_ready or pid_log_ready
@@ -466,7 +466,7 @@ ConfigurationSnapshot {
     appVersion: string,
     createdBy: string,
     tuningSessionNumber?: number,   // Session counter for contextual labels
-    tuningType?: 'filter' | 'pid' | 'quick', // Filter Tune, PID Tune, or Flash Tune
+    tuningType?: 'filter' | 'pid' | 'flash', // Filter Tune, PID Tune, or Flash Tune
     snapshotRole?: 'pre-tuning' | 'post-tuning',  // Role badges (orange/green)
     bfPidProfileIndex?: number   // BF PID profile active when snapshot was taken
   }
@@ -695,16 +695,16 @@ Filter Tune:                PID Tune:                   Flash Tune:
 
   START SESSION               START SESSION               START SESSION
        │                           │                           │
-filter_flight_pending       pid_flight_pending          quick_flight_pending
+filter_flight_pending       pid_flight_pending          flash_flight_pending
        │                           │                           │
 [smart reconnect]           [smart reconnect]           [smart reconnect]
        │                           │                           │
- filter_log_ready            pid_log_ready               quick_log_ready
+ filter_log_ready            pid_log_ready               flash_log_ready
        │                           │                           │
-  filter_analysis             pid_analysis               quick_analysis
+  filter_analysis             pid_analysis               flash_analysis
        │                           │                      (filter + TF)
   filter_applied              pid_applied                      │
-       │                           │                    quick_applied
+       │                           │                    flash_applied
 filter_verification_      pid_verification_                    │
   pending                   pending                   verification_pending
        │                           │                           │
@@ -822,7 +822,7 @@ Hardware error (FC timeout, USB disconnect)
 | `pid.types.ts` | `PIDTerm { P, I, D }`, `PIDFTerm extends PIDTerm { F }`, `PIDConfiguration`, `FeedforwardConfiguration` |
 | `blackbox.types.ts` | `BlackboxInfo`, `BlackboxParseResult`, `BlackboxFlightData`, `BBLLogHeader`, `BBLEncoding`, `BBLPredictor` |
 | `analysis.types.ts` | `PowerSpectrum`, `NoiseProfile`, `FilterRecommendation`, `StepResponse` (with `ffDominated`), `StepResponseTrace`, `PIDRecommendation`, `AxisStepMetrics`, `CurrentFilterSettings`, `FeedforwardContext` |
-| `tuning.types.ts` | `TuningPhase` (14 values), `TuningType` (`'filter' | 'pid' | 'quick'`), `TuningSession`, `TuningMode`, `AppliedChange` |
+| `tuning.types.ts` | `TuningPhase` (14 values), `TuningType` (`'filter' | 'pid' | 'flash'`), `TuningSession`, `TuningMode`, `AppliedChange` |
 | `tuning-history.types.ts` | `CompactSpectrum`, `CompactThrottleSpectrogram`, `CompactThrottleBand`, `FilterMetricsSummary`, `PIDMetricsSummary`, `CompletedTuningRecord`, `RecommendationTrace`, `VerificationDelta` |
 | `ipc.types.ts` | `ApplyRecommendationsInput/Progress/Result`, `SnapshotRestoreProgress/Result`, `BetaflightAPI` (complete API interface) |
 | `telemetry.types.ts` | `TelemetrySettings`, `TelemetryBundle`, `TelemetryBundleV2`, `TelemetrySessionRecord` |
