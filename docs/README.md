@@ -39,7 +39,7 @@ Overview of all design documents in this directory. Completed documents are arch
 | [TUNING_WORKFLOW_FIXES](./complete/TUNING_WORKFLOW_FIXES.md) | Fix for download/analyze blocking + phase transition issues |
 | [TELEMETRY_COLLECTION](./complete/TELEMETRY_COLLECTION.md) | Anonymous telemetry via CF Workers + R2. Client + server + Terraform IaC + CI/CD (PRs #261–#265) |
 | [TUNING_WORKFLOW_REVISION](./complete/TUNING_WORKFLOW_REVISION.md) | Stateful tuning workflow design. (Historical: originally described Deep Tune 10-phase state machine; later evolved into 3-mode architecture: Filter Tune, PID Tune, Flash Tune) |
-| [PRESET_GAP_ANALYSIS](./complete/PRESET_GAP_ANALYSIS.md) | Gap analysis vs community presets — all 11 tasks implemented (PRs #314–#322) |
+| [PRESET_GAP_ANALYSIS](./complete/PRESET_GAP_ANALYSIS.md) | Gap analysis vs community presets — all 11 tasks implemented (PRs #314–#323) |
 
 ## Status Legend
 

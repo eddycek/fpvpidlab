@@ -1,6 +1,6 @@
 # Preset Gap Analysis — Community Presets vs FPVPIDlab
 
-> **Status**: Complete (PRs #314–#322)
+> **Status**: Complete (PRs #314–#323)
 
 Gap analysis comparing FPVPIDlab recommendations against community Betaflight presets (SupaflyFPV, UAV Tech, Karate/sugarK, QuadMcFly, ctzsnooze, AOS/Chris Rosser). Identifies settings we don't currently recommend but should, ordered by implementation feasibility.
 
@@ -234,13 +234,13 @@ For detailed community preset values, see `docs/PID_TUNING_KNOWLEDGE.md`:
 - **Logic**:
   - If drone weight > 800g OR motor output regularly hits limits: recommend 1000/1000
   - Default (500/400) is fine for ≤5" standard builds
-  - Rule ID: `P-PIDLIM`, confidence: low (informational)
+  - Rule ID: `P-PIDLIM`, confidence: low (advisory)
   - Only recommend when evidence of PID saturation exists
 - **Files to modify**:
   - `src/main/analysis/PIDRecommender.ts` — add pidsum limit check
   - Tests for modified files
 - **Effort**: Small (0.5 day)
-- **Risk**: Low — informational advisory, requires evidence of saturation
+- **Risk**: Low — advisory, requires evidence of saturation
 
 ---
 
