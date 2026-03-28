@@ -188,50 +188,56 @@ export function FCInfoDisplay() {
             )}
           </div>
 
-          {ffConfig && (
-            <div className="fc-ff-section">
-              <h3 className="fc-ff-title">Feedforward</h3>
-              <div className="fc-ff-grid">
-                <span className="fc-ff-label">Boost:</span>
-                <span className="fc-ff-value">{ffConfig.boost}</span>
-                <span className="fc-ff-label">Gains (R/P/Y):</span>
-                <span className="fc-ff-value">
-                  {ffConfig.rollGain} / {ffConfig.pitchGain} / {ffConfig.yawGain}
-                </span>
-                <span className="fc-ff-label">Smoothing:</span>
-                <span className="fc-ff-value">{ffConfig.smoothFactor}</span>
-                <span className="fc-ff-label">Jitter Factor:</span>
-                <span className="fc-ff-value">{ffConfig.jitterFactor}</span>
-                <span className="fc-ff-label">Transition:</span>
-                <span className="fc-ff-value">{ffConfig.transition}</span>
-                <span className="fc-ff-label">Max Rate Limit:</span>
-                <span className="fc-ff-value">{ffConfig.maxRateLimit}</span>
-              </div>
-            </div>
-          )}
+          {(ffConfig || ratesConfig) && (
+            <div className="fc-config-columns">
+              {ffConfig && (
+                <div className="fc-ff-section">
+                  <h3 className="fc-ff-title">Feedforward</h3>
+                  <div className="fc-ff-grid">
+                    <span className="fc-ff-label">Boost:</span>
+                    <span className="fc-ff-value">{ffConfig.boost}</span>
+                    <span className="fc-ff-label">Gains (R/P/Y):</span>
+                    <span className="fc-ff-value">
+                      {ffConfig.rollGain} / {ffConfig.pitchGain} / {ffConfig.yawGain}
+                    </span>
+                    <span className="fc-ff-label">Smoothing:</span>
+                    <span className="fc-ff-value">{ffConfig.smoothFactor}</span>
+                    <span className="fc-ff-label">Jitter Factor:</span>
+                    <span className="fc-ff-value">{ffConfig.jitterFactor}</span>
+                    <span className="fc-ff-label">Transition:</span>
+                    <span className="fc-ff-value">{ffConfig.transition}</span>
+                    <span className="fc-ff-label">Max Rate Limit:</span>
+                    <span className="fc-ff-value">{ffConfig.maxRateLimit}</span>
+                  </div>
+                </div>
+              )}
 
-          {ratesConfig && (
-            <div className="fc-rates-section">
-              <h3 className="fc-rates-title">Actual Rates</h3>
-              <div className="fc-rates-grid">
-                <span className="fc-rates-label">RC Rate (R/P/Y):</span>
-                <span className="fc-rates-value">
-                  {ratesConfig.roll.rcRate} / {ratesConfig.pitch.rcRate} / {ratesConfig.yaw.rcRate}
-                </span>
-                <span className="fc-rates-label">Rate (R/P/Y):</span>
-                <span className="fc-rates-value">
-                  {ratesConfig.roll.rate} / {ratesConfig.pitch.rate} / {ratesConfig.yaw.rate}
-                </span>
-                <span className="fc-rates-label">Expo (R/P/Y):</span>
-                <span className="fc-rates-value">
-                  {ratesConfig.roll.rcExpo} / {ratesConfig.pitch.rcExpo} / {ratesConfig.yaw.rcExpo}
-                </span>
-                <span className="fc-rates-label">Rate Limit (R/P/Y):</span>
-                <span className="fc-rates-value">
-                  {ratesConfig.roll.rateLimit} / {ratesConfig.pitch.rateLimit} /{' '}
-                  {ratesConfig.yaw.rateLimit}
-                </span>
-              </div>
+              {ratesConfig && (
+                <div className="fc-rates-section">
+                  <h3 className="fc-rates-title">Actual Rates</h3>
+                  <div className="fc-rates-grid">
+                    <span className="fc-rates-label">RC Rate (R/P/Y):</span>
+                    <span className="fc-rates-value">
+                      {ratesConfig.roll.rcRate} / {ratesConfig.pitch.rcRate} /{' '}
+                      {ratesConfig.yaw.rcRate}
+                    </span>
+                    <span className="fc-rates-label">Rate (R/P/Y):</span>
+                    <span className="fc-rates-value">
+                      {ratesConfig.roll.rate} / {ratesConfig.pitch.rate} / {ratesConfig.yaw.rate}
+                    </span>
+                    <span className="fc-rates-label">Expo (R/P/Y):</span>
+                    <span className="fc-rates-value">
+                      {ratesConfig.roll.rcExpo} / {ratesConfig.pitch.rcExpo} /{' '}
+                      {ratesConfig.yaw.rcExpo}
+                    </span>
+                    <span className="fc-rates-label">Rate Limit (R/P/Y):</span>
+                    <span className="fc-rates-value">
+                      {ratesConfig.roll.rateLimit} / {ratesConfig.pitch.rateLimit} /{' '}
+                      {ratesConfig.yaw.rateLimit}
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

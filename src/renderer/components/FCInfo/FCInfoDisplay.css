@@ -162,11 +162,20 @@
   gap: 12px;
 }
 
-/* Feedforward configuration section */
-.fc-ff-section {
+/* Two-column layout for Feedforward + Rates */
+.fc-config-columns {
+  display: flex;
+  gap: 24px;
   margin-top: 12px;
   padding-top: 12px;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
+  flex-wrap: wrap;
+}
+
+/* Feedforward configuration section */
+.fc-ff-section {
+  flex: 1 1 200px;
+  min-width: 200px;
 }
 
 .fc-ff-title {
@@ -194,9 +203,8 @@
 
 /* Rates configuration section */
 .fc-rates-section {
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  flex: 1 1 200px;
+  min-width: 200px;
 }
 
 .fc-rates-title {
