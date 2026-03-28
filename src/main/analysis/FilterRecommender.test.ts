@@ -1022,7 +1022,7 @@ describe('recommendRpmFilterQ', () => {
     expect(rec!.recommendedValue).toBe(850);
     expect(rec!.ruleId).toBe('F-RPM-Q');
     expect(rec!.confidence).toBe('low');
-    expect(rec!.informational).toBe(true);
+    expect(rec!.informational).toBeUndefined();
   });
 
   it('should recommend lowering Q for 7" quad when Q is too high', () => {
@@ -1111,7 +1111,7 @@ describe('recommendDtermDynExpo', () => {
     expect(rec!.recommendedValue).toBe(7); // min of aggressive range
     expect(rec!.ruleId).toBe('F-DEXP');
     expect(rec!.confidence).toBe('low');
-    expect(rec!.informational).toBe(true);
+    expect(rec!.informational).toBeUndefined();
   });
 
   it('should recommend lower expo for smooth/cinematic flight style when too high', () => {

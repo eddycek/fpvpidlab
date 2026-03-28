@@ -2500,7 +2500,7 @@ describe('recommendPidsumLimits', () => {
     expect(limitRec!.currentValue).toBe(500);
     expect(limitRec!.recommendedValue).toBe(1000);
     expect(limitRec!.confidence).toBe('low');
-    expect(limitRec!.informational).toBe(true);
+    expect(limitRec!.informational).toBeUndefined();
     expect(limitRec!.ruleId).toBe('P-PIDLIM');
 
     const yawRec = recs.find((r) => r.setting === 'pidsum_limit_yaw');
@@ -2560,7 +2560,7 @@ describe('recommendFFMaxRateLimit', () => {
     expect(rec!.currentValue).toBe(90);
     expect(rec!.recommendedValue).toBe(100);
     expect(rec!.confidence).toBe('low');
-    expect(rec!.informational).toBe(true);
+    expect(rec!.informational).toBeUndefined();
     expect(rec!.ruleId).toBe('P-FF-RATELIM');
     expect(rec!.reason).toContain('aggressive');
     expect(rec!.reason).toContain('Karate');
@@ -2724,7 +2724,7 @@ describe('recommendTPA', () => {
     expect(rateRec!.recommendedValue).toBe(65);
     expect(rateRec!.ruleId).toBe('P-TPA');
     expect(rateRec!.confidence).toBe('low');
-    expect(rateRec!.informational).toBe(true);
+    expect(rateRec!.informational).toBeUndefined();
   });
 
   it('should recommend TPA rate for 7" build (large category)', () => {

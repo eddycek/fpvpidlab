@@ -1146,7 +1146,6 @@ export function recommendPidsumLimits(
         'preventing output clipping during aggressive corrections.',
       impact: 'response',
       confidence: 'low',
-      informational: true,
       ruleId: 'P-PIDLIM',
     });
   }
@@ -1161,7 +1160,6 @@ export function recommendPidsumLimits(
         `Increasing to ${PIDSUM_LIMIT_YAW_RECOMMENDED} prevents yaw authority clipping on heavy builds.`,
       impact: 'response',
       confidence: 'low',
-      informational: true,
       ruleId: 'P-PIDLIM',
     });
   }
@@ -1194,7 +1192,6 @@ export function recommendFFMaxRateLimit(
       'at high stick rates (used by Karate, ctzsnooze, AOS race presets).',
     impact: 'response',
     confidence: 'low',
-    informational: true,
     ruleId: 'P-FF-RATELIM',
   };
 }
@@ -1295,7 +1292,7 @@ export function recommendThrustLinear(
  * - Throttle-dependent noise severity (from DynamicLowpassAnalysis)
  * - Current TPA settings from BBL headers
  *
- * All recommendations are informational (advisory) with low confidence.
+ * All recommendations are low confidence and applied via CLI when user clicks Apply.
  * Rule ID: P-TPA
  */
 export function recommendTPA(
@@ -1326,7 +1323,6 @@ export function recommendTPA(
             : 'Too little TPA may allow noise-amplified oscillations at high throttle.'),
         impact: 'both',
         confidence: 'low',
-        informational: true,
         ruleId: 'P-TPA',
       });
     }
@@ -1348,7 +1344,6 @@ export function recommendTPA(
             : 'A higher breakpoint preserves full PID authority through more of the throttle range.'),
         impact: 'both',
         confidence: 'low',
-        informational: true,
         ruleId: 'P-TPA',
       });
     }
@@ -1373,7 +1368,6 @@ export function recommendTPA(
         'reducing noise-driven oscillations more effectively (SupaflyFPV 5" pattern).',
       impact: 'both',
       confidence: 'low',
-      informational: true,
       ruleId: 'P-TPA',
     });
   }
@@ -1390,7 +1384,6 @@ export function recommendTPA(
         'reducing motor noise during descents and idle (SupaflyFPV pattern).',
       impact: 'both',
       confidence: 'low',
-      informational: true,
       ruleId: 'P-TPA',
     });
   }

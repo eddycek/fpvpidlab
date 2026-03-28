@@ -687,7 +687,6 @@ export function recommendRpmFilterQ(
     impact: 'both',
     confidence: 'low',
     ruleId: 'F-RPM-Q',
-    informational: true,
   };
 }
 
@@ -749,7 +748,6 @@ export function recommendDtermDynExpo(
     impact: 'latency',
     confidence: 'low',
     ruleId: 'F-DEXP',
-    informational: true,
   };
 }
 
