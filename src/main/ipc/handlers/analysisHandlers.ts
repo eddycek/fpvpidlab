@@ -239,7 +239,7 @@ export function registerAnalysisHandlers(deps: HandlerDependencies): void {
             if (currentProfile?.size) {
               droneSize = currentProfile.size;
             }
-            if (currentProfile?.weight) {
+            if (currentProfile && currentProfile.weight !== undefined) {
               droneWeight = currentProfile.weight;
             }
           } catch {
@@ -356,7 +356,7 @@ export function registerAnalysisHandlers(deps: HandlerDependencies): void {
             if (currentProfile?.size) {
               droneSize = currentProfile.size;
             }
-            if (currentProfile?.weight) {
+            if (currentProfile && currentProfile.weight !== undefined) {
               droneWeight = currentProfile.weight;
             }
           } catch {
