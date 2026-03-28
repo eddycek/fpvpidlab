@@ -8,6 +8,7 @@
 /* Export buttons at bottom, side by side */
 .fc-export-buttons {
   display: flex;
+  justify-content: flex-end;
   gap: 8px;
   margin-top: 16px;
 }
