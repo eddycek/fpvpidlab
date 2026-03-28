@@ -991,9 +991,6 @@ export class MSPClient extends EventEmitter {
   }
 
   /**
-   * Clear MSC mode flag after FC reconnects from MSC mode.
-   */
-  /**
    * Read PID profile index from MSP_STATUS_EX and derive profile count from API version.
    * Byte 10 = current PID profile index (0-based)
    * Note: Byte 11 is averageSystemLoadPercent (uint16 LE with byte 12), NOT profile count.
@@ -1013,7 +1010,14 @@ export class MSPClient extends EventEmitter {
 
     const pidProfileIndex = response.data[10];
     // Derive profile count from API version (compile-time constant in BF)
-    const pidProfileCount = apiVersion && apiVersion.minor >= 45 ? 4 : 3;
+    let pidProfileCount = 3;
+    if (apiVersion) {
+      if (apiVersion.major > 1) {
+        pidProfileCount = 4;
+      } else if (apiVersion.major === 1 && apiVersion.minor >= 45) {
+        pidProfileCount = 4;
+      }
+    }
 
     logger.info(`Status EX: PID profile ${pidProfileIndex}/${pidProfileCount}`);
     return {
@@ -1039,6 +1043,9 @@ export class MSPClient extends EventEmitter {
     logger.info(`Switched to PID profile ${index}`);
   }
 
+  /**
+   * Clear MSC mode flag after FC reconnects from MSC mode.
+   */
   clearMSCMode(): void {
     this._mscModeActive = false;
   }

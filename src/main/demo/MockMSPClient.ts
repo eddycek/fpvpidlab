@@ -6,7 +6,12 @@
  */
 
 import { EventEmitter } from 'events';
-import type { PortInfo, FCInfo, ConnectionStatus } from '@shared/types/common.types';
+import type {
+  PortInfo,
+  FCInfo,
+  ConnectionStatus,
+  ApiVersionInfo,
+} from '@shared/types/common.types';
 import type {
   PIDConfiguration,
   FeedforwardConfiguration,
@@ -788,11 +793,10 @@ export class MockMSPClient extends EventEmitter {
     this._rebootPending = false;
   }
 
-  async getStatusEx(_apiVersion?: {
-    protocol: number;
-    major: number;
-    minor: number;
-  }): Promise<{ pidProfileIndex: number; pidProfileCount: number }> {
+  async getStatusEx(_apiVersion?: ApiVersionInfo): Promise<{
+    pidProfileIndex: number;
+    pidProfileCount: number;
+  }> {
     return {
       pidProfileIndex: this._pidProfileIndex,
       pidProfileCount: this._pidProfileCount,
