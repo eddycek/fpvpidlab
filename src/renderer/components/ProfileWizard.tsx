@@ -32,13 +32,13 @@ export function ProfileWizard({ fcSerial, fcInfo, onComplete }: ProfileWizardPro
 
   // Preset path
   const [selectedPresetId, setSelectedPresetId] = useState<string | null>(null);
-  const [presetCustomName, setPresetCustomName] = useState('');
+  const [presetCustomName, setPresetCustomName] = useState(fcInfo.craftName ?? '');
 
   // Flight style (shared between custom and preset paths)
   const [flightStyle, setFlightStyle] = useState<FlightStyle>('balanced');
 
-  // Custom path - basic
-  const [name, setName] = useState('');
+  // Custom path - basic (pre-fill from BF craft name if available)
+  const [name, setName] = useState(fcInfo.craftName ?? '');
   const [size, setSize] = useState<DroneSize>('5"');
   const [propSize, setPropSize] = useState('5.1"');
   const [battery, setBattery] = useState<BatteryType>('6S');

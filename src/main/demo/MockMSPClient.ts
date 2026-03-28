@@ -111,6 +111,7 @@ export const DEMO_FC_INFO: FCInfo = {
   version: '4.5.1',
   target: 'STM32F405',
   boardName: 'OMNIBUSF4SD',
+  craftName: 'Demo Quad',
   apiVersion: { protocol: 0, major: 1, minor: 46 },
   pidProfileIndex: 0,
   pidProfileCount: 4,

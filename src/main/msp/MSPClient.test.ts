@@ -558,6 +558,8 @@ describe('MSPClient.getFCInfo', () => {
             command: cmd,
             data: buildBoardInfoData({ targetName: 'STM32F7X2', boardName: 'SPEEDYBEEF7V3' }),
           };
+        case MSPCommand.MSP_NAME:
+          return { command: cmd, data: Buffer.from('My Racer\0') };
         default:
           throw new Error(`Unexpected command: ${cmd}`);
       }
@@ -568,7 +570,34 @@ describe('MSPClient.getFCInfo', () => {
     expect(info.version).toBe('4.5.1');
     expect(info.target).toBe('STM32F7X2');
     expect(info.boardName).toBe('SPEEDYBEEF7V3');
+    expect(info.craftName).toBe('My Racer');
     expect(info.apiVersion).toEqual({ protocol: 0, major: 1, minor: 46 });
+  });
+
+  it('omits craftName when MSP_NAME returns empty string', async () => {
+    const { client, sendCommand } = createClientWithStub();
+    sendCommand.mockImplementation(async (cmd: number) => {
+      switch (cmd) {
+        case MSPCommand.MSP_API_VERSION:
+          return { command: cmd, data: buildAPIVersionData(1, 46) };
+        case MSPCommand.MSP_FC_VARIANT:
+          return { command: cmd, data: buildFCVariantData('BTFL') };
+        case MSPCommand.MSP_FC_VERSION:
+          return { command: cmd, data: buildFCVersionData(4, 5, 1) };
+        case MSPCommand.MSP_BOARD_INFO:
+          return {
+            command: cmd,
+            data: buildBoardInfoData({ targetName: 'STM32F7X2', boardName: 'SPEEDYBEEF7V3' }),
+          };
+        case MSPCommand.MSP_NAME:
+          return { command: cmd, data: Buffer.from('\0') };
+        default:
+          throw new Error(`Unexpected command: ${cmd}`);
+      }
+    });
+
+    const info = await client.getFCInfo();
+    expect(info.craftName).toBeUndefined();
   });
 });
 

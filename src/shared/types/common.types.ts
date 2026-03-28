@@ -31,6 +31,7 @@ export interface FCInfo {
   version: string;
   target: string;
   boardName: string;
+  craftName?: string; // User-configured name from BF Configurator (MSP_NAME)
   apiVersion: ApiVersionInfo;
   pidProfileIndex?: number; // 0-based, from MSP_STATUS_EX byte 10
   pidProfileCount?: number; // number of available PID profiles (typically 4 for BF 4.5+)

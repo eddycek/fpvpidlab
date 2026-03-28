@@ -137,6 +137,41 @@ describe('ProfileWizard flight style', () => {
     );
   });
 
+  it('pre-fills profile name from FC craft name in custom path', async () => {
+    const user = userEvent.setup();
+    const fcInfoWithCraft: FCInfo = { ...mockFCInfo, craftName: 'My Racer' };
+    render(<ProfileWizard fcSerial="ABC123" fcInfo={fcInfoWithCraft} onComplete={onComplete} />);
+
+    await user.click(screen.getByText('Custom Configuration'));
+
+    const nameInput = screen.getByPlaceholderText('e.g., My 5 inch freestyle') as HTMLInputElement;
+    expect(nameInput.value).toBe('My Racer');
+  });
+
+  it('pre-fills custom name from FC craft name in preset path', async () => {
+    const user = userEvent.setup();
+    const fcInfoWithCraft: FCInfo = { ...mockFCInfo, craftName: 'My Racer' };
+    render(<ProfileWizard fcSerial="ABC123" fcInfo={fcInfoWithCraft} onComplete={onComplete} />);
+
+    await user.click(screen.getByText('Use a Preset'));
+    await user.click(screen.getByText('5" Freestyle'));
+
+    const nameInput = screen.getByPlaceholderText(
+      'Leave empty to use preset name'
+    ) as HTMLInputElement;
+    expect(nameInput.value).toBe('My Racer');
+  });
+
+  it('leaves name empty when craft name is not set', async () => {
+    const user = userEvent.setup();
+    render(<ProfileWizard fcSerial="ABC123" fcInfo={mockFCInfo} onComplete={onComplete} />);
+
+    await user.click(screen.getByText('Custom Configuration'));
+
+    const nameInput = screen.getByPlaceholderText('e.g., My 5 inch freestyle') as HTMLInputElement;
+    expect(nameInput.value).toBe('');
+  });
+
   it('allows changing flight style in custom path', async () => {
     const user = userEvent.setup();
     render(<ProfileWizard fcSerial="ABC123" fcInfo={mockFCInfo} onComplete={onComplete} />);

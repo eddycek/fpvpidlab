@@ -387,12 +387,19 @@ export class MSPClient extends EventEmitter {
     return uid;
   }
 
+  async getCraftName(): Promise<string> {
+    const response = await this.connection.sendCommand(MSPCommand.MSP_NAME);
+    const raw = response.data.toString('utf-8', 0, response.data.length);
+    return raw.replace(/[\x00-\x1F\x7F]/g, '').trim();
+  }
+
   async getFCInfo(): Promise<FCInfo> {
-    const [apiVersion, variant, version, boardInfo] = await Promise.all([
+    const [apiVersion, variant, version, boardInfo, craftName] = await Promise.all([
       this.getApiVersion(),
       this.getFCVariant(),
       this.getFCVersion(),
       this.getBoardInfo(),
+      this.getCraftName(),
     ]);
 
     return {
@@ -400,6 +407,7 @@ export class MSPClient extends EventEmitter {
       version,
       target: boardInfo.targetName,
       boardName: boardInfo.boardName,
+      ...(craftName ? { craftName } : {}),
       apiVersion,
     };
   }
