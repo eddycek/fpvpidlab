@@ -14,6 +14,7 @@ Overview of all design documents in this directory. Completed documents are arch
 |----------|--------|-------------|
 | [TUNING_PRECISION_IMPROVEMENTS](./TUNING_PRECISION_IMPROVEMENTS.md) | **Active** | Research-based tuning accuracy improvements: ~~Wiener deconvolution~~ (done), ~~proportional PID scaling~~ (done), ~~data quality scoring~~ (done), ~~flight quality score~~ (done), ~~throttle spectrograms~~ (done), chirp analysis |
 | [UX_IMPROVEMENT_IDEAS](./UX_IMPROVEMENT_IDEAS.md) | **Active** | Backlog of UX improvement ideas (4/7 done, rest are future work) |
+| [PRESET_GAP_ANALYSIS](./PRESET_GAP_ANALYSIS.md) | **Proposed** | Gap analysis vs SupaflyFPV presets — RC link FF tuning, RPM Q, anti-gravity, D-max awareness |
 | [PAYMENT_AND_INVOICING](./PAYMENT_AND_INVOICING.md) | **Proposed** | Stripe payment gateway + Trivi API invoicing. End-to-end purchase → invoice → license delivery flow |
 | [LICENSE_KEY_SYSTEM](./LICENSE_KEY_SYSTEM.md) | **Active** | Freemium licensing via CF Workers + D1. Ed25519 keys, offline grace period, admin API |
 | [CODE_SIGNING_AND_UPDATES](./CODE_SIGNING_AND_UPDATES.md) | **Active** | macOS/Windows code signing, electron-updater auto-update, GitHub Releases provider |
