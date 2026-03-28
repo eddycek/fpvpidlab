@@ -167,7 +167,7 @@ npm run test:ui           # Visual interface with DOM snapshots
 
 ## Test Inventory
 
-**Total: 2777 unit tests across 134 files + 37 Playwright E2E tests across 7 spec files** (last verified: March 28, 2026)
+**Total: 2800 unit tests across 134 files + 37 Playwright E2E tests across 7 spec files** (last verified: March 28, 2026)
 
 ### UI Components
 
@@ -180,13 +180,13 @@ npm run test:ui           # Visual interface with DOM snapshots
 | `ProfileSelector.test.tsx` | 11 | Profile switching, locking when FC connected |
 | `ProfileEditModal.test.tsx` | 18 | Profile editing, validation, form handling, flight style selector |
 | `ProfileDeleteModal.test.tsx` | 12 | Deletion confirmation, warnings |
-| `SnapshotManager/SnapshotManager.test.tsx` | 47 | Snapshot CRUD, export, restore, baseline handling, dynamic numbering, pagination, tuning metadata labels, role badges, smart compare |
+| `SnapshotManager/SnapshotManager.test.tsx` | 49 | Snapshot CRUD, export, restore, baseline handling, dynamic numbering, pagination, tuning metadata labels, role badges, smart compare, restore warnings display and dismiss |
 | `SnapshotManager/SnapshotDiffModal.test.tsx` | 13 | Snapshot diff view, change display |
-| `SnapshotManager/snapshotDiffUtils.test.ts` | 24 | CLI diff parsing, change computation |
+| `SnapshotManager/snapshotDiffUtils.test.ts` | 29 | CLI diff parsing, change computation, corrupted config line detection |
 | `Toast/Toast.test.tsx` | 14 | Toast notification rendering and lifecycle |
 | `Toast/ToastContainer.test.tsx` | 6 | Toast container layout and stacking |
 | `StartTuningModal.test.tsx` | 16 | Start tuning modal, 3-mode selection (Filter Tune/PID Tune/Flash Tune), "Start here" badge, cancel, BF PID profile selector (display, selection, labels, persistence) |
-| `TuningStatusBanner/TuningStatusBanner.test.tsx` | 67 | Workflow banner, unified 4-step indicator, actions, downloading, applied phases, BB settings pre-flight warning, filter/PID verification flow, flashUsedSize-based erased state, import file, skip erase, SD card labels + eraseCompleted, Flash Tune phases |
+| `TuningStatusBanner/TuningStatusBanner.test.tsx` | 78 | Workflow banner, unified 4-step indicator, actions, downloading, applied phases, BB settings pre-flight warning, filter/PID verification flow, flashUsedSize-based erased state, import file, skip erase, SD card labels + eraseCompleted, Flash Tune phases, post-apply verification mismatch warning |
 | `TuningWizard/TuningWizard.test.tsx` | 46 | Multi-step wizard flow, results display, apply, mode-aware routing, onApplyComplete with metrics, FF warning, RPM status, flight style display |
 | `TuningWizard/FlightGuideContent.test.tsx` | 11 | Flight guide content rendering, version-aware tip filtering |
 | `TuningWizard/TestFlightGuideStep.test.tsx` | 5 | Flight guide step integration |
@@ -274,7 +274,7 @@ npm run test:ui           # Visual interface with DOM snapshots
 | `msp/MSPProtocol.test.ts` | 40 | MSPv1 encode/decode, jumbo frames, round-trip, parseBuffer, checksum validation, garbage recovery |
 | `msp/MSPConnection.test.ts` | 51 | Connection lifecycle, sendCommand, sendCommandNoResponse, timeouts, error/partial responses, CLI mode (prompt debounce, chunk-boundary, trailing CR), event forwarding, port error fast-fail, CLI buffer limit |
 | `msp/MSPClient.test.ts` | 76 | FC info queries, PID/filter/FF config, board info, UID, blackbox info (flash+SD card), SD card summary, MSC reboot (fire-and-forget), set PID, CLI diff, save & reboot, connect/disconnect, version gate, listPorts, chunk ceiling, erase disconnect detection, BF PID profile selection (getStatusEx, selectPIDProfile) |
-| `msp/cliUtils.test.ts` | 17 | CLI command response validation, error pattern detection, setting extraction |
+| `msp/cliUtils.test.ts` | 19 | CLI command response validation, error pattern detection (incl. Allowed range), setting extraction |
 
 ### MSC (Mass Storage Class)
 

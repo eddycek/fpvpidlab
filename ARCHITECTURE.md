@@ -1,6 +1,6 @@
 # Architecture Overview
 
-**Last Updated:** March 28, 2026 | **Phase 4 Complete, Phase 6 Complete** | **2777 unit tests, 134 files + 37 Playwright E2E tests**
+**Last Updated:** March 28, 2026 | **Phase 4 Complete, Phase 6 Complete** | **2800 unit tests, 134 files + 37 Playwright E2E tests**
 
 ---
 
@@ -553,11 +553,15 @@ Why: MSP commands fail while FC is in CLI mode (CLI captures all input).
 
 ```
 Stage 1 (backup): Create "Pre-restore (auto)" snapshot
-Stage 2 (cli):    Enter CLI → send each restorable command
+Stage 2 (cli):    Enter CLI → send each restorable command (resilient: continues on error)
 Stage 3 (save):   CLI "save" → FC reboots
 
 Restorable commands: set, feature, serial, aux, beacon, map, resource, timer, dma, profile (context), rateprofile (context)
 Skipped: diff, batch, defaults, save, board_name, manufacturer_id, mcu_id, signature
+
+Resilient restore: if a CLI command fails (e.g., out-of-range value, unknown setting),
+the handler continues with remaining commands. Failed commands are collected in
+SnapshotRestoreResult.failedCommands[] and shown as warnings in the UI.
 ```
 
 ---
@@ -838,7 +842,7 @@ Hardware error (FC timeout, USB disconnect)
 
 ## Testing Strategy
 
-**2777 unit tests across 134 files + 37 Playwright E2E tests**. See [TESTING.md](./TESTING.md) for complete inventory.
+**2800 unit tests across 134 files + 37 Playwright E2E tests**. See [TESTING.md](./TESTING.md) for complete inventory.
 
 | Area | Files | Tests |
 |------|-------|-------|
@@ -846,7 +850,7 @@ Hardware error (FC timeout, USB disconnect)
 | FFT Analysis (+ Data Quality + Spectrogram + Delay) | 8 | 237 |
 | Step Response + PID + TF + CrossAxis + PropWash + DTerm + Bayesian | 10 | 322 |
 | Header Validation + Constants | 2 | 31 |
-| MSP Protocol & Client | 4 | 184 |
+| MSP Protocol & Client | 4 | 186 |
 | MSC (Mass Storage) | 2 | 45 |
 | Storage Managers | 7 | 127 |
 | IPC Handlers | 3 | 120 |
@@ -854,7 +858,7 @@ Hardware error (FC timeout, USB disconnect)
 | Diagnostic | 1 | 12 |
 | License | 1 | 12 |
 | Auto-Updater | 1 | 12 |
-| UI Components + Charts + Contexts | 50 | 726 |
+| UI Components + Charts + Contexts | 50 | 744 |
 | React Hooks + Utils | 17 | 183 |
 | Shared Constants & Utils | 5 | 98 |
 | E2E Workflows (Vitest) | 1 | 20 |

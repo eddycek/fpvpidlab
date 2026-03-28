@@ -128,7 +128,7 @@ npm run rebuild
 - `MSPProtocol.ts` - Low-level packet encoding/decoding. Jumbo frame support (frames >255 bytes: 2-byte size at offset+4)
 - `MSPConnection.ts` - Serial port handling, CLI mode switching
 - `MSPClient.ts` - High-level API with retry logic
-- `cliUtils.ts` - CLI command response validation (`validateCLIResponse()` throws `CLICommandError` on error patterns: 'Invalid name/value', 'Unknown command', line-level `ERROR`). Used in tuning/snapshot/fcInfo IPC handlers
+- `cliUtils.ts` - CLI command response validation (`validateCLIResponse()` throws `CLICommandError` on error patterns: 'Invalid name/value', 'Unknown command', 'Allowed range', line-level `ERROR`). Used in tuning/snapshot/fcInfo IPC handlers
 
 **Important MSP Behaviors**:
 - FC may be stuck in CLI mode from previous session → `forceExitCLI()` on connect (resets local flag only)
@@ -350,6 +350,7 @@ Three tuning modes: **Filter Tune** (2 flights: analysis + verification), **PID 
 - **TuningMode**: `'filter' | 'pid' | 'flash'` — wizard components adapt UI/flow per mode
 - **StartTuningModal**: Mode selection (Filter Tune/PID Tune/Flash Tune) with BF PID profile selector when FC has multiple profiles. Selected profile stored on `TuningSession.bfPidProfileIndex`
 - **Verification flow** (mandatory): After apply, user clicks "Erase & Verify" → fly verification flight → download → analyze verification → completed. Filter Tune: throttle sweep → spectrogram comparison. PID Tune: stick snaps → step response comparison. Flash Tune: hover → noise comparison.
+- **Post-apply verification**: On smart reconnect after apply, the main process reads back CLI diff and compares applied settings against expected values. Results stored on `TuningSession.applyVerified` (boolean) and `TuningSession.applyMismatches` (string[]). TuningStatusBanner shows amber warning if mismatches detected.
 - **Archive on completion**: When phase transitions to `completed`, session is archived to `TuningHistoryManager` before becoming dismissable
 - IPC: `TUNING_GET_SESSION`, `TUNING_START_SESSION`, `TUNING_UPDATE_PHASE`, `TUNING_RESET_SESSION`, `TUNING_GET_HISTORY`, `TUNING_UPDATE_VERIFICATION`, `TUNING_UPDATE_HISTORY_VERIFICATION` + `EVENT_TUNING_SESSION_CHANGED`
 - Design doc: `docs/TUNING_WORKFLOW_REVISION.md`
@@ -462,8 +463,10 @@ Snapshots carry tuning metadata (`tuningSessionNumber`, `tuningType`, `snapshotR
 **Restore Flow** (orchestrated in `SNAPSHOT_RESTORE` IPC handler):
 1. Load snapshot and parse `cliDiff` — extract restorable CLI commands
 2. Stage 1 (backup): Create "Pre-restore (auto)" safety snapshot
-3. Stage 2 (cli): Enter CLI mode, send each command
+3. Stage 2 (cli): Enter CLI mode, send each command (resilient — continues on error, collects failures)
 4. Stage 3 (save): Save and reboot FC
+
+**Resilient restore**: If a CLI command fails (e.g., out-of-range value rejected by FC with "Allowed range" error, or unknown setting on different firmware), the handler logs the failure, collects the command in `failedCommands[]`, and continues with remaining commands. `SnapshotRestoreResult` includes `failedCommands?: string[]` — UI displays warnings for any commands that could not be applied.
 
 **Restorable commands**: `set`, `feature`, `serial`, `aux`, `beacon`, `map`, `resource`, `timer`, `dma`, `profile` (context switch), `rateprofile` (context switch) — everything except identity (`board_name`, `manufacturer_id`, `mcu_id`, `signature`), and control (`diff`, `batch`, `defaults`, `save`). Profile/rateprofile lines are preserved as context switches so that per-profile settings are applied to the correct BF profile slot.
 
@@ -545,12 +548,13 @@ await waitFor(() => {
 - **Baseline** type cannot be deleted via UI
 - **Auto-created baseline** when profile first connects
 - **Export** downloads CLI diff as `.txt` file
-- **Restore** sends `set` commands from snapshot CLI diff to FC via CLI, then saves and reboots
+- **Restore** sends `set` commands from snapshot CLI diff to FC via CLI, then saves and reboots. Resilient: continues on command failure, collects `failedCommands[]` in result, UI shows warnings
 - **Restore safety backup** auto-creates "Pre-restore (auto)" snapshot before applying
 - **Server-side filtering** by current profile's snapshotIds
 - **Dynamic numbering** `#1` (oldest) through `#N` (newest) — recalculates on deletion
 - **Tuning metadata** on auto snapshots: `tuningSessionNumber`, `tuningType` ('filter'/'pid'/'flash'), `snapshotRole` ('pre-tuning'/'post-tuning'). Contextual labels like "Pre-tuning #3 (Filter Tune)". Role badges: pre-tuning (orange), post-tuning (green)
 - **Compare** smart matching: for tuning snapshots, auto-selects pre/post-tuning pair from the same session number. Falls back to comparing with previous snapshot (or empty config for oldest). Uses `snapshotDiffUtils.ts` to parse CLI diff, compute changes, and group by command type. Displayed in `SnapshotDiffModal` with GitHub-style color coding (green=added, yellow=changed). Settings reverted to factory default show as "Changed to (default)".
+- **Corrupted config detection**: `detectCorruptedConfigLines()` in `snapshotDiffUtils.ts` scans CLI diff for `###ERROR IN diff: CORRUPTED CONFIG:` markers (out-of-range values stored on FC). `SnapshotDiffModal` shows amber warnings for corrupted settings.
 
 ### BlackboxStatus Readonly Mode
 - When a tuning session is active, `BlackboxStatus` enters readonly mode (`readonly={!!tuning.session}`)
