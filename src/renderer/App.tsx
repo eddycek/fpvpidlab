@@ -99,6 +99,16 @@ function AppContent() {
       .catch(() => setAvailableLogIds(new Set()));
   };
 
+  const refreshBlackboxInfo = () => {
+    window.betaflight
+      .getBlackboxInfo()
+      .then((info) => {
+        setFlashUsedSize(info.usedSize);
+        setStorageType(info.storageType);
+      })
+      .catch(() => setFlashUsedSize(null));
+  };
+
   useEffect(() => {
     refreshAvailableLogIds();
     return window.betaflight.onProfileChanged((profile) => {
@@ -135,13 +145,7 @@ function AppContent() {
       setIsConnected(status.connected);
       fetchBBSettings(status);
       if (status.connected) {
-        window.betaflight
-          .getBlackboxInfo()
-          .then((info) => {
-            setFlashUsedSize(info.usedSize);
-            setStorageType(info.storageType);
-          })
-          .catch(() => setFlashUsedSize(null));
+        refreshBlackboxInfo();
       } else {
         setFlashUsedSize(null);
       }
@@ -348,13 +352,7 @@ function AppContent() {
           const previousProfile = tuning.session?.bfPidProfileIndex;
           await tuning.startSession(previousType, previousProfile);
           // Re-fetch BB info (may be stale from initial connection during CLI mode)
-          window.betaflight
-            .getBlackboxInfo()
-            .then((info) => {
-              setFlashUsedSize(info.usedSize);
-              setStorageType(info.storageType);
-            })
-            .catch(() => {});
+          refreshBlackboxInfo();
         } catch (err) {
           toast.error(err instanceof Error ? err.message : 'Failed to start new cycle');
         }
@@ -794,13 +792,7 @@ function AppContent() {
               // Re-fetch BB info — the initial fetch during onConnectionChanged may have
               // returned stale data (getBlackboxInfo() during CLI mode returns usedSize=0).
               // Session start runs AFTER baseline creation, so CLI mode has exited.
-              window.betaflight
-                .getBlackboxInfo()
-                .then((info) => {
-                  setFlashUsedSize(info.usedSize);
-                  setStorageType(info.storageType);
-                })
-                .catch(() => {});
+              refreshBlackboxInfo();
             } catch (err) {
               toast.error(err instanceof Error ? err.message : 'Failed to start tuning session');
             }
