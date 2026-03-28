@@ -163,7 +163,7 @@ IPC handlers are split into domain modules under `src/main/ipc/handlers/`:
 | `types.ts` | — | `HandlerDependencies` interface, `createResponse`, `parseDiffSetting` |
 | `events.ts` | — | 7 event broadcast functions |
 | `connectionHandlers.ts` | 8 | Port scanning, connect, disconnect, status, demo mode, reset demo, get logs, export logs |
-| `fcInfoHandlers.ts` | 6 | FC info, CLI export, BB settings, FF config, fix settings, BF PID profile selection |
+| `fcInfoHandlers.ts` | 7 | FC info, CLI export, BB settings, FF config, fix settings, reset settings, BF PID profile selection |
 | `snapshotHandlers.ts` | 6 | Snapshot CRUD, export, restore |
 | `profileHandlers.ts` | 10 | Profile CRUD, presets, FC serial |
 | `pidHandlers.ts` | 3 | PID get/set/save |
@@ -539,7 +539,7 @@ await waitFor(() => {
 - **Cannot cancel ProfileWizard** - profile creation is mandatory for new FC
 - **Active profile deletion** allowed - disconnects FC automatically
 - **Profile switching** disabled when FC connected (UI lock with visual indicator)
-- **Preset profiles** available in `@shared/constants.ts` (10 common drone types)
+- **Preset profiles** available in `@shared/constants.ts` (8 common drone types)
 
 ### Snapshot Behavior
 - **Baseline** type cannot be deleted via UI

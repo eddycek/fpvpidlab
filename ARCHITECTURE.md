@@ -1,6 +1,6 @@
 # Architecture Overview
 
-**Last Updated:** March 28, 2026 | **Phase 4 Complete, Phase 6 Complete** | **2684 unit tests, 134 files + 37 Playwright E2E tests**
+**Last Updated:** March 28, 2026 | **Phase 4 Complete, Phase 6 Complete** | **2777 unit tests, 134 files + 37 Playwright E2E tests**
 
 ---
 
@@ -37,13 +37,13 @@
 │  ┌───────────────────────────────┼──────────────────────────────────────┐  │
 │  │              Preload Script (contextBridge, 689 lines)              │  │
 │  └───────────────────────────────┼──────────────────────────────────────┘  │
-│                                  │ IPC (63 channels, 16 event types)        │
+│                                  │ IPC (64 channels, 16 event types)        │
 │                                  │                                         │
 │  ┌───────────────────────────────┼──────────────────────────────────────┐  │
 │  │                     Main Process (Node.js)                          │  │
 │  │                                                                      │  │
 │  │  ┌────────────────────────────┴─────────────────────────────────┐   │  │
-│  │  │                    IPC Handlers (63 handlers, 13 modules)     │   │  │
+│  │  │                    IPC Handlers (64 handlers, 13 modules)     │   │  │
 │  │  │  connection:* | fc:* | snapshot:* | profile:* | blackbox:*  │   │  │
 │  │  │  analysis:* | tuning:* | pid:*                              │   │  │
 │  │  └───┬──────────┬──────────┬────────────┬──────────┬───────────┘   │  │
@@ -289,18 +289,18 @@ Two independent analysis pipelines: **filter tuning** (FFT noise analysis) and *
 | `FFTCompute.ts` | 171 | 20 | Welch's method, Hanning window |
 | `SegmentSelector.ts` | 195 | 27 | Hover + throttle sweep detection |
 | `NoiseAnalyzer.ts` | 246 | 25 | Peak detection, noise classification |
-| `FilterRecommender.ts` | 627 | 55 | Noise-based filter targets, RPM-aware bounds, propwash floor, medium noise, notch-aware resonance, LPF2 |
+| `FilterRecommender.ts` | 627 | 80 | Noise-based filter targets, RPM-aware bounds, propwash floor, medium noise, notch-aware resonance, LPF2, preset gap analysis settings |
 | `FilterAnalyzer.ts` | 206 | 19 | Filter analysis orchestrator (data quality, throttle spectrogram, group delay) |
 | `ThrottleSpectrogramAnalyzer.ts` | — | 19 | Throttle-dependent spectrogram analysis |
 | `GroupDelayEstimator.ts` | — | 23 | Group delay estimation, filter latency measurement |
 | `StepDetector.ts` | 142 | 16 | Derivative-based step input detection |
 | `StepMetrics.ts` | 330 | 38 | Rise time, overshoot, settling, trace, FF contribution, adaptive window |
-| `PIDRecommender.ts` | 430 | 102 | Flight-PID-anchored P/D recommendations, FF-aware, damping ratio, I-term, quad-size-aware bounds, D-min/TPA advisory |
+| `PIDRecommender.ts` | 430 | 207 | Flight-PID-anchored P/D recommendations, FF-aware, damping ratio, I-term, quad-size-aware bounds, D-min/TPA advisory, preset gap analysis settings |
 | `PIDAnalyzer.ts` | 185 | 21 | PID analysis orchestrator (FF context, data quality, cross-axis, propwash) |
 | `CrossAxisDetector.ts` | — | 20 | Cross-axis coupling detection |
 | `PropWashDetector.ts` | — | 16 | Propwash detection and analysis |
 | `DataQualityScorer.ts` | ~200 | 39 | Flight data quality scoring (0-100), confidence adjustment, low coherence warning |
-| `headerValidation.ts` | 94 | 20 | BB header diagnostics, version-aware debug mode, RPM enrichment |
+| `headerValidation.ts` | 94 | 28 | BB header diagnostics, version-aware debug mode, RPM enrichment, preset gap analysis fields |
 | `constants.ts` | 177 | — | All tunable thresholds |
 
 #### Filter Analysis Pipeline
@@ -450,7 +450,7 @@ DroneProfile {
 }
 ```
 
-10 preset profiles available: tiny-whoop, micro-whoop, 3inch-cinewhoop, 4inch-toothpick, 5inch-freestyle, 5inch-race, 5inch-cinematic, 6inch-longrange, 7inch-longrange, 10inch-ultra-longrange.
+8 preset profiles available: tiny-whoop, 3inch-whoop, 3inch-freestyle, 4inch-freestyle, 5inch-freestyle, 5inch-race, 6inch-longrange, 7inch-longrange.
 
 #### Snapshot Data Model
 
@@ -501,12 +501,12 @@ TuningSession {
 
 ### IPC Layer (`src/main/ipc/`)
 
-**63 IPC channels** organized by domain:
+**64 IPC channels** organized by domain:
 
 | Domain | Channels | Key Operations |
 |--------|----------|---------------|
 | Connection (8) | `list_ports`, `connect`, `disconnect`, `get_status`, `is_demo_mode`, `reset_demo`, `get_logs`, `export_logs` | Port scanning, connect/disconnect, demo mode, logs |
-| FC Info (6) | `get_info`, `export_cli`, `get_blackbox_settings`, `get_feedforward_config`, `fix_blackbox_settings`, `select_pid_profile` | FC data, CLI export, FF config, BB settings fix, BF PID profile selection (MSP_SELECT_SETTING) |
+| FC Info (7) | `get_info`, `export_cli`, `get_blackbox_settings`, `get_feedforward_config`, `get_rates_config`, `fix_blackbox_settings`, `select_pid_profile` | FC data, CLI export, FF config, rates config, BB settings fix, BF PID profile selection (MSP_SELECT_SETTING) |
 | Profiles (10) | `create`, `create_from_preset`, `update`, `delete`, `list`, `get`, `get_current`, `set_current`, `export`, `get_fc_serial` | Full profile CRUD |
 | Snapshots (6) | `create`, `list`, `delete`, `export`, `load`, `restore` | Snapshot CRUD + rollback |
 | Blackbox (9) | `get_info`, `download_log`, `list_logs`, `delete_log`, `erase_flash`, `open_folder`, `test_read`, `parse_log`, `import_log` | Flash ops + parsing + import |
@@ -838,7 +838,7 @@ Hardware error (FC timeout, USB disconnect)
 
 ## Testing Strategy
 
-**2684 unit tests across 134 files + 37 Playwright E2E tests**. See [TESTING.md](./TESTING.md) for complete inventory.
+**2777 unit tests across 134 files + 37 Playwright E2E tests**. See [TESTING.md](./TESTING.md) for complete inventory.
 
 | Area | Files | Tests |
 |------|-------|-------|
