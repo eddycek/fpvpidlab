@@ -1384,8 +1384,13 @@ export class MSPClient extends EventEmitter {
           if (!this.connection.isOpen()) {
             throw new ConnectionError('FC disconnected during erase');
           }
-          // FC may be busy erasing and not responding to MSP — retry
-          logger.debug('Poll failed (FC busy), retrying...');
+          if (pollError instanceof TimeoutError) {
+            // FC may be busy erasing and not responding to MSP — retry
+            logger.debug('Poll failed (FC busy / timeout), retrying...');
+          } else {
+            // Non-timeout errors (connection problems, etc.) should surface immediately
+            throw pollError;
+          }
         }
       }
 

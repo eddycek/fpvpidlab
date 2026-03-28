@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { MSPClient } from './MSPClient';
 import { MSPCommand } from './types';
+import { TimeoutError } from '../utils/errors';
 import {
   buildAPIVersionData,
   buildFCVariantData,
@@ -1434,6 +1435,46 @@ describe('MSPClient.eraseBlackboxFlash — disconnect detection', () => {
     } catch (err) {
       expect((err as Error).name).toBe('ConnectionError');
     }
+  });
+});
+
+describe('MSPClient.eraseBlackboxFlash — poll uses getDataflashInfo not getBlackboxInfo', () => {
+  it('does not false-positive on timeout (usedSize=0 from fallback)', async () => {
+    const { client, sendCommand, mockConn } = createClientWithStub();
+
+    let eraseCommandSent = false;
+    let pollCount = 0;
+
+    sendCommand.mockImplementation(async (cmd: number) => {
+      if (cmd === MSPCommand.MSP_DATAFLASH_ERASE) {
+        eraseCommandSent = true;
+        return { command: cmd, data: Buffer.alloc(0), error: false };
+      }
+      if (cmd === MSPCommand.MSP_DATAFLASH_SUMMARY) {
+        pollCount++;
+        // Simulate timeout on dataflash summary (FC busy erasing)
+        // This should NOT be treated as erase success
+        if (pollCount <= 2) {
+          throw new TimeoutError(cmd);
+        }
+        // After 2 retries, return erased state
+        return {
+          command: cmd,
+          data: buildDataflashSummaryData({
+            ready: 0x03,
+            totalSize: 2 * 1024 * 1024,
+            usedSize: 0,
+          }),
+        };
+      }
+      return { command: cmd, data: Buffer.alloc(0) };
+    });
+
+    await client.eraseBlackboxFlash();
+
+    expect(eraseCommandSent).toBe(true);
+    // Should have polled at least 3 times (2 timeouts + 1 success)
+    expect(pollCount).toBeGreaterThanOrEqual(3);
   });
 });
 
