@@ -39,6 +39,9 @@ import {
   extractTPAContext,
   extractItermRelaxCutoff,
   recommendItermRelaxCutoff,
+  extractDynIdleMinRpm,
+  extractRpmFilterActive,
+  recommendDynIdleMinRpm,
 } from './PIDRecommender';
 import type { TransferFunctionContext } from './PIDRecommender';
 import {
@@ -372,6 +375,16 @@ async function analyzePIDCore(params: CoreParams): Promise<PIDAnalysisResult> {
   const itermRelaxRec = recommendItermRelaxCutoff(itermRelaxCutoff, flightStyle);
   if (itermRelaxRec) {
     rawRecommendations.push(itermRelaxRec);
+  }
+
+  // Dynamic idle min RPM recommendation (size-based advisory)
+  if (rawHeaders) {
+    const dynIdleMinRpm = extractDynIdleMinRpm(rawHeaders);
+    const rpmFilterActive = extractRpmFilterActive(rawHeaders);
+    const dynIdleRec = recommendDynIdleMinRpm(dynIdleMinRpm, rpmFilterActive, droneSize);
+    if (dynIdleRec) {
+      rawRecommendations.push(dynIdleRec);
+    }
   }
 
   // Quality-adjusted confidence — no blanket cap, gating handles it

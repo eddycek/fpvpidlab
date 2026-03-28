@@ -457,6 +457,29 @@ export const RC_LINK_PROFILES: readonly RCLinkProfile[] = [
   },
 ] as const;
 
+// ---- Dynamic Idle Min RPM ----
+// Source: docs/PID_TUNING_KNOWLEDGE.md Section 10 (Community Consensus)
+// Maintains minimum motor RPM for desync prevention and RPM filter accuracy.
+
+/** Dynamic idle min RPM ranges by drone size.
+ * Smaller quads need higher min RPM (higher KV motors, faster desync).
+ * Larger quads can use lower min RPM (lower KV, higher inertia). */
+export const DYN_IDLE_MIN_RPM_BY_SIZE: Record<
+  DroneSize,
+  { min: number; max: number; typical: number }
+> = {
+  '1"': { min: 40, max: 60, typical: 50 },
+  '2.5"': { min: 40, max: 60, typical: 50 },
+  '3"': { min: 40, max: 60, typical: 45 },
+  '4"': { min: 25, max: 40, typical: 30 },
+  '5"': { min: 20, max: 35, typical: 25 },
+  '6"': { min: 15, max: 30, typical: 20 },
+  '7"': { min: 15, max: 25, typical: 20 },
+};
+
+/** Fallback dynamic idle min RPM when drone size is unknown (= 5" values) */
+export const DYN_IDLE_MIN_RPM_DEFAULT = DYN_IDLE_MIN_RPM_BY_SIZE['5"'];
+
 /** rc_smoothing_auto_factor: BF default is 30, most presets recommend 45 for >=150Hz */
 export const RC_SMOOTHING_AUTO_FACTOR_DEFAULT = 30;
 export const RC_SMOOTHING_AUTO_FACTOR_RECOMMENDED = 45;

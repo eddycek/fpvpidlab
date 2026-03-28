@@ -24,6 +24,8 @@ import {
   BANDWIDTH_LOW_HZ_BY_STYLE,
   ITERM_RELAX_CUTOFF_BY_STYLE,
   ITERM_RELAX_DEVIATION_THRESHOLD,
+  DYN_IDLE_MIN_RPM_BY_SIZE,
+  DYN_IDLE_MIN_RPM_DEFAULT,
   type QuadSizeBounds,
 } from './constants';
 
@@ -308,9 +310,9 @@ export function recommendPID(
     applyPropWashContext(recommendations, propWash, currentPIDs, flightPIDs, bounds);
   }
 
-  // Post-process: D-min/D-max advisory notes
+  // Post-process: D-min/D-max advisory notes (includes D-max gain recommendation)
   if (dMinContext?.active) {
-    applyDMinAdvisory(recommendations, dMinContext);
+    applyDMinAdvisory(recommendations, dMinContext, droneSize);
   }
 
   // Post-process: TPA advisory notes
@@ -888,10 +890,22 @@ function generateFrequencyDomainRecs(
 }
 
 /**
- * Annotate D recommendations when D-min/D-max is active.
+ * Annotate D recommendations when D-min/D-max is active, and recommend
+ * disabling simplified_dmax_gain for predictable tuning convergence.
+ *
+ * D-max adds unpredictability: the actual D value varies between d_min and
+ * d_max based on stick input, making it harder for iterative tuning to converge.
+ * Community consensus (SupaflyFPV, UAV Tech) is to disable D-max for <=5" quads.
+ * For 6-7", opinions are mixed — some LR builds benefit from adaptive D.
+ *
  * FPVPIDlab adjusts the D value (d_max in BF terms); d_min is separate.
  */
-function applyDMinAdvisory(recommendations: PIDRecommendation[], dMin: DMinContext): void {
+function applyDMinAdvisory(
+  recommendations: PIDRecommendation[],
+  dMin: DMinContext,
+  droneSize?: DroneSize
+): void {
+  // Annotate existing D recommendations with D-min context
   for (const rec of recommendations) {
     if (!rec.setting.includes('_d')) continue;
 
@@ -904,6 +918,39 @@ function applyDMinAdvisory(recommendations: PIDRecommendation[], dMin: DMinConte
     if (dMinValue && dMinValue > 0) {
       rec.reason += ` Note: D-min is active on ${axis} (d_min=${dMinValue}). This change adjusts the maximum D value — D-min may also need adjustment for consistent feel.`;
     }
+  }
+
+  // Emit D-max disable recommendation (once, not per-axis)
+  const isLargeQuad = droneSize === '6"' || droneSize === '7"';
+  if (isLargeQuad) {
+    // For 6-7": informational only (mixed community opinion)
+    recommendations.push({
+      setting: 'simplified_dmax_gain',
+      currentValue: 1, // D-max is effectively active (d_min < d_max)
+      recommendedValue: 1, // informational — no change suggested
+      reason:
+        'D-max is active (d_min < d_max). For larger quads, some pilots keep D-max for ' +
+        'efficiency during cruise, while others disable it for predictable tuning. ' +
+        'Consider disabling (simplified_dmax_gain = 0) if your tune feels inconsistent.',
+      impact: 'stability',
+      confidence: 'low',
+      informational: true,
+      ruleId: 'P-DMAX-INFO',
+    });
+  } else {
+    // For <=5" and whoops: recommend disabling
+    recommendations.push({
+      setting: 'simplified_dmax_gain',
+      currentValue: 1, // D-max is effectively active
+      recommendedValue: 0,
+      reason:
+        'D-max is active (d_min < d_max), which makes the actual D value vary with stick input. ' +
+        'This adds unpredictability to tuning — each analysis flight sees different effective D. ' +
+        'Disabling D-max (simplified_dmax_gain = 0) gives consistent D for faster tune convergence.',
+      impact: 'stability',
+      confidence: 'low',
+      ruleId: 'P-DMAX-INFO',
+    });
   }
 }
 
@@ -962,6 +1009,64 @@ export function recommendItermRelaxCutoff(
     impact: 'both',
     confidence: 'medium',
     ruleId: 'P-IRELAX',
+  };
+}
+
+/**
+ * Extract dyn_idle_min_rpm from BBL raw headers.
+ * Returns undefined if the header is not present.
+ */
+export function extractDynIdleMinRpm(rawHeaders: Map<string, string>): number | undefined {
+  return parseIntOr(rawHeaders.get('dyn_idle_min_rpm'));
+}
+
+/**
+ * Extract rpm_filter_harmonics from BBL raw headers.
+ * Returns true when RPM filter is active (harmonics > 0).
+ */
+export function extractRpmFilterActive(rawHeaders: Map<string, string>): boolean {
+  const harmonics = parseIntOr(rawHeaders.get('rpm_filter_harmonics'));
+  return harmonics !== undefined && harmonics > 0;
+}
+
+/**
+ * Recommend dyn_idle_min_rpm based on drone size and RPM filter status.
+ *
+ * Dynamic idle maintains minimum motor RPM for:
+ * - Desync prevention on rapid throttle cuts
+ * - RPM filter accuracy at low throttle
+ * - Better prop wash recovery (motors always spinning)
+ *
+ * Only recommends when RPM filter is active and dyn_idle is disabled (0).
+ * Size-based: smaller quads need higher min RPM (higher KV, faster desync).
+ */
+export function recommendDynIdleMinRpm(
+  currentMinRpm: number | undefined,
+  rpmFilterActive: boolean,
+  droneSize?: DroneSize
+): PIDRecommendation | undefined {
+  if (currentMinRpm === undefined) return undefined;
+
+  // Only recommend when RPM filter is active — dynamic idle complements RPM filtering
+  if (!rpmFilterActive) return undefined;
+
+  // Only recommend when currently disabled
+  if (currentMinRpm !== 0) return undefined;
+
+  const range = droneSize ? DYN_IDLE_MIN_RPM_BY_SIZE[droneSize] : DYN_IDLE_MIN_RPM_DEFAULT;
+  const sizeLabel = droneSize ?? '5"';
+
+  return {
+    setting: 'dyn_idle_min_rpm',
+    currentValue: 0,
+    recommendedValue: range.typical,
+    reason:
+      `Dynamic idle is disabled but RPM filter is active. Setting dyn_idle_min_rpm to ${range.typical} ` +
+      `(typical for ${sizeLabel} builds, range ${range.min}-${range.max}) prevents motor desync on ` +
+      'throttle cuts and improves RPM filter accuracy at low throttle.',
+    impact: 'stability',
+    confidence: 'low',
+    ruleId: 'P-DYN-IDLE',
   };
 }
 

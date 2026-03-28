@@ -8,6 +8,9 @@ import {
   extractTPAContext,
   extractItermRelaxCutoff,
   recommendItermRelaxCutoff,
+  extractDynIdleMinRpm,
+  extractRpmFilterActive,
+  recommendDynIdleMinRpm,
 } from './PIDRecommender';
 import type { DMinContext, TPAContext } from './PIDRecommender';
 import type { TransferFunctionContext } from './PIDRecommender';
@@ -2202,5 +2205,251 @@ describe('recommendItermRelaxCutoff', () => {
     expect(rec).toBeDefined();
     expect(rec!.reason).toContain('cinematic');
     expect(rec!.reason).toContain('5-10');
+  });
+});
+
+// ---- Task 6: D-Max Gain Awareness ----
+
+describe('D-max gain awareness (P-DMAX-INFO)', () => {
+  it('should recommend disabling D-max for 5" quads when D-min is active', () => {
+    const overshootProfile = makeProfile({ meanOvershoot: 30 });
+    const pids: PIDConfiguration = {
+      roll: { P: 45, I: 80, D: 30 },
+      pitch: { P: 45, I: 80, D: 30 },
+      yaw: { P: 45, I: 80, D: 0 },
+    };
+    const dMin: DMinContext = { active: true, roll: 20, pitch: 20 };
+    const recs = recommendPID(
+      overshootProfile,
+      emptyProfile(),
+      emptyProfile(),
+      pids,
+      undefined,
+      undefined,
+      'balanced',
+      undefined,
+      undefined,
+      undefined,
+      '5"',
+      dMin
+    );
+    const dmaxRec = recs.find((r) => r.ruleId === 'P-DMAX-INFO');
+    expect(dmaxRec).toBeDefined();
+    expect(dmaxRec!.setting).toBe('simplified_dmax_gain');
+    expect(dmaxRec!.recommendedValue).toBe(0);
+    expect(dmaxRec!.confidence).toBe('low');
+    expect(dmaxRec!.reason).toContain('unpredictability');
+    expect(dmaxRec!.informational).toBeUndefined();
+  });
+
+  it('should recommend disabling D-max for whoop (1") quads', () => {
+    const goodProfile = makeProfile({ meanOvershoot: 5 });
+    const pids: PIDConfiguration = {
+      roll: { P: 80, I: 90, D: 50 },
+      pitch: { P: 80, I: 90, D: 50 },
+      yaw: { P: 45, I: 80, D: 0 },
+    };
+    const dMin: DMinContext = { active: true, roll: 30, pitch: 30 };
+    const recs = recommendPID(
+      goodProfile,
+      goodProfile,
+      emptyProfile(),
+      pids,
+      undefined,
+      undefined,
+      'balanced',
+      undefined,
+      undefined,
+      undefined,
+      '1"',
+      dMin
+    );
+    const dmaxRec = recs.find((r) => r.ruleId === 'P-DMAX-INFO');
+    expect(dmaxRec).toBeDefined();
+    expect(dmaxRec!.recommendedValue).toBe(0);
+  });
+
+  it('should emit informational-only for 7" quads (mixed community opinion)', () => {
+    const goodProfile = makeProfile({ meanOvershoot: 5 });
+    const pids: PIDConfiguration = {
+      roll: { P: 40, I: 80, D: 25 },
+      pitch: { P: 40, I: 80, D: 25 },
+      yaw: { P: 45, I: 80, D: 0 },
+    };
+    const dMin: DMinContext = { active: true, roll: 15, pitch: 15 };
+    const recs = recommendPID(
+      goodProfile,
+      goodProfile,
+      emptyProfile(),
+      pids,
+      undefined,
+      undefined,
+      'balanced',
+      undefined,
+      undefined,
+      undefined,
+      '7"',
+      dMin
+    );
+    const dmaxRec = recs.find((r) => r.ruleId === 'P-DMAX-INFO');
+    expect(dmaxRec).toBeDefined();
+    expect(dmaxRec!.informational).toBe(true);
+    expect(dmaxRec!.recommendedValue).toBe(1); // no change suggested
+    expect(dmaxRec!.reason).toContain('larger quads');
+  });
+
+  it('should emit informational-only for 6" quads', () => {
+    const goodProfile = makeProfile({ meanOvershoot: 5 });
+    const pids: PIDConfiguration = {
+      roll: { P: 42, I: 80, D: 28 },
+      pitch: { P: 42, I: 80, D: 28 },
+      yaw: { P: 45, I: 80, D: 0 },
+    };
+    const dMin: DMinContext = { active: true, roll: 18, pitch: 18 };
+    const recs = recommendPID(
+      goodProfile,
+      goodProfile,
+      emptyProfile(),
+      pids,
+      undefined,
+      undefined,
+      'balanced',
+      undefined,
+      undefined,
+      undefined,
+      '6"',
+      dMin
+    );
+    const dmaxRec = recs.find((r) => r.ruleId === 'P-DMAX-INFO');
+    expect(dmaxRec).toBeDefined();
+    expect(dmaxRec!.informational).toBe(true);
+  });
+
+  it('should not emit D-max recommendation when D-min is inactive', () => {
+    const goodProfile = makeProfile({ meanOvershoot: 5 });
+    const dMin: DMinContext = { active: false, roll: 0, pitch: 0 };
+    const recs = recommendPID(
+      goodProfile,
+      goodProfile,
+      emptyProfile(),
+      DEFAULT_PIDS,
+      undefined,
+      undefined,
+      'balanced',
+      undefined,
+      undefined,
+      undefined,
+      '5"',
+      dMin
+    );
+    const dmaxRec = recs.find((r) => r.ruleId === 'P-DMAX-INFO');
+    expect(dmaxRec).toBeUndefined();
+  });
+
+  it('should emit only one D-max recommendation (not per-axis)', () => {
+    const overshootProfile = makeProfile({ meanOvershoot: 30 });
+    const pids: PIDConfiguration = {
+      roll: { P: 45, I: 80, D: 30 },
+      pitch: { P: 45, I: 80, D: 30 },
+      yaw: { P: 45, I: 80, D: 0 },
+    };
+    const dMin: DMinContext = { active: true, roll: 20, pitch: 20 };
+    const recs = recommendPID(
+      overshootProfile,
+      overshootProfile,
+      emptyProfile(),
+      pids,
+      undefined,
+      undefined,
+      'balanced',
+      undefined,
+      undefined,
+      undefined,
+      '5"',
+      dMin
+    );
+    const dmaxRecs = recs.filter((r) => r.ruleId === 'P-DMAX-INFO');
+    expect(dmaxRecs.length).toBe(1);
+  });
+});
+
+// ---- Task 7: Dynamic Idle Min RPM Advisory ----
+
+describe('extractDynIdleMinRpm', () => {
+  it('should extract dyn_idle_min_rpm from headers', () => {
+    const headers = new Map([['dyn_idle_min_rpm', '25']]);
+    expect(extractDynIdleMinRpm(headers)).toBe(25);
+  });
+
+  it('should return undefined when header is missing', () => {
+    const headers = new Map<string, string>();
+    expect(extractDynIdleMinRpm(headers)).toBeUndefined();
+  });
+});
+
+describe('extractRpmFilterActive', () => {
+  it('should return true when rpm_filter_harmonics > 0', () => {
+    const headers = new Map([['rpm_filter_harmonics', '3']]);
+    expect(extractRpmFilterActive(headers)).toBe(true);
+  });
+
+  it('should return false when rpm_filter_harmonics is 0', () => {
+    const headers = new Map([['rpm_filter_harmonics', '0']]);
+    expect(extractRpmFilterActive(headers)).toBe(false);
+  });
+
+  it('should return false when header is missing', () => {
+    const headers = new Map<string, string>();
+    expect(extractRpmFilterActive(headers)).toBe(false);
+  });
+});
+
+describe('recommendDynIdleMinRpm', () => {
+  it('should recommend enabling when RPM filter active and dyn_idle is 0', () => {
+    const rec = recommendDynIdleMinRpm(0, true, '5"');
+    expect(rec).toBeDefined();
+    expect(rec!.setting).toBe('dyn_idle_min_rpm');
+    expect(rec!.recommendedValue).toBe(25); // 5" typical
+    expect(rec!.confidence).toBe('low');
+    expect(rec!.ruleId).toBe('P-DYN-IDLE');
+    expect(rec!.reason).toContain('RPM filter');
+  });
+
+  it('should recommend higher min RPM for small quads (1")', () => {
+    const rec = recommendDynIdleMinRpm(0, true, '1"');
+    expect(rec).toBeDefined();
+    expect(rec!.recommendedValue).toBe(50); // 1" typical
+  });
+
+  it('should recommend lower min RPM for large quads (7")', () => {
+    const rec = recommendDynIdleMinRpm(0, true, '7"');
+    expect(rec).toBeDefined();
+    expect(rec!.recommendedValue).toBe(20); // 7" typical
+  });
+
+  it('should use 5" default when drone size is unknown', () => {
+    const rec = recommendDynIdleMinRpm(0, true);
+    expect(rec).toBeDefined();
+    expect(rec!.recommendedValue).toBe(25); // 5" typical
+    expect(rec!.reason).toContain('5"');
+  });
+
+  it('should not recommend when dyn_idle is already enabled', () => {
+    expect(recommendDynIdleMinRpm(25, true, '5"')).toBeUndefined();
+  });
+
+  it('should not recommend when RPM filter is inactive', () => {
+    expect(recommendDynIdleMinRpm(0, false, '5"')).toBeUndefined();
+  });
+
+  it('should not recommend when current value is undefined', () => {
+    expect(recommendDynIdleMinRpm(undefined, true, '5"')).toBeUndefined();
+  });
+
+  it('should include size range in reason text', () => {
+    const rec = recommendDynIdleMinRpm(0, true, '3"');
+    expect(rec).toBeDefined();
+    expect(rec!.reason).toContain('40-60'); // 3" range
+    expect(rec!.recommendedValue).toBe(45); // 3" typical
   });
 });
