@@ -11,6 +11,9 @@ import {
   extractDynIdleMinRpm,
   extractRpmFilterActive,
   recommendDynIdleMinRpm,
+  extractPidsumLimits,
+  recommendPidsumLimits,
+  recommendFFMaxRateLimit,
 } from './PIDRecommender';
 import type { DMinContext, TPAContext } from './PIDRecommender';
 import type { TransferFunctionContext } from './PIDRecommender';
@@ -2451,5 +2454,127 @@ describe('recommendDynIdleMinRpm', () => {
     expect(rec).toBeDefined();
     expect(rec!.reason).toContain('40-60'); // 3" range
     expect(rec!.recommendedValue).toBe(45); // 3" typical
+  });
+});
+
+describe('extractPidsumLimits', () => {
+  it('should extract pidsum_limit and pidsum_limit_yaw from headers', () => {
+    const headers = new Map<string, string>();
+    headers.set('pidsum_limit', '500');
+    headers.set('pidsum_limit_yaw', '400');
+
+    const result = extractPidsumLimits(headers);
+    expect(result.pidsumLimit).toBe(500);
+    expect(result.pidsumLimitYaw).toBe(400);
+  });
+
+  it('should return undefined for missing headers', () => {
+    const headers = new Map<string, string>();
+    const result = extractPidsumLimits(headers);
+    expect(result.pidsumLimit).toBeUndefined();
+    expect(result.pidsumLimitYaw).toBeUndefined();
+  });
+
+  it('should handle partial headers', () => {
+    const headers = new Map<string, string>();
+    headers.set('pidsum_limit', '1000');
+
+    const result = extractPidsumLimits(headers);
+    expect(result.pidsumLimit).toBe(1000);
+    expect(result.pidsumLimitYaw).toBeUndefined();
+  });
+});
+
+describe('recommendPidsumLimits', () => {
+  it('should recommend both limits for heavy quads at defaults', () => {
+    const recs = recommendPidsumLimits(500, 400, 900);
+    expect(recs).toHaveLength(2);
+
+    const limitRec = recs.find((r) => r.setting === 'pidsum_limit');
+    expect(limitRec).toBeDefined();
+    expect(limitRec!.currentValue).toBe(500);
+    expect(limitRec!.recommendedValue).toBe(1000);
+    expect(limitRec!.confidence).toBe('low');
+    expect(limitRec!.informational).toBe(true);
+    expect(limitRec!.ruleId).toBe('P-PIDLIM');
+
+    const yawRec = recs.find((r) => r.setting === 'pidsum_limit_yaw');
+    expect(yawRec).toBeDefined();
+    expect(yawRec!.currentValue).toBe(400);
+    expect(yawRec!.recommendedValue).toBe(1000);
+  });
+
+  it('should not recommend for light quads (<= 800g)', () => {
+    const recs = recommendPidsumLimits(500, 400, 650);
+    expect(recs).toHaveLength(0);
+  });
+
+  it('should not recommend when weight is exactly 800g (boundary)', () => {
+    const recs = recommendPidsumLimits(500, 400, 800);
+    expect(recs).toHaveLength(0);
+  });
+
+  it('should not recommend when limits are already changed from defaults', () => {
+    const recs = recommendPidsumLimits(1000, 1000, 900);
+    expect(recs).toHaveLength(0);
+  });
+
+  it('should not recommend when weight is undefined', () => {
+    const recs = recommendPidsumLimits(500, 400, undefined);
+    expect(recs).toHaveLength(0);
+  });
+
+  it('should only recommend pidsum_limit when yaw is already changed', () => {
+    const recs = recommendPidsumLimits(500, 1000, 900);
+    expect(recs).toHaveLength(1);
+    expect(recs[0].setting).toBe('pidsum_limit');
+  });
+
+  it('should only recommend pidsum_limit_yaw when limit is already changed', () => {
+    const recs = recommendPidsumLimits(1000, 400, 900);
+    expect(recs).toHaveLength(1);
+    expect(recs[0].setting).toBe('pidsum_limit_yaw');
+  });
+
+  it('should handle undefined header values gracefully', () => {
+    const recs = recommendPidsumLimits(undefined, undefined, 900);
+    expect(recs).toHaveLength(0);
+  });
+
+  it('should include weight in reason text', () => {
+    const recs = recommendPidsumLimits(500, 400, 1200);
+    expect(recs[0].reason).toContain('1200g');
+  });
+});
+
+describe('recommendFFMaxRateLimit', () => {
+  it('should recommend 100 for aggressive style at default 90', () => {
+    const rec = recommendFFMaxRateLimit(90, 'aggressive');
+    expect(rec).toBeDefined();
+    expect(rec!.setting).toBe('feedforward_max_rate_limit');
+    expect(rec!.currentValue).toBe(90);
+    expect(rec!.recommendedValue).toBe(100);
+    expect(rec!.confidence).toBe('low');
+    expect(rec!.informational).toBe(true);
+    expect(rec!.ruleId).toBe('P-FF-RATELIM');
+    expect(rec!.reason).toContain('aggressive');
+    expect(rec!.reason).toContain('Karate');
+  });
+
+  it('should not recommend for balanced style', () => {
+    expect(recommendFFMaxRateLimit(90, 'balanced')).toBeUndefined();
+  });
+
+  it('should not recommend for smooth style', () => {
+    expect(recommendFFMaxRateLimit(90, 'smooth')).toBeUndefined();
+  });
+
+  it('should not recommend when already changed from default', () => {
+    expect(recommendFFMaxRateLimit(95, 'aggressive')).toBeUndefined();
+    expect(recommendFFMaxRateLimit(100, 'aggressive')).toBeUndefined();
+  });
+
+  it('should not recommend when value is undefined', () => {
+    expect(recommendFFMaxRateLimit(undefined, 'aggressive')).toBeUndefined();
   });
 });

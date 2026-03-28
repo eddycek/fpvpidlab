@@ -26,6 +26,13 @@ import {
   ITERM_RELAX_DEVIATION_THRESHOLD,
   DYN_IDLE_MIN_RPM_BY_SIZE,
   DYN_IDLE_MIN_RPM_DEFAULT,
+  PIDSUM_LIMIT_DEFAULT,
+  PIDSUM_LIMIT_YAW_DEFAULT,
+  PIDSUM_LIMIT_RECOMMENDED,
+  PIDSUM_LIMIT_YAW_RECOMMENDED,
+  PIDSUM_LIMIT_WEIGHT_THRESHOLD_G,
+  FF_MAX_RATE_LIMIT_DEFAULT,
+  FF_MAX_RATE_LIMIT_RACE_RECOMMENDED,
   type QuadSizeBounds,
 } from './constants';
 
@@ -1067,6 +1074,101 @@ export function recommendDynIdleMinRpm(
     impact: 'stability',
     confidence: 'low',
     ruleId: 'P-DYN-IDLE',
+  };
+}
+
+/**
+ * Extract pidsum_limit and pidsum_limit_yaw from BBL raw headers.
+ * Returns undefined values if headers are not present.
+ */
+export function extractPidsumLimits(rawHeaders: Map<string, string>): {
+  pidsumLimit?: number;
+  pidsumLimitYaw?: number;
+} {
+  return {
+    pidsumLimit: parseIntOr(rawHeaders.get('pidsum_limit')),
+    pidsumLimitYaw: parseIntOr(rawHeaders.get('pidsum_limit_yaw')),
+  };
+}
+
+/**
+ * Recommend increasing pidsum_limit and pidsum_limit_yaw for heavy/powerful quads.
+ *
+ * Only recommends when drone weight > 800g and current limits are at BF defaults
+ * (500/400). Higher limits give full PID authority on heavy builds.
+ *
+ * Returns 0-2 informational recommendations.
+ */
+export function recommendPidsumLimits(
+  pidsumLimit: number | undefined,
+  pidsumLimitYaw: number | undefined,
+  droneWeightG: number | undefined
+): PIDRecommendation[] {
+  const recs: PIDRecommendation[] = [];
+
+  if (droneWeightG === undefined || droneWeightG <= PIDSUM_LIMIT_WEIGHT_THRESHOLD_G) return recs;
+
+  if (pidsumLimit !== undefined && pidsumLimit === PIDSUM_LIMIT_DEFAULT) {
+    recs.push({
+      setting: 'pidsum_limit',
+      currentValue: pidsumLimit,
+      recommendedValue: PIDSUM_LIMIT_RECOMMENDED,
+      reason:
+        `PID sum limit is at the default ${PIDSUM_LIMIT_DEFAULT} but your quad weighs ${droneWeightG}g. ` +
+        `Increasing to ${PIDSUM_LIMIT_RECOMMENDED} gives the PID controller full authority for heavy/powerful builds, ` +
+        'preventing output clipping during aggressive corrections.',
+      impact: 'response',
+      confidence: 'low',
+      informational: true,
+      ruleId: 'P-PIDLIM',
+    });
+  }
+
+  if (pidsumLimitYaw !== undefined && pidsumLimitYaw === PIDSUM_LIMIT_YAW_DEFAULT) {
+    recs.push({
+      setting: 'pidsum_limit_yaw',
+      currentValue: pidsumLimitYaw,
+      recommendedValue: PIDSUM_LIMIT_YAW_RECOMMENDED,
+      reason:
+        `Yaw PID sum limit is at the default ${PIDSUM_LIMIT_YAW_DEFAULT} but your quad weighs ${droneWeightG}g. ` +
+        `Increasing to ${PIDSUM_LIMIT_YAW_RECOMMENDED} prevents yaw authority clipping on heavy builds.`,
+      impact: 'response',
+      confidence: 'low',
+      informational: true,
+      ruleId: 'P-PIDLIM',
+    });
+  }
+
+  return recs;
+}
+
+/**
+ * Recommend feedforward_max_rate_limit for racing builds.
+ *
+ * Racing builds benefit from higher FF rate limit (95-100) for maximum
+ * stick response fidelity. Only recommends when current is at default 90
+ * and flight style is aggressive.
+ */
+export function recommendFFMaxRateLimit(
+  currentMaxRateLimit: number | undefined,
+  flightStyle: FlightStyle
+): PIDRecommendation | undefined {
+  if (currentMaxRateLimit === undefined) return undefined;
+  if (flightStyle !== 'aggressive') return undefined;
+  if (currentMaxRateLimit !== FF_MAX_RATE_LIMIT_DEFAULT) return undefined;
+
+  return {
+    setting: 'feedforward_max_rate_limit',
+    currentValue: currentMaxRateLimit,
+    recommendedValue: FF_MAX_RATE_LIMIT_RACE_RECOMMENDED,
+    reason:
+      `Feedforward max rate limit is at the default ${FF_MAX_RATE_LIMIT_DEFAULT} but your flight style is aggressive. ` +
+      `Racing builds benefit from ${FF_MAX_RATE_LIMIT_RACE_RECOMMENDED} for maximum stick response fidelity ` +
+      'at high stick rates (used by Karate, ctzsnooze, AOS race presets).',
+    impact: 'response',
+    confidence: 'low',
+    informational: true,
+    ruleId: 'P-FF-RATELIM',
   };
 }
 

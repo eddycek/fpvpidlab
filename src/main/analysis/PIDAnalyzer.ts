@@ -42,6 +42,9 @@ import {
   extractDynIdleMinRpm,
   extractRpmFilterActive,
   recommendDynIdleMinRpm,
+  extractPidsumLimits,
+  recommendPidsumLimits,
+  recommendFFMaxRateLimit,
 } from './PIDRecommender';
 import type { TransferFunctionContext } from './PIDRecommender';
 import {
@@ -281,6 +284,7 @@ interface CoreParams {
   rawHeaders?: Map<string, string>;
   flightStyle: FlightStyle;
   droneSize?: DroneSize;
+  droneWeight?: number;
   historyObservations?: PIDObservation[];
   onProgress?: (progress: AnalysisProgress) => void;
   startTime: number;
@@ -296,6 +300,7 @@ async function analyzePIDCore(params: CoreParams): Promise<PIDAnalysisResult> {
     rawHeaders,
     flightStyle,
     droneSize,
+    droneWeight,
     historyObservations,
     onProgress,
     startTime,
@@ -385,6 +390,20 @@ async function analyzePIDCore(params: CoreParams): Promise<PIDAnalysisResult> {
     if (dynIdleRec) {
       rawRecommendations.push(dynIdleRec);
     }
+  }
+
+  // PID sum limit recommendation (weight-based advisory)
+  if (rawHeaders) {
+    const { pidsumLimit, pidsumLimitYaw } = extractPidsumLimits(rawHeaders);
+    const pidsumRecs = recommendPidsumLimits(pidsumLimit, pidsumLimitYaw, droneWeight);
+    rawRecommendations.push(...pidsumRecs);
+  }
+
+  // Feedforward max rate limit recommendation (racing advisory)
+  const ffMaxRateLimit = feedforwardContext?.maxRateLimit;
+  const ffMaxRateLimitRec = recommendFFMaxRateLimit(ffMaxRateLimit, flightStyle);
+  if (ffMaxRateLimitRec) {
+    rawRecommendations.push(ffMaxRateLimitRec);
   }
 
   // Quality-adjusted confidence — no blanket cap, gating handles it
@@ -490,7 +509,8 @@ export async function analyzePID(
   rawHeaders?: Map<string, string>,
   flightStyle: FlightStyle = 'balanced',
   historyObservations?: PIDObservation[],
-  droneSize?: DroneSize
+  droneSize?: DroneSize,
+  droneWeight?: number
 ): Promise<PIDAnalysisResult> {
   const startTime = performance.now();
   const extracted = await extractViaStepResponse(flightData, onProgress);
@@ -503,6 +523,7 @@ export async function analyzePID(
     rawHeaders,
     flightStyle,
     droneSize,
+    droneWeight,
     historyObservations,
     onProgress,
     startTime,
@@ -524,7 +545,8 @@ export async function analyzeTransferFunction(
   rawHeaders?: Map<string, string>,
   flightStyle: FlightStyle = 'balanced',
   historyObservations?: PIDObservation[],
-  droneSize?: DroneSize
+  droneSize?: DroneSize,
+  droneWeight?: number
 ): Promise<PIDAnalysisResult & { transferFunction: TransferFunctionResult }> {
   const startTime = performance.now();
   const extracted = await extractViaWiener(flightData, onProgress);
@@ -537,6 +559,7 @@ export async function analyzeTransferFunction(
     rawHeaders,
     flightStyle,
     droneSize,
+    droneWeight,
     historyObservations,
     onProgress,
     startTime,

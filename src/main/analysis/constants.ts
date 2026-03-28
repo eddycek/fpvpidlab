@@ -581,3 +581,32 @@ export const DTERM_DYN_EXPO_BY_STYLE: Record<FlightStyle, { min: number; max: nu
 
 /** BF default dterm_lpf1_dyn_expo */
 export const DTERM_DYN_EXPO_DEFAULT = 5;
+
+// ---- PID Sum Limit Advisory ----
+// Source: docs/PID_TUNING_KNOWLEDGE.md Section 10
+// UAV Tech universally sets both to 1000. Karate Race: yaw limit 1000.
+
+/** BF default pidsum_limit (maximum combined PID output per axis) */
+export const PIDSUM_LIMIT_DEFAULT = 500;
+
+/** BF default pidsum_limit_yaw */
+export const PIDSUM_LIMIT_YAW_DEFAULT = 400;
+
+/** Recommended pidsum_limit for heavy/powerful builds */
+export const PIDSUM_LIMIT_RECOMMENDED = 1000;
+
+/** Recommended pidsum_limit_yaw for heavy/powerful builds */
+export const PIDSUM_LIMIT_YAW_RECOMMENDED = 1000;
+
+/** Drone weight threshold (grams AUW) above which higher pidsum_limit is recommended */
+export const PIDSUM_LIMIT_WEIGHT_THRESHOLD_G = 800;
+
+// ---- Feedforward Max Rate Limit Advisory ----
+// Source: docs/PRESET_GAP_ANALYSIS.md Task 11 (community preset analysis)
+// Karate Race: 100, ctzsnooze/AOS: 95. Default: 90.
+
+/** BF default feedforward_max_rate_limit */
+export const FF_MAX_RATE_LIMIT_DEFAULT = 90;
+
+/** Recommended feedforward_max_rate_limit for racing */
+export const FF_MAX_RATE_LIMIT_RACE_RECOMMENDED = 100;

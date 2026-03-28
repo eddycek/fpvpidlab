@@ -226,9 +226,10 @@ export function registerAnalysisHandlers(deps: HandlerDependencies): void {
         // Extract flight-time PIDs from BBL header for convergent recommendations
         const flightPIDs = extractFlightPIDs(session.header.rawHeaders);
 
-        // Read flight style and drone size from current profile
+        // Read flight style, drone size, and weight from current profile
         let flightStyle: 'smooth' | 'balanced' | 'aggressive' = 'balanced';
         let droneSize: import('@shared/types/profile.types').DroneSize | undefined;
+        let droneWeight: number | undefined;
         if (deps.profileManager) {
           try {
             const currentProfile = await deps.profileManager.getCurrentProfile();
@@ -237,6 +238,9 @@ export function registerAnalysisHandlers(deps: HandlerDependencies): void {
             }
             if (currentProfile?.size) {
               droneSize = currentProfile.size;
+            }
+            if (currentProfile?.weight) {
+              droneWeight = currentProfile.weight;
             }
           } catch {
             // Fall back to balanced
@@ -255,7 +259,8 @@ export function registerAnalysisHandlers(deps: HandlerDependencies): void {
           session.header.rawHeaders,
           flightStyle,
           undefined,
-          droneSize
+          droneSize,
+          droneWeight
         );
 
         // Attach header warnings to the result
@@ -341,6 +346,7 @@ export function registerAnalysisHandlers(deps: HandlerDependencies): void {
 
         let flightStyle: 'smooth' | 'balanced' | 'aggressive' = 'balanced';
         let droneSize: import('@shared/types/profile.types').DroneSize | undefined;
+        let droneWeight: number | undefined;
         if (deps.profileManager) {
           try {
             const currentProfile = await deps.profileManager.getCurrentProfile();
@@ -349,6 +355,9 @@ export function registerAnalysisHandlers(deps: HandlerDependencies): void {
             }
             if (currentProfile?.size) {
               droneSize = currentProfile.size;
+            }
+            if (currentProfile?.weight) {
+              droneWeight = currentProfile.weight;
             }
           } catch {
             // Fall back to balanced
@@ -366,7 +375,8 @@ export function registerAnalysisHandlers(deps: HandlerDependencies): void {
           session.header.rawHeaders,
           flightStyle,
           undefined,
-          droneSize
+          droneSize,
+          droneWeight
         );
 
         logger.info(

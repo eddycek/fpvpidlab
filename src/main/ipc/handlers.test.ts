@@ -1164,8 +1164,9 @@ describe('IPC Handlers', () => {
         null, // flightPIDs
         expect.anything(), // rawHeaders
         'aggressive', // flightStyle
-        undefined, // dTermEffectiveness
-        undefined // droneSize (mock profile has no size)
+        undefined, // historyObservations
+        undefined, // droneSize (mock profile has no size)
+        undefined // droneWeight (mock profile has no weight)
       );
     });
 
