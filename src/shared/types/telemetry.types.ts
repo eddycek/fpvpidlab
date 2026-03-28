@@ -58,6 +58,8 @@ export interface TelemetryBundle {
     fcSerialHashes: string[];
     /** Unique board targets */
     boardTargets: string[];
+    /** Unique rate types seen (BETAFLIGHT, ACTUAL, QUICK, etc.) */
+    ratesTypes: string[];
   };
 
   /** Blackbox usage */
@@ -104,6 +106,14 @@ export interface TelemetrySessionRecord {
     applied: boolean;
     delta: number;
   }>;
+
+  /** RC rates configuration snapshot (full config for correlation analysis) */
+  rates?: {
+    type: string;
+    roll: { rcRate: number; rate: number; expo: number; rateLimit: number };
+    pitch: { rcRate: number; rate: number; expo: number; rateLimit: number };
+    yaw: { rcRate: number; rate: number; expo: number; rateLimit: number };
+  };
 
   /** Key metrics (NO absolute PID/filter values — only noise/response metrics) */
   metrics: {

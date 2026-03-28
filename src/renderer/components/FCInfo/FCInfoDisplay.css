@@ -191,3 +191,45 @@
   color: #e0e0e0;
   font-weight: 500;
 }
+
+/* Rates configuration section */
+.fc-rates-section {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.fc-rates-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: #e0e0e0;
+  margin: 0 0 8px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.fc-rates-type {
+  font-size: 12px;
+  font-weight: 600;
+  color: #60a5fa;
+  background: rgba(96, 165, 250, 0.12);
+  padding: 1px 8px;
+  border-radius: 10px;
+}
+
+.fc-rates-grid {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 12px;
+  font-size: 13px;
+}
+
+.fc-rates-label {
+  color: #999;
+}
+
+.fc-rates-value {
+  color: #e0e0e0;
+  font-weight: 500;
+}

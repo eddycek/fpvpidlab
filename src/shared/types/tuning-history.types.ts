@@ -5,7 +5,7 @@
  */
 
 import type { AppliedChange, TuningType } from './tuning.types';
-import type { PIDConfiguration } from './pid.types';
+import type { PIDConfiguration, RatesConfiguration } from './pid.types';
 
 /** Downsampled power spectrum safe for JSON serialization (128 bins) */
 export interface CompactSpectrum {
@@ -224,4 +224,7 @@ export interface CompletedTuningRecord {
 
   /** Overall tune quality score (0-100) */
   qualityScore?: number;
+
+  /** RC rates configuration at time of tuning (for telemetry correlation) */
+  ratesConfig?: RatesConfiguration;
 }

@@ -17,6 +17,25 @@ export interface PIDConfiguration {
   yaw: PIDTerm;
 }
 
+/** Rate type as reported by Betaflight (MSP_RC_TUNING byte 22, BF 4.3+) */
+export type RatesType = 'BETAFLIGHT' | 'RACEFLIGHT' | 'KISS' | 'ACTUAL' | 'QUICK';
+
+/** Per-axis rate values */
+export interface AxisRates {
+  rcRate: number;
+  rate: number;
+  rcExpo: number;
+  rateLimit: number;
+}
+
+/** RC rates configuration from MSP_RC_TUNING (BF 4.3+, API 1.44+) */
+export interface RatesConfiguration {
+  ratesType: RatesType;
+  roll: AxisRates;
+  pitch: AxisRates;
+  yaw: AxisRates;
+}
+
 /** Feedforward configuration from MSP_PID_ADVANCED (BF 4.3+, API 1.44+) */
 export interface FeedforwardConfiguration {
   /** Center-stick FF attenuation (0-100) */

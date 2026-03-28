@@ -13,7 +13,11 @@ import type {
   ProfileCreationInput,
   ProfileUpdateInput,
 } from '@shared/types/profile.types';
-import type { PIDConfiguration, FeedforwardConfiguration } from '@shared/types/pid.types';
+import type {
+  PIDConfiguration,
+  FeedforwardConfiguration,
+  RatesConfiguration,
+} from '@shared/types/pid.types';
 import type {
   BlackboxInfo,
   BlackboxLogMetadata,
@@ -131,6 +135,14 @@ const betaflightAPI: BetaflightAPI = {
     const response = await ipcRenderer.invoke(IPCChannel.FC_GET_FEEDFORWARD_CONFIG);
     if (!response.success) {
       throw new Error(response.error || 'Failed to get feedforward configuration');
+    }
+    return response.data;
+  },
+
+  async getRatesConfig(): Promise<RatesConfiguration> {
+    const response = await ipcRenderer.invoke(IPCChannel.FC_GET_RATES_CONFIG);
+    if (!response.success) {
+      throw new Error(response.error || 'Failed to get rates configuration');
     }
     return response.data;
   },

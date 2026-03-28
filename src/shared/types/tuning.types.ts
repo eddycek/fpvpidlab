@@ -15,6 +15,7 @@ import type {
   RecommendationTrace,
   TransferFunctionMetricsSummary,
 } from './tuning-history.types';
+import type { RatesConfiguration } from './pid.types';
 
 /** Which analysis mode the wizard is operating in */
 export type TuningMode = 'filter' | 'pid' | 'full' | 'flash';
@@ -136,4 +137,7 @@ export interface TuningSession {
 
   /** Per-recommendation metadata for telemetry tracking */
   recommendationTraces?: RecommendationTrace[];
+
+  /** RC rates configuration at time of tuning (for telemetry) */
+  ratesConfig?: RatesConfiguration;
 }

@@ -5,7 +5,7 @@ import { useDemoMode } from '../../hooks/useDemoMode';
 import { computeBBSettingsStatus } from '../../utils/bbSettingsUtils';
 import { FixSettingsConfirmModal } from './FixSettingsConfirmModal';
 import type { BlackboxSettings } from '@shared/types/blackbox.types';
-import type { FeedforwardConfiguration } from '@shared/types/pid.types';
+import type { FeedforwardConfiguration, RatesConfiguration } from '@shared/types/pid.types';
 import './FCInfoDisplay.css';
 
 export function FCInfoDisplay() {
@@ -15,6 +15,7 @@ export function FCInfoDisplay() {
   const [bbSettings, setBbSettings] = useState<BlackboxSettings | null>(null);
   const [bbLoading, setBbLoading] = useState(false);
   const [ffConfig, setFfConfig] = useState<FeedforwardConfiguration | null>(null);
+  const [ratesConfig, setRatesConfig] = useState<RatesConfiguration | null>(null);
   const [fixing, setFixing] = useState(false);
   const [showFixConfirm, setShowFixConfirm] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
@@ -40,9 +41,15 @@ export function FCInfoDisplay() {
         .getFeedforwardConfig()
         .then((config) => setFfConfig(config))
         .catch(() => setFfConfig(null));
+
+      window.betaflight
+        .getRatesConfig()
+        .then((config) => setRatesConfig(config))
+        .catch(() => setRatesConfig(null));
     } else {
       setBbSettings(null);
       setFfConfig(null);
+      setRatesConfig(null);
     }
   }, [status.connected]);
 
@@ -199,6 +206,33 @@ export function FCInfoDisplay() {
                 <span className="fc-ff-value">{ffConfig.transition}</span>
                 <span className="fc-ff-label">Max Rate Limit:</span>
                 <span className="fc-ff-value">{ffConfig.maxRateLimit}</span>
+              </div>
+            </div>
+          )}
+
+          {ratesConfig && (
+            <div className="fc-rates-section">
+              <h3 className="fc-rates-title">
+                Rates <span className="fc-rates-type">{ratesConfig.ratesType}</span>
+              </h3>
+              <div className="fc-rates-grid">
+                <span className="fc-rates-label">RC Rate (R/P/Y):</span>
+                <span className="fc-rates-value">
+                  {ratesConfig.roll.rcRate} / {ratesConfig.pitch.rcRate} / {ratesConfig.yaw.rcRate}
+                </span>
+                <span className="fc-rates-label">Rate (R/P/Y):</span>
+                <span className="fc-rates-value">
+                  {ratesConfig.roll.rate} / {ratesConfig.pitch.rate} / {ratesConfig.yaw.rate}
+                </span>
+                <span className="fc-rates-label">Expo (R/P/Y):</span>
+                <span className="fc-rates-value">
+                  {ratesConfig.roll.rcExpo} / {ratesConfig.pitch.rcExpo} / {ratesConfig.yaw.rcExpo}
+                </span>
+                <span className="fc-rates-label">Rate Limit (R/P/Y):</span>
+                <span className="fc-rates-value">
+                  {ratesConfig.roll.rateLimit} / {ratesConfig.pitch.rateLimit} /{' '}
+                  {ratesConfig.yaw.rateLimit}
+                </span>
               </div>
             </div>
           )}

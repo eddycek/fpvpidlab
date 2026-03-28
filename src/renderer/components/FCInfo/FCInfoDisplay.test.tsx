@@ -51,6 +51,9 @@ describe('FCInfoDisplay', () => {
 
     // Default: FF config not available (most tests don't need it)
     vi.mocked(window.betaflight.getFeedforwardConfig).mockRejectedValue(new Error('Not connected'));
+
+    // Default: Rates config not available (most tests don't need it)
+    vi.mocked(window.betaflight.getRatesConfig).mockRejectedValue(new Error('Not connected'));
   });
 
   it('renders nothing when not connected', () => {
@@ -610,5 +613,73 @@ describe('FCInfoDisplay', () => {
     const resetBtn = screen.getByText('Reset');
     expect(resetBtn).toBeDisabled();
     expect(resetBtn.title).toBe('Not available in demo mode');
+  });
+
+  // Rates configuration tests
+
+  it('displays rates section when rates config available', async () => {
+    vi.mocked(window.betaflight.getRatesConfig).mockResolvedValue({
+      ratesType: 'ACTUAL',
+      roll: { rcRate: 15, rate: 200, rcExpo: 56, rateLimit: 1998 },
+      pitch: { rcRate: 15, rate: 200, rcExpo: 56, rateLimit: 1998 },
+      yaw: { rcRate: 12, rate: 150, rcExpo: 32, rateLimit: 1998 },
+    });
+
+    render(<FCInfoDisplay />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Rates')).toBeInTheDocument();
+      expect(screen.getByText('ACTUAL')).toBeInTheDocument();
+      expect(screen.getByText('RC Rate (R/P/Y):')).toBeInTheDocument();
+      expect(screen.getByText('15 / 15 / 12')).toBeInTheDocument();
+      expect(screen.getByText('Rate (R/P/Y):')).toBeInTheDocument();
+      expect(screen.getByText('200 / 200 / 150')).toBeInTheDocument();
+      expect(screen.getByText('Expo (R/P/Y):')).toBeInTheDocument();
+      expect(screen.getByText('56 / 56 / 32')).toBeInTheDocument();
+      expect(screen.getByText('Rate Limit (R/P/Y):')).toBeInTheDocument();
+      expect(screen.getByText('1998 / 1998 / 1998')).toBeInTheDocument();
+    });
+  });
+
+  it('hides rates section when rates config fetch fails', async () => {
+    vi.mocked(window.betaflight.getRatesConfig).mockRejectedValue(new Error('Not supported'));
+
+    render(<FCInfoDisplay />);
+
+    await waitFor(() => {
+      expect(screen.getByText('BTFL')).toBeInTheDocument();
+    });
+
+    expect(screen.queryByText('Rates')).not.toBeInTheDocument();
+  });
+
+  it('calls getRatesConfig on mount when connected', async () => {
+    vi.mocked(window.betaflight.getRatesConfig).mockResolvedValue({
+      ratesType: 'BETAFLIGHT',
+      roll: { rcRate: 100, rate: 70, rcExpo: 0, rateLimit: 1998 },
+      pitch: { rcRate: 100, rate: 70, rcExpo: 0, rateLimit: 1998 },
+      yaw: { rcRate: 100, rate: 70, rcExpo: 0, rateLimit: 1998 },
+    });
+
+    render(<FCInfoDisplay />);
+
+    await waitFor(() => {
+      expect(window.betaflight.getRatesConfig).toHaveBeenCalled();
+    });
+  });
+
+  it('displays correct rates type badge', async () => {
+    vi.mocked(window.betaflight.getRatesConfig).mockResolvedValue({
+      ratesType: 'QUICK',
+      roll: { rcRate: 180, rate: 80, rcExpo: 50, rateLimit: 1998 },
+      pitch: { rcRate: 180, rate: 80, rcExpo: 50, rateLimit: 1998 },
+      yaw: { rcRate: 150, rate: 60, rcExpo: 30, rateLimit: 1998 },
+    });
+
+    render(<FCInfoDisplay />);
+
+    await waitFor(() => {
+      expect(screen.getByText('QUICK')).toBeInTheDocument();
+    });
   });
 });

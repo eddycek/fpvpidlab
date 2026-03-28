@@ -11,7 +11,7 @@ import type {
   ProfileCreationInput,
   ProfileUpdateInput,
 } from './profile.types';
-import type { PIDConfiguration, FeedforwardConfiguration } from './pid.types';
+import type { PIDConfiguration, FeedforwardConfiguration, RatesConfiguration } from './pid.types';
 import type {
   BlackboxInfo,
   BlackboxLogMetadata,
@@ -104,6 +104,7 @@ export enum IPCChannel {
   FC_EXPORT_CLI = 'fc:export-cli',
   FC_GET_BLACKBOX_SETTINGS = 'fc:get-blackbox-settings',
   FC_GET_FEEDFORWARD_CONFIG = 'fc:get-feedforward-config',
+  FC_GET_RATES_CONFIG = 'fc:get-rates-config',
   FC_FIX_BLACKBOX_SETTINGS = 'fc:fix-blackbox-settings',
   FC_SELECT_PID_PROFILE = 'fc:select-pid-profile',
 
@@ -223,6 +224,7 @@ export interface BetaflightAPI {
   exportCLI(format: 'diff' | 'dump'): Promise<string>;
   getBlackboxSettings(): Promise<BlackboxSettings>;
   getFeedforwardConfig(): Promise<FeedforwardConfiguration>;
+  getRatesConfig(): Promise<RatesConfiguration>;
   fixBlackboxSettings(input: FixBlackboxSettingsInput): Promise<FixBlackboxSettingsResult>;
   selectPidProfile(index: number): Promise<void>;
 

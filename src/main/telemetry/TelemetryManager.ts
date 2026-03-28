@@ -133,7 +133,7 @@ export class TelemetryManager {
         byMode: { filter: 0, pid: 0, flash: 0 },
         recentQualityScores: [],
       },
-      fcInfo: { bfVersions: [], fcSerialHashes: [], boardTargets: [] },
+      fcInfo: { bfVersions: [], fcSerialHashes: [], boardTargets: [], ratesTypes: [] },
       blackbox: { totalLogsDownloaded: 0, storageTypes: [], compressionDetected: false },
       features: {
         analysisOverviewUsed: false,
@@ -180,6 +180,20 @@ export class TelemetryManager {
         bundle.fcInfo.bfVersions = [...versions];
         bundle.fcInfo.boardTargets = [...targets];
         bundle.fcInfo.fcSerialHashes = [...serialHashes];
+
+        // Collect unique rates types from tuning history
+        if (this.tuningHistoryManager) {
+          const ratesTypesSet = new Set<string>();
+          for (const meta of profiles) {
+            const history = await this.tuningHistoryManager.getHistory(meta.id);
+            for (const record of history) {
+              if (record.ratesConfig?.ratesType) {
+                ratesTypesSet.add(record.ratesConfig.ratesType);
+              }
+            }
+          }
+          bundle.fcInfo.ratesTypes = [...ratesTypesSet];
+        }
       } catch (err) {
         logger.warn('Telemetry: failed to collect profile data:', err);
       }
@@ -444,6 +458,33 @@ export class TelemetryManager {
     // Session ID for event correlation (may not exist on older records)
     const sessionId = (record as any).sessionId as string | undefined;
 
+    // RC rates configuration (may not exist on older records)
+    let rates: TelemetrySessionRecord['rates'] | undefined;
+    if (record.ratesConfig) {
+      const rc = record.ratesConfig;
+      rates = {
+        type: rc.ratesType,
+        roll: {
+          rcRate: rc.roll.rcRate,
+          rate: rc.roll.rate,
+          expo: rc.roll.rcExpo,
+          rateLimit: rc.roll.rateLimit,
+        },
+        pitch: {
+          rcRate: rc.pitch.rcRate,
+          rate: rc.pitch.rate,
+          expo: rc.pitch.rcExpo,
+          rateLimit: rc.pitch.rateLimit,
+        },
+        yaw: {
+          rcRate: rc.yaw.rcRate,
+          rate: rc.yaw.rate,
+          expo: rc.yaw.rcExpo,
+          rateLimit: rc.yaw.rateLimit,
+        },
+      };
+    }
+
     return {
       sessionId,
       mode,
@@ -457,6 +498,7 @@ export class TelemetryManager {
       metrics,
       verification,
       qualityScore,
+      rates,
     };
   }
 

@@ -335,6 +335,16 @@ export function registerTuningHandlers(deps: HandlerDependencies): void {
           }
         }
 
+        // Read current RC rates config for telemetry correlation
+        let ratesConfig: TuningSession['ratesConfig'];
+        if (mspClient?.isConnected()) {
+          try {
+            ratesConfig = await mspClient.getRatesConfiguration();
+          } catch (e) {
+            logger.warn('Could not read rates configuration:', e);
+          }
+        }
+
         const session = await tuningSessionManager.createSession(profileId, resolvedType);
         const initialPhase =
           resolvedType === TUNING_TYPE.FLASH
@@ -345,6 +355,7 @@ export function registerTuningHandlers(deps: HandlerDependencies): void {
         const phaseData: Partial<TuningSession> = {};
         if (baselineSnapshotId) phaseData.baselineSnapshotId = baselineSnapshotId;
         if (bfPidProfileIndex !== undefined) phaseData.bfPidProfileIndex = bfPidProfileIndex;
+        if (ratesConfig) phaseData.ratesConfig = ratesConfig;
         if (Object.keys(phaseData).length > 0) {
           await tuningSessionManager.updatePhase(profileId, initialPhase, phaseData);
         }

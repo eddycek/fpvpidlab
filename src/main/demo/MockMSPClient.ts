@@ -7,7 +7,11 @@
 
 import { EventEmitter } from 'events';
 import type { PortInfo, FCInfo, ConnectionStatus } from '@shared/types/common.types';
-import type { PIDConfiguration, FeedforwardConfiguration } from '@shared/types/pid.types';
+import type {
+  PIDConfiguration,
+  FeedforwardConfiguration,
+  RatesConfiguration,
+} from '@shared/types/pid.types';
 import type { CurrentFilterSettings } from '@shared/types/analysis.types';
 import type { BlackboxInfo } from '@shared/types/blackbox.types';
 import {
@@ -538,6 +542,15 @@ export class MockMSPClient extends EventEmitter {
       smoothFactor: intOr(s.get('feedforward_smooth_factor'), DEMO_FF_CONFIG.smoothFactor),
       jitterFactor: intOr(s.get('feedforward_jitter_factor'), DEMO_FF_CONFIG.jitterFactor),
       maxRateLimit: intOr(s.get('feedforward_max_rate_limit'), DEMO_FF_CONFIG.maxRateLimit),
+    };
+  }
+
+  async getRatesConfiguration(): Promise<RatesConfiguration> {
+    return {
+      ratesType: 'ACTUAL',
+      roll: { rcRate: 15, rate: 200, rcExpo: 56, rateLimit: 1998 },
+      pitch: { rcRate: 15, rate: 200, rcExpo: 56, rateLimit: 1998 },
+      yaw: { rcRate: 12, rate: 150, rcExpo: 32, rateLimit: 1998 },
     };
   }
 

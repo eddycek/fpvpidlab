@@ -64,6 +64,7 @@ export class TuningHistoryManager {
       transferFunctionMetrics: session.transferFunctionMetrics ?? null,
       bfPidProfileIndex: session.bfPidProfileIndex,
       appVersion: APP_VERSION,
+      ratesConfig: session.ratesConfig,
     };
 
     const existing = await this.loadRecords(session.profileId);

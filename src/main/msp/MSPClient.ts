@@ -9,7 +9,12 @@ import type {
   FCInfo,
   ConnectionStatus,
 } from '@shared/types/common.types';
-import type { PIDConfiguration, FeedforwardConfiguration } from '@shared/types/pid.types';
+import type {
+  PIDConfiguration,
+  FeedforwardConfiguration,
+  RatesConfiguration,
+  RatesType,
+} from '@shared/types/pid.types';
 import type { CurrentFilterSettings } from '@shared/types/analysis.types';
 import type { BlackboxInfo, SDCardInfo } from '@shared/types/blackbox.types';
 import { SDCardState } from '@shared/types/blackbox.types';
@@ -641,6 +646,60 @@ export class MSPClient extends EventEmitter {
     };
 
     logger.info('Feedforward configuration read:', config);
+    return config;
+  }
+
+  /**
+   * Read RC rates configuration from flight controller via MSP_RC_TUNING.
+   *
+   * Byte layout (BF 4.3+, API 1.44+, from betaflight-configurator MSPHelper.js):
+   *  0:    U8  rcRate (roll)         10:    U8  rcYawExpo
+   *  1:    U8  rcExpo (roll)         11:    U8  rcYawRate
+   *  2:    U8  rollRate              12:    U8  rcPitchRate
+   *  3:    U8  pitchRate             13:    U8  rcPitchExpo
+   *  4:    U8  yawRate               14:    U8  throttle_limit_type
+   *  5:    U8  dynamicThrottlePID    15:    U8  throttle_limit_percent
+   *  6:    U8  throttle_mid          16-17: U16 roll_rate_limit
+   *  7:    U8  throttle_expo         18-19: U16 pitch_rate_limit
+   *  8-9:  U16 tpa_breakpoint        20-21: U16 yaw_rate_limit
+   *                                  22:    U8  rates_type
+   */
+  async getRatesConfiguration(): Promise<RatesConfiguration> {
+    const response = await this.connection.sendCommand(MSPCommand.MSP_RC_TUNING);
+
+    if (response.data.length < 23) {
+      throw new MSPError(
+        `Invalid MSP_RC_TUNING response - expected at least 23 bytes, got ${response.data.length}`
+      );
+    }
+
+    const RATES_TYPE_MAP: RatesType[] = ['BETAFLIGHT', 'RACEFLIGHT', 'KISS', 'ACTUAL', 'QUICK'];
+    const ratesTypeIndex = response.data.readUInt8(22);
+    const ratesType: RatesType = RATES_TYPE_MAP[ratesTypeIndex] ?? 'BETAFLIGHT';
+
+    const config: RatesConfiguration = {
+      ratesType,
+      roll: {
+        rcRate: response.data.readUInt8(0),
+        rate: response.data.readUInt8(2),
+        rcExpo: response.data.readUInt8(1),
+        rateLimit: response.data.readUInt16LE(16),
+      },
+      pitch: {
+        rcRate: response.data.readUInt8(12),
+        rate: response.data.readUInt8(3),
+        rcExpo: response.data.readUInt8(13),
+        rateLimit: response.data.readUInt16LE(18),
+      },
+      yaw: {
+        rcRate: response.data.readUInt8(11),
+        rate: response.data.readUInt8(4),
+        rcExpo: response.data.readUInt8(10),
+        rateLimit: response.data.readUInt16LE(20),
+      },
+    };
+
+    logger.info('Rates configuration read:', config);
     return config;
   }
 

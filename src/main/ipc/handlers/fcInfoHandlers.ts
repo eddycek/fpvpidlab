@@ -1,7 +1,7 @@
 import { ipcMain } from 'electron';
 import { IPCChannel } from '@shared/types/ipc.types';
 import type { BlackboxSettings } from '@shared/types/blackbox.types';
-import type { FeedforwardConfiguration } from '@shared/types/pid.types';
+import type { FeedforwardConfiguration, RatesConfiguration } from '@shared/types/pid.types';
 import type { FCInfo } from '@shared/types/common.types';
 import type { FixBlackboxSettingsInput, FixBlackboxSettingsResult } from '@shared/types/ipc.types';
 import type { HandlerDependencies } from './types';
@@ -127,6 +127,23 @@ export function registerFCInfoHandlers(deps: HandlerDependencies): void {
       } catch (error) {
         logger.error('Failed to get feedforward configuration:', error);
         return createResponse<FeedforwardConfiguration>(undefined, getErrorMessage(error));
+      }
+    }
+  );
+
+  // FC_GET_RATES_CONFIG
+  ipcMain.handle(
+    IPCChannel.FC_GET_RATES_CONFIG,
+    async (): Promise<IPCResponse<RatesConfiguration>> => {
+      try {
+        if (!deps.mspClient) throw new Error('MSP client not initialized');
+        if (!deps.mspClient.isConnected()) throw new Error('Flight controller not connected');
+
+        const config = await deps.mspClient.getRatesConfiguration();
+        return createResponse<RatesConfiguration>(config);
+      } catch (error) {
+        logger.error('Failed to get rates configuration:', error);
+        return createResponse<RatesConfiguration>(undefined, getErrorMessage(error));
       }
     }
   );
