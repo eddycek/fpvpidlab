@@ -53,7 +53,12 @@ import { analyzePropWash } from './PropWashDetector';
 import { suggestNextPID, type PIDObservation } from './BayesianPIDOptimizer';
 import { analyzeDTermEffectiveness } from './DTermAnalyzer';
 import { mapToSliders, computeSliderDelta, buildRecommendedPIDs } from './SliderMapper';
-import { analyzeFeedforward, recommendFeedforward } from './FeedforwardAnalyzer';
+import {
+  analyzeFeedforward,
+  recommendFeedforward,
+  recommendRCLinkBaseline,
+  mergeFFRecommendations,
+} from './FeedforwardAnalyzer';
 import { analyzeThrottleTF } from './ThrottleTFAnalyzer';
 
 /** Default PID configuration if none provided */
@@ -356,11 +361,10 @@ async function analyzePIDCore(params: CoreParams): Promise<PIDAnalysisResult> {
     tpaContext
   );
 
-  // FF recommendations (header-based for both; energy-based only when steps exist)
-  const ffRecommendations = recommendFeedforward(
-    feedforwardAnalysis ?? undefined,
-    feedforwardContext
-  );
+  // FF recommendations: RC-link baseline + step-response refinement, merged (no duplicates)
+  const rcLinkBaselineRecs = recommendRCLinkBaseline(feedforwardContext);
+  const stepFFRecs = recommendFeedforward(feedforwardAnalysis ?? undefined, feedforwardContext);
+  const ffRecommendations = mergeFFRecommendations(rcLinkBaselineRecs, stepFFRecs);
   rawRecommendations.push(...ffRecommendations);
 
   // I-term relax cutoff recommendation (flight-style-aware advisory)

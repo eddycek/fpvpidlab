@@ -1,10 +1,12 @@
 /**
  * Extended feedforward analysis module.
  *
- * Analyzes step response data to produce recommendations for:
- * - `feedforward_smooth_factor`: When leading-edge overshoot (0-20ms) dominates settling overshoot
- * - `feedforward_jitter_factor`: When small-magnitude steps show more FF overshoot than large steps
- * - RC link rate awareness: High-speed links (250Hz+) benefit from stronger smoothing
+ * Two recommendation layers:
+ * 1. **RC-link-aware baseline** (new): Compares current FF settings against community-consensus
+ *    profiles for the detected RC link rate. Generates recommendations when settings deviate
+ *    >30% from the baseline (or wrong averaging mode).
+ * 2. **Step-response refinement** (existing): Analyzes leading-edge overshoot and small-step
+ *    jitter to fine-tune feedforward_smooth_factor and feedforward_jitter_factor.
  *
  * Designed to work alongside the existing FF-dominated detection in PIDAnalyzer/PIDRecommender.
  */
@@ -14,6 +16,12 @@ import type {
   StepResponse,
   PIDRecommendation,
 } from '@shared/types/analysis.types';
+import {
+  lookupRCLinkProfile,
+  RC_SMOOTHING_AUTO_FACTOR_DEFAULT,
+  RC_SMOOTHING_AUTO_FACTOR_RECOMMENDED,
+  RC_SMOOTHING_ADVISORY_MIN_HZ,
+} from './constants';
 
 // ---- Constants ----
 
@@ -46,6 +54,9 @@ export const SMOOTH_FACTOR_MAX = 75;
 
 /** Max jitter factor (BF range 0-20) */
 export const JITTER_FACTOR_MAX = 20;
+
+/** Deviation threshold for numeric FF settings (>30% off-target triggers recommendation) */
+export const RC_LINK_DEVIATION_THRESHOLD = 0.3;
 
 // ---- Implementation ----
 
@@ -137,7 +148,133 @@ export function analyzeFeedforward(
 }
 
 /**
- * Generate feedforward-specific PID recommendations based on analysis.
+ * Check if a numeric FF setting deviates significantly from the target.
+ * Returns true when the absolute relative deviation exceeds the threshold.
+ * Special case: when target is 0, any non-zero current value is a deviation.
+ */
+function isSignificantDeviation(
+  current: number,
+  target: number,
+  threshold: number = RC_LINK_DEVIATION_THRESHOLD
+): boolean {
+  if (target === 0) return current !== 0;
+  return Math.abs(current - target) / target > threshold;
+}
+
+/**
+ * Generate RC-link-aware feedforward baseline recommendations.
+ *
+ * Compares current FF settings against the community-consensus profile for the detected
+ * RC link rate. Generates recommendations for settings that deviate >30% from the baseline
+ * or have the wrong averaging mode.
+ *
+ * This runs independently of step-response analysis — it only needs the FF context
+ * (from BBL headers). Step-response-based recommendations from `recommendFeedforward()`
+ * serve as a refinement layer on top of these baselines.
+ *
+ * @param ffContext - Current feedforward configuration from BBL headers
+ * @returns Array of PID recommendations for RC-link-aware FF baseline
+ */
+export function recommendRCLinkBaseline(
+  ffContext: FeedforwardContext | undefined
+): PIDRecommendation[] {
+  if (!ffContext?.active) return [];
+
+  const profile = lookupRCLinkProfile(ffContext.rcLinkRateHz);
+  if (!profile) return [];
+
+  const recommendations: PIDRecommendation[] = [];
+
+  // FF-AVG: feedforward_averaging mode
+  const currentAveraging = ffContext.averaging ?? 0;
+  if (currentAveraging !== profile.averaging) {
+    recommendations.push({
+      setting: 'feedforward_averaging',
+      currentValue: currentAveraging,
+      recommendedValue: profile.averaging,
+      reason:
+        `Your RC link rate is ${ffContext.rcLinkRateHz} Hz (${profile.label}). ` +
+        `Community presets recommend feedforward_averaging=${profile.averaging === 0 ? 'OFF' : profile.averaging} for this link rate. ` +
+        (profile.averaging === 0
+          ? 'Low-rate RC links should not average FF — it adds unacceptable latency.'
+          : `High-rate links benefit from ${profile.averaging}-point averaging to smooth discrete RC steps.`),
+      impact: 'response',
+      confidence: 'medium',
+      ruleId: 'FF-AVG',
+    });
+  }
+
+  // FF-SMOOTH: feedforward_smooth_factor
+  const currentSmooth = ffContext.smoothFactor ?? 0;
+  if (isSignificantDeviation(currentSmooth, profile.smoothFactor)) {
+    recommendations.push({
+      setting: 'feedforward_smooth_factor',
+      currentValue: currentSmooth,
+      recommendedValue: profile.smoothFactor,
+      reason:
+        `Your RC link rate is ${ffContext.rcLinkRateHz} Hz (${profile.label}). ` +
+        `Community presets recommend feedforward_smooth_factor=${profile.smoothFactor} for this link rate ` +
+        `(currently ${currentSmooth}). ` +
+        (profile.smoothFactor > currentSmooth
+          ? 'Increasing smooth factor reduces FF jitter without losing response.'
+          : 'Decreasing smooth factor improves stick response — your link rate supports less smoothing.'),
+      impact: 'stability',
+      confidence: 'medium',
+      ruleId: 'FF-SMOOTH',
+    });
+  }
+
+  // FF-JITTER: feedforward_jitter_factor
+  const currentJitter = ffContext.jitterFactor ?? 0;
+  if (isSignificantDeviation(currentJitter, profile.jitterFactor)) {
+    recommendations.push({
+      setting: 'feedforward_jitter_factor',
+      currentValue: currentJitter,
+      recommendedValue: profile.jitterFactor,
+      reason:
+        `Your RC link rate is ${ffContext.rcLinkRateHz} Hz (${profile.label}). ` +
+        `Community presets recommend feedforward_jitter_factor=${profile.jitterFactor} for this link rate ` +
+        `(currently ${currentJitter}). ` +
+        (profile.jitterFactor > currentJitter
+          ? 'Increasing jitter factor attenuates FF noise from RC link jitter.'
+          : 'Decreasing jitter factor improves response to subtle stick inputs — your link rate has less jitter.'),
+      impact: 'stability',
+      confidence: 'medium',
+      ruleId: 'FF-JITTER',
+    });
+  }
+
+  // rc_smoothing_auto_factor advisory
+  const currentAutoFactor = ffContext.rcSmoothingAutoFactor;
+  if (
+    currentAutoFactor !== undefined &&
+    currentAutoFactor === RC_SMOOTHING_AUTO_FACTOR_DEFAULT &&
+    ffContext.rcLinkRateHz !== undefined &&
+    ffContext.rcLinkRateHz >= RC_SMOOTHING_ADVISORY_MIN_HZ
+  ) {
+    recommendations.push({
+      setting: 'rc_smoothing_auto_factor',
+      currentValue: currentAutoFactor,
+      recommendedValue: RC_SMOOTHING_AUTO_FACTOR_RECOMMENDED,
+      reason:
+        `rc_smoothing_auto_factor is at BF default (${RC_SMOOTHING_AUTO_FACTOR_DEFAULT}). ` +
+        `Most community presets recommend ${RC_SMOOTHING_AUTO_FACTOR_RECOMMENDED} for RC link rates ≥${RC_SMOOTHING_ADVISORY_MIN_HZ} Hz. ` +
+        'Higher values produce smoother input with slightly more latency — good for freestyle/cinema.',
+      impact: 'stability',
+      confidence: 'medium',
+      ruleId: 'FF-RC-SMOOTH',
+    });
+  }
+
+  return recommendations;
+}
+
+/**
+ * Generate feedforward-specific PID recommendations based on step response analysis.
+ *
+ * This is the existing step-response-based refinement layer. It generates recommendations
+ * when the flight data shows specific FF issues (leading-edge spike, small-step jitter).
+ * These recommendations are additive — they refine on top of RC-link baselines.
  *
  * @param analysis - Result from analyzeFeedforward
  * @param ffContext - Current feedforward configuration
@@ -201,6 +338,32 @@ export function recommendFeedforward(
   }
 
   return recommendations;
+}
+
+/**
+ * Merge RC-link baseline recommendations with step-response refinement recommendations.
+ *
+ * When both layers produce a recommendation for the same setting, the step-response
+ * recommendation wins (it's based on actual flight data, not just RC rate profile).
+ * RC-link baseline fills in settings that step-response analysis doesn't cover
+ * (e.g., feedforward_averaging, rc_smoothing_auto_factor).
+ *
+ * @param baselineRecs - From recommendRCLinkBaseline()
+ * @param stepRecs - From recommendFeedforward()
+ * @returns Merged array with no duplicate settings
+ */
+export function mergeFFRecommendations(
+  baselineRecs: PIDRecommendation[],
+  stepRecs: PIDRecommendation[]
+): PIDRecommendation[] {
+  const stepSettings = new Set(stepRecs.map((r) => r.setting));
+  const merged = [...stepRecs];
+  for (const rec of baselineRecs) {
+    if (!stepSettings.has(rec.setting)) {
+      merged.push(rec);
+    }
+  }
+  return merged;
 }
 
 /**

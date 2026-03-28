@@ -2,17 +2,22 @@ import { describe, it, expect } from 'vitest';
 import {
   analyzeFeedforward,
   recommendFeedforward,
+  recommendRCLinkBaseline,
+  mergeFFRecommendations,
   extractRCLinkRate,
   LEADING_EDGE_RATIO_THRESHOLD,
   SMALL_STEP_RATIO_THRESHOLD,
   SMOOTH_FACTOR_MAX,
   JITTER_FACTOR_MAX,
+  RC_LINK_DEVIATION_THRESHOLD,
 } from './FeedforwardAnalyzer';
+import { lookupRCLinkProfile, RC_LINK_PROFILES } from './constants';
 import type {
   FeedforwardContext,
   FeedforwardAnalysis,
   StepResponse,
   StepEvent,
+  PIDRecommendation,
 } from '@shared/types/analysis.types';
 
 // ---- Helpers ----
@@ -51,6 +56,10 @@ const activeFF: FeedforwardContext = {
   smoothFactor: 25,
   jitterFactor: 7,
 };
+
+// ================================================================
+// analyzeFeedforward (step-response analysis)
+// ================================================================
 
 describe('analyzeFeedforward', () => {
   it('should return undefined when FF is not active', () => {
@@ -207,6 +216,10 @@ describe('analyzeFeedforward', () => {
   });
 });
 
+// ================================================================
+// recommendFeedforward (step-response-based refinement)
+// ================================================================
+
 describe('recommendFeedforward', () => {
   const baseAnalysis: FeedforwardAnalysis = {
     hasRecommendations: true,
@@ -304,6 +317,436 @@ describe('recommendFeedforward', () => {
     expect(smoothRec).toBeUndefined();
   });
 });
+
+// ================================================================
+// lookupRCLinkProfile
+// ================================================================
+
+describe('lookupRCLinkProfile', () => {
+  it('should return undefined for undefined rate', () => {
+    expect(lookupRCLinkProfile(undefined)).toBeUndefined();
+  });
+
+  it('should return undefined for zero rate', () => {
+    expect(lookupRCLinkProfile(0)).toBeUndefined();
+  });
+
+  it('should return undefined for negative rate', () => {
+    expect(lookupRCLinkProfile(-50)).toBeUndefined();
+  });
+
+  it('should return CRSF 50Hz profile for 50 Hz', () => {
+    const profile = lookupRCLinkProfile(50);
+    expect(profile).toBeDefined();
+    expect(profile!.label).toBe('CRSF 50Hz');
+    expect(profile!.averaging).toBe(0);
+    expect(profile!.smoothFactor).toBe(0);
+    expect(profile!.jitterFactor).toBe(10);
+    expect(profile!.boost).toBe(5);
+  });
+
+  it('should return CRSF 150Hz profile for 100 Hz', () => {
+    const profile = lookupRCLinkProfile(100);
+    expect(profile).toBeDefined();
+    expect(profile!.label).toBe('CRSF 150Hz');
+    expect(profile!.averaging).toBe(0);
+    expect(profile!.smoothFactor).toBe(30);
+    expect(profile!.jitterFactor).toBe(7);
+    expect(profile!.boost).toBeUndefined();
+  });
+
+  it('should return CRSF Dynamic profile for 200 Hz', () => {
+    const profile = lookupRCLinkProfile(200);
+    expect(profile).toBeDefined();
+    expect(profile!.label).toBe('CRSF Dynamic');
+    expect(profile!.averaging).toBe(0);
+    expect(profile!.smoothFactor).toBe(15);
+    expect(profile!.jitterFactor).toBe(10);
+    expect(profile!.boost).toBe(10);
+  });
+
+  it('should return ELRS/Tracer profile for 250 Hz', () => {
+    const profile = lookupRCLinkProfile(250);
+    expect(profile).toBeDefined();
+    expect(profile!.label).toBe('ELRS/Tracer 250Hz');
+    expect(profile!.averaging).toBe(2);
+    expect(profile!.smoothFactor).toBe(35);
+    expect(profile!.jitterFactor).toBe(5);
+    expect(profile!.boost).toBe(18);
+  });
+
+  it('should return ELRS 500Hz+ profile for 500 Hz', () => {
+    const profile = lookupRCLinkProfile(500);
+    expect(profile).toBeDefined();
+    expect(profile!.label).toBe('ELRS 500Hz+');
+    expect(profile!.averaging).toBe(2);
+    expect(profile!.smoothFactor).toBe(65);
+    expect(profile!.jitterFactor).toBe(4);
+    expect(profile!.boost).toBe(18);
+  });
+
+  it('should return ELRS 500Hz+ profile for 1000 Hz', () => {
+    const profile = lookupRCLinkProfile(1000);
+    expect(profile).toBeDefined();
+    expect(profile!.label).toBe('ELRS 500Hz+');
+  });
+
+  it('should have non-overlapping bands covering all positive rates', () => {
+    for (let hz = 1; hz <= 1000; hz++) {
+      const profile = lookupRCLinkProfile(hz);
+      expect(profile).toBeDefined();
+    }
+  });
+
+  it('should have 5 profiles covering the full range', () => {
+    expect(RC_LINK_PROFILES).toHaveLength(5);
+  });
+
+  it('should return profiles at exact band boundaries', () => {
+    // Test boundary between band 1 and 2
+    expect(lookupRCLinkProfile(60)!.label).toBe('CRSF 50Hz');
+    expect(lookupRCLinkProfile(61)!.label).toBe('CRSF 150Hz');
+
+    // Test boundary between band 2 and 3
+    expect(lookupRCLinkProfile(149)!.label).toBe('CRSF 150Hz');
+    expect(lookupRCLinkProfile(150)!.label).toBe('CRSF Dynamic');
+
+    // Test boundary between band 3 and 4
+    expect(lookupRCLinkProfile(249)!.label).toBe('CRSF Dynamic');
+    expect(lookupRCLinkProfile(250)!.label).toBe('ELRS/Tracer 250Hz');
+
+    // Test boundary between band 4 and 5
+    expect(lookupRCLinkProfile(499)!.label).toBe('ELRS/Tracer 250Hz');
+    expect(lookupRCLinkProfile(500)!.label).toBe('ELRS 500Hz+');
+  });
+});
+
+// ================================================================
+// recommendRCLinkBaseline
+// ================================================================
+
+describe('recommendRCLinkBaseline', () => {
+  it('should return empty when FF is not active', () => {
+    expect(recommendRCLinkBaseline({ active: false })).toEqual([]);
+  });
+
+  it('should return empty when FF context is undefined', () => {
+    expect(recommendRCLinkBaseline(undefined)).toEqual([]);
+  });
+
+  it('should return empty when RC link rate is unknown', () => {
+    expect(recommendRCLinkBaseline({ active: true, boost: 15 })).toEqual([]);
+  });
+
+  it('should return empty when settings match the profile (ELRS 250Hz)', () => {
+    const ctx: FeedforwardContext = {
+      active: true,
+      boost: 18,
+      averaging: 2,
+      smoothFactor: 35,
+      jitterFactor: 5,
+      rcLinkRateHz: 250,
+    };
+    const recs = recommendRCLinkBaseline(ctx);
+    expect(recs).toEqual([]);
+  });
+
+  it('should recommend averaging change for ELRS 500Hz when OFF', () => {
+    const ctx: FeedforwardContext = {
+      active: true,
+      boost: 18,
+      averaging: 0, // OFF, should be 2_POINT
+      smoothFactor: 65,
+      jitterFactor: 4,
+      rcLinkRateHz: 500,
+    };
+    const recs = recommendRCLinkBaseline(ctx);
+    const avgRec = recs.find((r) => r.setting === 'feedforward_averaging');
+    expect(avgRec).toBeDefined();
+    expect(avgRec!.ruleId).toBe('FF-AVG');
+    expect(avgRec!.currentValue).toBe(0);
+    expect(avgRec!.recommendedValue).toBe(2);
+    expect(avgRec!.reason).toContain('500 Hz');
+    expect(avgRec!.reason).toContain('2-point averaging');
+  });
+
+  it('should recommend against averaging for low-rate CRSF 50Hz', () => {
+    const ctx: FeedforwardContext = {
+      active: true,
+      boost: 5,
+      averaging: 2, // 2_POINT, should be OFF for 50Hz
+      smoothFactor: 0,
+      jitterFactor: 10,
+      rcLinkRateHz: 50,
+    };
+    const recs = recommendRCLinkBaseline(ctx);
+    const avgRec = recs.find((r) => r.setting === 'feedforward_averaging');
+    expect(avgRec).toBeDefined();
+    expect(avgRec!.recommendedValue).toBe(0);
+    expect(avgRec!.reason).toContain('latency');
+  });
+
+  it('should recommend smooth factor change for CRSF 150Hz', () => {
+    const ctx: FeedforwardContext = {
+      active: true,
+      boost: 15,
+      averaging: 0,
+      smoothFactor: 0, // way off from 30
+      jitterFactor: 7,
+      rcLinkRateHz: 100,
+    };
+    const recs = recommendRCLinkBaseline(ctx);
+    const smoothRec = recs.find((r) => r.setting === 'feedforward_smooth_factor');
+    expect(smoothRec).toBeDefined();
+    expect(smoothRec!.ruleId).toBe('FF-SMOOTH');
+    expect(smoothRec!.currentValue).toBe(0);
+    expect(smoothRec!.recommendedValue).toBe(30);
+  });
+
+  it('should recommend jitter factor change for ELRS/Tracer 250Hz', () => {
+    const ctx: FeedforwardContext = {
+      active: true,
+      boost: 18,
+      averaging: 2,
+      smoothFactor: 35,
+      jitterFactor: 15, // way off from 5
+      rcLinkRateHz: 300,
+    };
+    const recs = recommendRCLinkBaseline(ctx);
+    const jitterRec = recs.find((r) => r.setting === 'feedforward_jitter_factor');
+    expect(jitterRec).toBeDefined();
+    expect(jitterRec!.ruleId).toBe('FF-JITTER');
+    expect(jitterRec!.currentValue).toBe(15);
+    expect(jitterRec!.recommendedValue).toBe(5);
+  });
+
+  it('should not recommend when deviation is within 30% threshold', () => {
+    // Profile for ELRS/Tracer 250Hz: smooth=35, jitter=5
+    // smooth=28 → deviation = |28-35|/35 = 0.2 (within 30%)
+    // jitter=4 → deviation = |4-5|/5 = 0.2 (within 30%)
+    const ctx: FeedforwardContext = {
+      active: true,
+      boost: 18,
+      averaging: 2,
+      smoothFactor: 28,
+      jitterFactor: 4,
+      rcLinkRateHz: 300,
+    };
+    const recs = recommendRCLinkBaseline(ctx);
+    expect(recs.filter((r) => r.setting === 'feedforward_smooth_factor')).toHaveLength(0);
+    expect(recs.filter((r) => r.setting === 'feedforward_jitter_factor')).toHaveLength(0);
+  });
+
+  it('should recommend rc_smoothing_auto_factor advisory when at default for >=150Hz', () => {
+    const ctx: FeedforwardContext = {
+      active: true,
+      boost: 15,
+      averaging: 0,
+      smoothFactor: 15,
+      jitterFactor: 10,
+      rcLinkRateHz: 200,
+      rcSmoothingAutoFactor: 30,
+    };
+    const recs = recommendRCLinkBaseline(ctx);
+    const rcRec = recs.find((r) => r.setting === 'rc_smoothing_auto_factor');
+    expect(rcRec).toBeDefined();
+    expect(rcRec!.ruleId).toBe('FF-RC-SMOOTH');
+    expect(rcRec!.currentValue).toBe(30);
+    expect(rcRec!.recommendedValue).toBe(45);
+  });
+
+  it('should not recommend rc_smoothing_auto_factor when not at default', () => {
+    const ctx: FeedforwardContext = {
+      active: true,
+      boost: 15,
+      averaging: 0,
+      smoothFactor: 15,
+      jitterFactor: 10,
+      rcLinkRateHz: 200,
+      rcSmoothingAutoFactor: 45, // already at recommended
+    };
+    const recs = recommendRCLinkBaseline(ctx);
+    const rcRec = recs.find((r) => r.setting === 'rc_smoothing_auto_factor');
+    expect(rcRec).toBeUndefined();
+  });
+
+  it('should not recommend rc_smoothing_auto_factor for low RC rate', () => {
+    const ctx: FeedforwardContext = {
+      active: true,
+      boost: 5,
+      averaging: 0,
+      smoothFactor: 0,
+      jitterFactor: 10,
+      rcLinkRateHz: 50,
+      rcSmoothingAutoFactor: 30,
+    };
+    const recs = recommendRCLinkBaseline(ctx);
+    const rcRec = recs.find((r) => r.setting === 'rc_smoothing_auto_factor');
+    expect(rcRec).toBeUndefined();
+  });
+
+  it('should generate all 3 FF recs + rc_smoothing when everything is wrong', () => {
+    const ctx: FeedforwardContext = {
+      active: true,
+      boost: 15,
+      averaging: 0, // should be 2 for ELRS 500Hz
+      smoothFactor: 0, // should be 65
+      jitterFactor: 20, // should be 4
+      rcLinkRateHz: 500,
+      rcSmoothingAutoFactor: 30, // should be 45
+    };
+    const recs = recommendRCLinkBaseline(ctx);
+    expect(recs).toHaveLength(4);
+    const settings = recs.map((r) => r.setting);
+    expect(settings).toContain('feedforward_averaging');
+    expect(settings).toContain('feedforward_smooth_factor');
+    expect(settings).toContain('feedforward_jitter_factor');
+    expect(settings).toContain('rc_smoothing_auto_factor');
+  });
+
+  it('should handle missing FF context fields gracefully', () => {
+    const ctx: FeedforwardContext = {
+      active: true,
+      // no averaging, smoothFactor, jitterFactor — all undefined → defaults to 0
+      rcLinkRateHz: 500,
+    };
+    const recs = recommendRCLinkBaseline(ctx);
+    // Should recommend averaging (0 → 2) and smooth factor (0 → 65)
+    expect(recs.find((r) => r.setting === 'feedforward_averaging')).toBeDefined();
+    expect(recs.find((r) => r.setting === 'feedforward_smooth_factor')).toBeDefined();
+  });
+
+  it('should include ruleId on all recommendations', () => {
+    const ctx: FeedforwardContext = {
+      active: true,
+      boost: 15,
+      averaging: 0,
+      smoothFactor: 0,
+      jitterFactor: 20,
+      rcLinkRateHz: 500,
+      rcSmoothingAutoFactor: 30,
+    };
+    const recs = recommendRCLinkBaseline(ctx);
+    for (const rec of recs) {
+      expect(rec.ruleId).toBeDefined();
+      expect(rec.ruleId).toMatch(/^FF-/);
+    }
+  });
+
+  it('should set confidence to medium on all recommendations', () => {
+    const ctx: FeedforwardContext = {
+      active: true,
+      boost: 15,
+      averaging: 0,
+      smoothFactor: 0,
+      jitterFactor: 20,
+      rcLinkRateHz: 500,
+    };
+    const recs = recommendRCLinkBaseline(ctx);
+    for (const rec of recs) {
+      expect(rec.confidence).toBe('medium');
+    }
+  });
+
+  // Test each RC link band generates correct recommendations
+  describe('per-band recommendations', () => {
+    it('should recommend correct values for CRSF 50Hz band', () => {
+      // Mismatch everything with ELRS-style settings
+      const ctx: FeedforwardContext = {
+        active: true,
+        boost: 18,
+        averaging: 2,
+        smoothFactor: 65,
+        jitterFactor: 4,
+        rcLinkRateHz: 50,
+      };
+      const recs = recommendRCLinkBaseline(ctx);
+      expect(recs.find((r) => r.setting === 'feedforward_averaging')!.recommendedValue).toBe(0);
+      expect(recs.find((r) => r.setting === 'feedforward_smooth_factor')!.recommendedValue).toBe(0);
+      expect(recs.find((r) => r.setting === 'feedforward_jitter_factor')!.recommendedValue).toBe(
+        10
+      );
+    });
+
+    it('should recommend correct values for ELRS 500Hz+ band', () => {
+      // Mismatch everything with CRSF-style settings
+      const ctx: FeedforwardContext = {
+        active: true,
+        boost: 5,
+        averaging: 0,
+        smoothFactor: 0,
+        jitterFactor: 15,
+        rcLinkRateHz: 500,
+      };
+      const recs = recommendRCLinkBaseline(ctx);
+      expect(recs.find((r) => r.setting === 'feedforward_averaging')!.recommendedValue).toBe(2);
+      expect(recs.find((r) => r.setting === 'feedforward_smooth_factor')!.recommendedValue).toBe(
+        65
+      );
+      expect(recs.find((r) => r.setting === 'feedforward_jitter_factor')!.recommendedValue).toBe(4);
+    });
+  });
+});
+
+// ================================================================
+// mergeFFRecommendations
+// ================================================================
+
+describe('mergeFFRecommendations', () => {
+  const makeRec = (setting: string, value: number, ruleId?: string): PIDRecommendation => ({
+    setting,
+    currentValue: 0,
+    recommendedValue: value,
+    reason: 'test',
+    impact: 'stability',
+    confidence: 'medium',
+    ...(ruleId ? { ruleId } : {}),
+  });
+
+  it('should return step recs when no baseline recs', () => {
+    const stepRecs = [makeRec('feedforward_smooth_factor', 35)];
+    const merged = mergeFFRecommendations([], stepRecs);
+    expect(merged).toHaveLength(1);
+    expect(merged[0].recommendedValue).toBe(35);
+  });
+
+  it('should return baseline recs when no step recs', () => {
+    const baselineRecs = [makeRec('feedforward_averaging', 2, 'FF-AVG')];
+    const merged = mergeFFRecommendations(baselineRecs, []);
+    expect(merged).toHaveLength(1);
+    expect(merged[0].setting).toBe('feedforward_averaging');
+  });
+
+  it('should prefer step recs over baseline for same setting', () => {
+    const baseline = [makeRec('feedforward_smooth_factor', 65, 'FF-SMOOTH')];
+    const step = [makeRec('feedforward_smooth_factor', 45)];
+    const merged = mergeFFRecommendations(baseline, step);
+    expect(merged).toHaveLength(1);
+    expect(merged[0].recommendedValue).toBe(45); // step wins
+  });
+
+  it('should include non-overlapping settings from both', () => {
+    const baseline = [
+      makeRec('feedforward_averaging', 2, 'FF-AVG'),
+      makeRec('feedforward_smooth_factor', 65, 'FF-SMOOTH'),
+    ];
+    const step = [makeRec('feedforward_smooth_factor', 45)];
+    const merged = mergeFFRecommendations(baseline, step);
+    expect(merged).toHaveLength(2);
+    expect(merged.find((r) => r.setting === 'feedforward_averaging')).toBeDefined();
+    expect(merged.find((r) => r.setting === 'feedforward_smooth_factor')!.recommendedValue).toBe(
+      45
+    );
+  });
+
+  it('should handle both empty', () => {
+    expect(mergeFFRecommendations([], [])).toEqual([]);
+  });
+});
+
+// ================================================================
+// extractRCLinkRate
+// ================================================================
 
 describe('extractRCLinkRate', () => {
   it('should extract from rc_smoothing_input_hz', () => {

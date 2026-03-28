@@ -650,6 +650,8 @@ export function extractFeedforwardContext(rawHeaders: Map<string, string>): Feed
   const maxRateLimit = parseIntOr(rawHeaders.get('feedforward_max_rate_limit'));
   const smoothFactor = parseIntOr(rawHeaders.get('feedforward_smooth_factor'));
   const jitterFactor = parseIntOr(rawHeaders.get('feedforward_jitter_factor'));
+  const averaging = parseIntOr(rawHeaders.get('feedforward_averaging'));
+  const rcSmoothingAutoFactor = parseIntOr(rawHeaders.get('rc_smoothing_auto_factor'));
 
   // Extract RC link rate from headers
   const rcSmoothingInputHz = parseIntOr(rawHeaders.get('rc_smoothing_input_hz'));
@@ -669,7 +671,9 @@ export function extractFeedforwardContext(rawHeaders: Map<string, string>): Feed
     ...(maxRateLimit !== undefined ? { maxRateLimit } : {}),
     ...(smoothFactor !== undefined ? { smoothFactor } : {}),
     ...(jitterFactor !== undefined ? { jitterFactor } : {}),
+    ...(averaging !== undefined ? { averaging } : {}),
     ...(rcLinkRateHz !== undefined ? { rcLinkRateHz } : {}),
+    ...(rcSmoothingAutoFactor !== undefined ? { rcSmoothingAutoFactor } : {}),
   };
 }
 

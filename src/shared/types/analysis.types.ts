@@ -259,8 +259,12 @@ export interface FeedforwardContext {
   smoothFactor?: number;
   /** FF jitter factor (0-20, attenuates FF on small stick inputs) */
   jitterFactor?: number;
+  /** FF averaging mode (0=OFF, 2=2_POINT, 3=3_POINT, 4=4_POINT) */
+  averaging?: number;
   /** Detected RC link rate in Hz (from BBL header or frame timing) */
   rcLinkRateHz?: number;
+  /** rc_smoothing_auto_factor value (BF default 30) */
+  rcSmoothingAutoFactor?: number;
 }
 
 /** Extended feedforward analysis result */

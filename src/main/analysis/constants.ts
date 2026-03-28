@@ -379,3 +379,96 @@ export const ITERM_RELAX_CUTOFF_BY_STYLE: Record<
 
 /** Minimum deviation (%) from style-appropriate range to trigger recommendation */
 export const ITERM_RELAX_DEVIATION_THRESHOLD = 0.5; // 50%
+
+// ---- RC Link-Aware Feedforward Profiles ----
+// Source: docs/PID_TUNING_KNOWLEDGE.md Section 1 (Community Consensus)
+// SupaflyFPV 4.5 presets, UAV Tech radio options, Karate race presets.
+
+/** FF averaging modes: 0=OFF, 2=2_POINT, 3=3_POINT, 4=4_POINT */
+export type FFAveragingMode = 0 | 2 | 3 | 4;
+
+/** A single RC link rate profile with recommended FF settings */
+export interface RCLinkProfile {
+  /** Descriptive label for this band */
+  label: string;
+  /** Inclusive lower bound of RC link rate (Hz) */
+  minHz: number;
+  /** Inclusive upper bound of RC link rate (Hz). Infinity for the highest band */
+  maxHz: number;
+  /** Recommended feedforward_averaging value */
+  averaging: FFAveragingMode;
+  /** Recommended feedforward_smooth_factor (0-75) */
+  smoothFactor: number;
+  /** Recommended feedforward_jitter_factor (0-20) */
+  jitterFactor: number;
+  /** Recommended feedforward_boost (undefined = leave at current) */
+  boost?: number;
+}
+
+/**
+ * RC link rate → FF settings lookup table.
+ * Bands are non-overlapping and ordered by ascending rate.
+ * Values from PID_TUNING_KNOWLEDGE.md Section 1.
+ */
+export const RC_LINK_PROFILES: readonly RCLinkProfile[] = [
+  {
+    label: 'CRSF 50Hz',
+    minHz: 0,
+    maxHz: 60,
+    averaging: 0,
+    smoothFactor: 0,
+    jitterFactor: 10,
+    boost: 5,
+  },
+  {
+    label: 'CRSF 150Hz',
+    minHz: 61,
+    maxHz: 149,
+    averaging: 0,
+    smoothFactor: 30,
+    jitterFactor: 7,
+  },
+  {
+    label: 'CRSF Dynamic',
+    minHz: 150,
+    maxHz: 249,
+    averaging: 0,
+    smoothFactor: 15,
+    jitterFactor: 10,
+    boost: 10,
+  },
+  {
+    label: 'ELRS/Tracer 250Hz',
+    minHz: 250,
+    maxHz: 499,
+    averaging: 2,
+    smoothFactor: 35,
+    jitterFactor: 5,
+    boost: 18,
+  },
+  {
+    label: 'ELRS 500Hz+',
+    minHz: 500,
+    maxHz: Infinity,
+    averaging: 2,
+    smoothFactor: 65,
+    jitterFactor: 4,
+    boost: 18,
+  },
+] as const;
+
+/** rc_smoothing_auto_factor: BF default is 30, most presets recommend 45 for >=150Hz */
+export const RC_SMOOTHING_AUTO_FACTOR_DEFAULT = 30;
+export const RC_SMOOTHING_AUTO_FACTOR_RECOMMENDED = 45;
+/** RC link rate threshold above which rc_smoothing_auto_factor advisory triggers */
+export const RC_SMOOTHING_ADVISORY_MIN_HZ = 150;
+
+/**
+ * Look up the RC link profile for a given link rate.
+ * Returns undefined if rate is undefined or ≤0 (invalid).
+ * For valid positive rates, a profile is always found (bands cover 1-Infinity).
+ */
+export function lookupRCLinkProfile(rcLinkRateHz: number | undefined): RCLinkProfile | undefined {
+  if (rcLinkRateHz === undefined || rcLinkRateHz <= 0) return undefined;
+  return RC_LINK_PROFILES.find((p) => rcLinkRateHz >= p.minHz && rcLinkRateHz <= p.maxHz);
+}

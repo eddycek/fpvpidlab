@@ -1074,6 +1074,33 @@ describe('PIDRecommender', () => {
       expect(ctx.active).toBe(false);
       expect(ctx.boost).toBeUndefined();
     });
+
+    it('should extract feedforward_averaging from headers', () => {
+      const headers = new Map<string, string>();
+      headers.set('feedforward_boost', '15');
+      headers.set('feedforward_averaging', '2');
+
+      const ctx = extractFeedforwardContext(headers);
+      expect(ctx.averaging).toBe(2);
+    });
+
+    it('should extract rc_smoothing_auto_factor from headers', () => {
+      const headers = new Map<string, string>();
+      headers.set('feedforward_boost', '15');
+      headers.set('rc_smoothing_auto_factor', '45');
+
+      const ctx = extractFeedforwardContext(headers);
+      expect(ctx.rcSmoothingAutoFactor).toBe(45);
+    });
+
+    it('should handle missing averaging and rc_smoothing_auto_factor', () => {
+      const headers = new Map<string, string>();
+      headers.set('feedforward_boost', '15');
+
+      const ctx = extractFeedforwardContext(headers);
+      expect(ctx.averaging).toBeUndefined();
+      expect(ctx.rcSmoothingAutoFactor).toBeUndefined();
+    });
   });
 
   describe('generatePIDSummary', () => {
