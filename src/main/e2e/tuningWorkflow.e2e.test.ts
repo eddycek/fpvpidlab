@@ -213,7 +213,9 @@ function makeProfileInput(
     fcSerialNumber: serial,
     name,
     size: '5"',
-    battery: '4S',
+    battery: '6S',
+    weight: 650,
+    flightStyle: 'balanced',
     fcInfo: {
       variant: 'BTFL',
       version: '4.5.1',

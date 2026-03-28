@@ -58,7 +58,7 @@ Connecting with BF 4.2 or earlier will show an error and auto-disconnect. See [B
 - Multi-quad profile management with automatic FC detection by serial number
 - Profile auto-selection on connect, profile locking while FC is connected
 - BF PID profile selection — choose which Betaflight PID profile slot (1–4) to tune into
-- 10 preset profiles (Tiny Whoop, 5" Freestyle, 7" Long Range, etc.)
+- 8 preset profiles (Tiny Whoop, 5" Freestyle, 7" Long Range, etc.)
 - Cross-platform (Windows, macOS, Linux)
 
 ### Configuration Management
@@ -88,7 +88,7 @@ Connecting with BF 4.2 or earlier will show an error and auto-disconnect. See [B
 
 ### Automated PID Tuning
 - Step response analysis (rise time, overshoot, settling time, latency, ringing)
-- Quad-size-aware PID safety bounds for 9 drone sizes (1"–10") — prevents dangerous values on micros, allows higher D on large quads
+- Quad-size-aware PID safety bounds for 7 drone sizes (1"–7") — prevents dangerous values on micros, allows higher D on large quads
 - Severity-scaled P increase: P+5 for mild sluggishness, P+10 for very sluggish (rise time > 2× threshold)
 - P informational warnings when P is unusually high (>1.3× typical) or low (<0.7× typical) for the quad size
 - I-term rules: steady-state error detection with I increase/decrease recommendations (I min = 40)

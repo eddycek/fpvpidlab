@@ -304,18 +304,16 @@ export interface QuadSizeBounds {
  * (motor saturation) and allows higher D on large quads (high inertia).
  *
  * Sizes map to categories: micro (1-2.5"), small (3-4"), standard (5"),
- * large (6-7"), ultra (10").
+ * large (6-7").
  */
 export const QUAD_SIZE_BOUNDS: Record<DroneSize, QuadSizeBounds> = {
   '1"': { pMin: 30, pMax: 80, dMin: 15, dMax: 50, iMin: 40, iMax: 100, pTypical: 40 },
-  '2"': { pMin: 30, pMax: 80, dMin: 15, dMax: 50, iMin: 40, iMax: 100, pTypical: 40 },
   '2.5"': { pMin: 25, pMax: 90, dMin: 15, dMax: 55, iMin: 40, iMax: 110, pTypical: 42 },
   '3"': { pMin: 20, pMax: 100, dMin: 15, dMax: 60, iMin: 40, iMax: 110, pTypical: 45 },
   '4"': { pMin: 20, pMax: 110, dMin: 15, dMax: 70, iMin: 40, iMax: 120, pTypical: 46 },
   '5"': { pMin: 20, pMax: 120, dMin: 15, dMax: 80, iMin: 40, iMax: 120, pTypical: 48 },
   '6"': { pMin: 20, pMax: 120, dMin: 15, dMax: 90, iMin: 40, iMax: 120, pTypical: 50 },
   '7"': { pMin: 20, pMax: 120, dMin: 15, dMax: 100, iMin: 40, iMax: 120, pTypical: 50 },
-  '10"': { pMin: 20, pMax: 120, dMin: 15, dMax: 100, iMin: 40, iMax: 120, pTypical: 50 },
 };
 
 /** Fallback bounds when drone size is unknown (= standard 5" bounds) */

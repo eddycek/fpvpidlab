@@ -41,9 +41,9 @@ export function ProfileWizard({ fcSerial, fcInfo, onComplete }: ProfileWizardPro
   const [name, setName] = useState('');
   const [size, setSize] = useState<DroneSize>('5"');
   const [propSize, setPropSize] = useState('5.1"');
-  const [battery, setBattery] = useState<BatteryType>('4S');
+  const [battery, setBattery] = useState<BatteryType>('6S');
   const [weight, setWeight] = useState(650);
-  const [motorKV, setMotorKV] = useState(2400);
+  const [motorKV, setMotorKV] = useState(1950);
   const [notes, setNotes] = useState('');
 
   // Apply size defaults when size changes
@@ -106,7 +106,7 @@ export function ProfileWizard({ fcSerial, fcInfo, onComplete }: ProfileWizardPro
     }
   };
 
-  const canContinueBasic = name.trim().length > 0;
+  const canContinueBasic = name.trim().length > 0 && weight > 0;
   const canContinuePreset = selectedPresetId !== null;
 
   const modalContent = (
@@ -280,7 +280,9 @@ function FlightStyleSelector({
 }) {
   return (
     <div className="wizard-form-group">
-      <label>Flying Style</label>
+      <label>
+        Flying Style <span className="required">*</span>
+      </label>
       <div className="flight-style-options">
         {FLIGHT_STYLE_OPTIONS.map((opt) => (
           <button
@@ -346,7 +348,7 @@ function BasicStep({
   onContinue: () => void;
   canContinue: boolean;
 }) {
-  const sizes: DroneSize[] = ['1"', '2"', '2.5"', '3"', '4"', '5"', '6"', '7"', '10"'];
+  const sizes: DroneSize[] = ['1"', '2.5"', '3"', '4"', '5"', '6"', '7"'];
   const batteries: BatteryType[] = ['1S', '2S', '3S', '4S', '6S'];
 
   return (
@@ -403,7 +405,9 @@ function BasicStep({
         </div>
 
         <div className="wizard-form-group">
-          <label>Weight (grams)</label>
+          <label>
+            Weight (grams) <span className="required">*</span>
+          </label>
           <input
             type="number"
             value={weight}

@@ -13,17 +13,17 @@ describe('ProfileSelector', () => {
       size: '5"',
       battery: '4S',
       connectionCount: 10,
-      lastConnected: new Date('2024-01-01').toISOString()
+      lastConnected: new Date('2024-01-01').toISOString(),
     },
     {
       id: 'profile-2',
       name: 'Tiny Whoop',
       fcSerialNumber: 'DEF456',
-      size: '2"',
+      size: '1"',
       battery: '1S',
       connectionCount: 5,
-      lastConnected: new Date('2024-01-02').toISOString()
-    }
+      lastConnected: new Date('2024-01-02').toISOString(),
+    },
   ];
 
   beforeEach(() => {
@@ -33,12 +33,19 @@ describe('ProfileSelector', () => {
     vi.mocked(window.betaflight.getCurrentProfile).mockResolvedValue({
       ...mockProfiles[0],
       weight: 650,
+      flightStyle: 'balanced',
       motorKV: 2400,
       propSize: '5.1"',
       snapshotIds: [],
       createdAt: new Date('2024-01-01').toISOString(),
       updatedAt: new Date('2024-01-01').toISOString(),
-      fcInfo: { variant: 'BTFL', version: '4.4.0', target: 'STM32F405', boardName: 'MATEKF405', apiVersion: { protocol: 0, major: 1, minor: 46 } }
+      fcInfo: {
+        variant: 'BTFL',
+        version: '4.4.0',
+        target: 'STM32F405',
+        boardName: 'MATEKF405',
+        apiVersion: { protocol: 0, major: 1, minor: 46 },
+      },
     });
     vi.mocked(window.betaflight.getConnectionStatus).mockResolvedValue({ connected: false });
     vi.mocked(window.betaflight.onProfileChanged).mockReturnValue(() => {});
@@ -90,13 +97,20 @@ describe('ProfileSelector', () => {
     const user = userEvent.setup();
     vi.mocked(window.betaflight.setCurrentProfile).mockResolvedValue({
       ...mockProfiles[1],
-      weight: 50,
-      motorKV: 8000,
-      propSize: '40mm',
+      weight: 25,
+      flightStyle: 'balanced',
+      motorKV: 19000,
+      propSize: '31mm',
       snapshotIds: [],
       createdAt: new Date('2024-01-02').toISOString(),
       updatedAt: new Date('2024-01-02').toISOString(),
-      fcInfo: { variant: 'BTFL', version: '4.4.0', target: 'STM32F405', boardName: 'MATEKF405', apiVersion: { protocol: 0, major: 1, minor: 46 } }
+      fcInfo: {
+        variant: 'BTFL',
+        version: '4.4.0',
+        target: 'STM32F405',
+        boardName: 'MATEKF405',
+        apiVersion: { protocol: 0, major: 1, minor: 46 },
+      },
     });
 
     render(<ProfileSelector />);
@@ -125,7 +139,7 @@ describe('ProfileSelector', () => {
   it('shows lock notice when FC is connected', async () => {
     vi.mocked(window.betaflight.getConnectionStatus).mockResolvedValue({
       connected: true,
-      portPath: '/dev/ttyUSB0'
+      portPath: '/dev/ttyUSB0',
     });
 
     render(<ProfileSelector />);
@@ -147,7 +161,7 @@ describe('ProfileSelector', () => {
     const user = userEvent.setup();
     vi.mocked(window.betaflight.getConnectionStatus).mockResolvedValue({
       connected: true,
-      portPath: '/dev/ttyUSB0'
+      portPath: '/dev/ttyUSB0',
     });
 
     render(<ProfileSelector />);

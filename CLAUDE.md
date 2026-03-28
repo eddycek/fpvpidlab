@@ -599,11 +599,13 @@ Renderer components subscribe to events:
 ### Size Defaults
 When user selects drone size, defaults auto-populate:
 - 1" → 25g, 19000KV, 1S
-- 5" → 650g, 2400KV, 4S
+- 5" → 650g, 1950KV, 6S
 - etc. (see `SIZE_DEFAULTS` in constants)
 
+Sizes available: 1", 2.5", 3", 4", 5", 6", 7" (no 2" or 10")
+
 ### Preset Profiles
-10 presets available: tiny-whoop, micro-whoop, 4inch-toothpick, 5inch-freestyle, 5inch-race, 5inch-cinematic, 6inch-longrange, 7inch-longrange, 3inch-cinewhoop, 10inch-ultra-longrange
+8 presets available: tiny-whoop, 3inch-freestyle, 3inch-whoop, 4inch-freestyle, 5inch-freestyle, 5inch-race, 6inch-longrange, 7inch-longrange
 
 ## Common Issues
 

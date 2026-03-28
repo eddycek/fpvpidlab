@@ -95,13 +95,13 @@ describe('ProfileWizard flight style', () => {
     );
   });
 
-  it('sets flight style from preset mapping for cinematic preset', async () => {
+  it('sets flight style from preset mapping for whoop preset', async () => {
     const user = userEvent.setup();
     render(<ProfileWizard fcSerial="ABC123" fcInfo={mockFCInfo} onComplete={onComplete} />);
 
     await user.click(screen.getByText('Use a Preset'));
-    const cinematicPreset = screen.getByText('5" Cinematic');
-    await user.click(cinematicPreset);
+    const whoopPreset = screen.getByText('3" Whoop');
+    await user.click(whoopPreset);
     await user.click(screen.getByText('Continue'));
 
     expect(screen.getByText('Smooth')).toBeInTheDocument();
@@ -110,7 +110,7 @@ describe('ProfileWizard flight style', () => {
 
     expect(onComplete).toHaveBeenCalledWith(
       expect.objectContaining({
-        presetId: '5inch-cinematic',
+        presetId: '3inch-whoop',
         flightStyle: 'smooth',
       })
     );

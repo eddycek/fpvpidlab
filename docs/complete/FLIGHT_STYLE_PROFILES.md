@@ -53,13 +53,13 @@ This was correct at the time — the types existed in the data model but no code
 
 ### 1.4 Preset Profiles Already Encode Style Implicitly
 
-Our 10 preset profiles have flight style baked into their names and descriptions:
+Our 8 preset profiles have flight style baked into their names and descriptions:
 
 ```typescript
 '5inch-freestyle':  'Standard 5 inch freestyle quad with balanced tuning'
 '5inch-race':       'Lightweight 5 inch racing quad with aggressive tuning'
-'5inch-cinematic':  'Heavy cinematic quad with GoPro, smooth tuning'
-'3inch-cinewhoop':  'Indoor/cinematic whoop with ducted props'
+'3inch-whoop':      'Indoor whoop with ducted props'
+'6inch-longrange':  'Long range quad with balanced tuning'
 ```
 
 The words "balanced", "aggressive", and "smooth" are already there — we just don't extract them into a structured field.
@@ -100,12 +100,10 @@ The core value: FlightStyle directly modifies the PID recommender's decision thr
 ```typescript
 export type FlightStyle = 'smooth' | 'balanced' | 'aggressive';
 
-export interface DroneProfileOptional {
-  propSize?: string;
-  weight?: number;
-  motorKV?: number;
-  notes?: string;
-  flightStyle?: FlightStyle;  // NEW — defaults to 'balanced' if unset
+export interface DroneProfileRequired {
+  // ...existing required fields...
+  weight: number;
+  flightStyle: FlightStyle;  // Required — no longer optional
 }
 ```
 
@@ -122,7 +120,7 @@ Using an optional field ensures backward compatibility — existing profiles wit
 
 **PresetSelector**: Map preset IDs to default flight styles:
 - `5inch-race` → `aggressive`
-- `5inch-cinematic`, `3inch-cinewhoop` → `smooth`
+- `3inch-whoop`, `7inch-longrange` → `smooth`
 - All others → `balanced`
 
 ### 2.5 PID Recommender Changes
@@ -150,7 +148,7 @@ Existing profiles have no `flightStyle` field. When loaded:
 
 ### ~~Task 1: Add `FlightStyle` type and update profile interfaces~~ ✅ DONE (PR #71)
 - **File**: `src/shared/types/profile.types.ts`
-- **Changes**: Add `FlightStyle` type, add `flightStyle?: FlightStyle` to `DroneProfileOptional`
+- **Changes**: Add `FlightStyle` type, add `flightStyle` to `DroneProfileRequired` (now required, along with `weight`)
 - **Tests**: Type compilation; verify `ProfileCreationInput` and `ProfileUpdateInput` inherit the new field
 
 ### ~~Task 2: Add flight style selector to ProfileWizard~~ ✅ DONE (PR #72)
@@ -202,8 +200,7 @@ Existing profiles have no `flightStyle` field. When loaded:
   ```typescript
   '5inch-freestyle':  { ...preset(...), flightStyle: 'balanced' },
   '5inch-race':       { ...preset(...), flightStyle: 'aggressive' },
-  '5inch-cinematic':  { ...preset(...), flightStyle: 'smooth' },
-  '3inch-cinewhoop':  { ...preset(...), flightStyle: 'smooth' },
+  '3inch-whoop':      { ...preset(...), flightStyle: 'smooth' },
   '6inch-longrange':  { ...preset(...), flightStyle: 'smooth' },
   '7inch-longrange':  { ...preset(...), flightStyle: 'smooth' },
   // others: 'balanced'
@@ -257,7 +254,7 @@ Use "Flying Style" (not "Flight Style") in the UI — more natural for pilots. T
 
 | File | Change Type |
 |------|-------------|
-| `src/shared/types/profile.types.ts` | Add `FlightStyle` type, add to `DroneProfileOptional` |
+| `src/shared/types/profile.types.ts` | Add `FlightStyle` type, add to `DroneProfileRequired` |
 | `src/shared/constants.ts` | Add `flightStyle` to `PresetProfile` and preset mappings |
 | `src/main/analysis/constants.ts` | Add `PID_STYLE_THRESHOLDS` map |
 | `src/main/analysis/PIDRecommender.ts` | Accept FlightStyle, use style thresholds |
@@ -275,7 +272,7 @@ Use "Flying Style" (not "Flight Style") in the UI — more natural for pilots. T
 - Current PID thresholds: `src/main/analysis/constants.ts` lines 146-176
 - PID recommender rules: `src/main/analysis/PIDRecommender.ts` lines 41-160
 - Removed types: commit `2f83956` (February 8, 2026)
-- Preset profiles: `src/shared/constants.ts` (10 presets)
+- Preset profiles: `src/shared/constants.ts` (8 presets)
 - [Oscar Liang: FPV Drone PID Tuning](https://oscarliang.com/pid/)
 - [Betaflight PID Tuning Guide](https://www.betaflight.com/docs/wiki/guides/current/PID-Tuning-Guide)
 - [FPVSIM: Step Response P/D Balance](https://fpvsim.com/how-tos/step-response-pd-balance)

@@ -33,16 +33,16 @@ export function ProfileEditModal({ profile, onSave, onCancel }: ProfileEditModal
   const [size, setSize] = useState(profile.size);
   const [propSize, setPropSize] = useState(profile.propSize || '');
   const [battery, setBattery] = useState(profile.battery);
-  const [weight, setWeight] = useState(profile.weight || 0);
+  const [weight, setWeight] = useState(profile.weight);
   const [motorKV, setMotorKV] = useState(profile.motorKV || 0);
   const [notes, setNotes] = useState(profile.notes || '');
-  const [flightStyle, setFlightStyle] = useState<FlightStyle>(profile.flightStyle ?? 'balanced');
+  const [flightStyle, setFlightStyle] = useState<FlightStyle>(profile.flightStyle);
   const [isSaving, setIsSaving] = useState(false);
 
-  const sizes: DroneSize[] = ['1"', '2"', '2.5"', '3"', '4"', '5"', '6"', '7"', '10"'];
+  const sizes: DroneSize[] = ['1"', '2.5"', '3"', '4"', '5"', '6"', '7"'];
   const batteries: BatteryType[] = ['1S', '2S', '3S', '4S', '6S'];
 
-  const canSave = name.trim().length > 0;
+  const canSave = name.trim().length > 0 && weight > 0;
 
   const handleSave = async () => {
     if (!canSave || isSaving) return;
@@ -54,7 +54,7 @@ export function ProfileEditModal({ profile, onSave, onCancel }: ProfileEditModal
         size,
         propSize: propSize || undefined,
         battery,
-        weight: weight || undefined,
+        weight,
         motorKV: motorKV || undefined,
         notes: notes || undefined,
         flightStyle,
@@ -125,7 +125,9 @@ export function ProfileEditModal({ profile, onSave, onCancel }: ProfileEditModal
           </div>
 
           <div className="wizard-form-group">
-            <label>Weight (grams)</label>
+            <label>
+              Weight (grams) <span className="required">*</span>
+            </label>
             <input
               type="number"
               value={weight}
@@ -145,7 +147,9 @@ export function ProfileEditModal({ profile, onSave, onCancel }: ProfileEditModal
         </div>
 
         <div className="wizard-form-group">
-          <label>Flying Style</label>
+          <label>
+            Flying Style <span className="required">*</span>
+          </label>
           <div className="flight-style-options">
             {FLIGHT_STYLE_OPTIONS.map((opt) => (
               <button

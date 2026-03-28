@@ -19,7 +19,9 @@ function makeInput(serial: string, name = 'Test Drone'): ProfileCreationInput {
     fcInfo: mockFCInfo,
     name,
     size: '5"',
-    battery: '4S',
+    battery: '6S',
+    weight: 650,
+    flightStyle: 'balanced',
   };
 }
 
@@ -28,7 +30,10 @@ describe('ProfileManager', () => {
   let tempDir: string;
 
   beforeEach(async () => {
-    tempDir = join(tmpdir(), `bfat-test-profmgr-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+    tempDir = join(
+      tmpdir(),
+      `bfat-test-profmgr-${Date.now()}-${Math.random().toString(36).slice(2)}`
+    );
     manager = new ProfileManager(tempDir);
     await manager.initialize();
   });
@@ -73,9 +78,10 @@ describe('ProfileManager', () => {
       name: '5" Freestyle',
       description: 'Standard 5-inch freestyle quad',
       size: '5"' as const,
-      battery: '4S' as const,
+      battery: '6S' as const,
       weight: 650,
-      motorKV: 2400,
+      flightStyle: 'balanced' as const,
+      motorKV: 1950,
       propSize: '5.1"',
     };
 
@@ -84,12 +90,24 @@ describe('ProfileManager', () => {
     expect(profile.name).toBe('5" Freestyle');
     expect(profile.size).toBe('5"');
     expect(profile.weight).toBe(650);
-    expect(profile.motorKV).toBe(2400);
+    expect(profile.motorKV).toBe(1950);
   });
 
   it('uses custom name when provided', async () => {
-    const preset = { name: 'Default', description: '', size: '3"' as const, battery: '4S' as const };
-    const profile = await manager.createProfileFromPreset(preset, 'SN-X', mockFCInfo, 'My Custom Name');
+    const preset = {
+      name: 'Default',
+      description: '',
+      size: '3"' as const,
+      battery: '4S' as const,
+      weight: 180,
+      flightStyle: 'balanced' as const,
+    };
+    const profile = await manager.createProfileFromPreset(
+      preset,
+      'SN-X',
+      mockFCInfo,
+      'My Custom Name'
+    );
     expect(profile.name).toBe('My Custom Name');
   });
 
@@ -100,7 +118,7 @@ describe('ProfileManager', () => {
     const originalUpdatedAt = created.updatedAt;
 
     // Small delay to ensure timestamp difference
-    await new Promise(r => setTimeout(r, 10));
+    await new Promise((r) => setTimeout(r, 10));
 
     const updated = await manager.updateProfile(created.id, { name: 'Renamed' });
 
@@ -143,8 +161,8 @@ describe('ProfileManager', () => {
 
     const list = await manager.listProfiles();
     expect(list).toHaveLength(2);
-    expect(list.map(p => p.name)).toContain('Alpha');
-    expect(list.map(p => p.name)).toContain('Beta');
+    expect(list.map((p) => p.name)).toContain('Alpha');
+    expect(list.map((p) => p.name)).toContain('Beta');
     // Metadata only — no fcInfo or snapshotIds
     expect((list[0] as any).fcInfo).toBeUndefined();
   });
@@ -227,7 +245,7 @@ describe('ProfileManager', () => {
     await manager.linkSnapshot(profile.id, 'snap-x');
 
     const loaded = await manager.getProfile(profile.id);
-    expect(loaded!.snapshotIds.filter(id => id === 'snap-x')).toHaveLength(1);
+    expect(loaded!.snapshotIds.filter((id) => id === 'snap-x')).toHaveLength(1);
   });
 
   it('unlinks snapshot and clears baseline if matched', async () => {

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import type {
   FlightStyle,
-  DroneProfileOptional,
+  DroneProfileRequired,
   ProfileCreationInput,
   ProfileUpdateInput,
 } from './profile.types';
@@ -12,11 +12,16 @@ describe('FlightStyle type', () => {
     expect(styles).toHaveLength(3);
   });
 
-  it('is optional in DroneProfileOptional', () => {
-    const withStyle: DroneProfileOptional = { flightStyle: 'aggressive' };
-    const withoutStyle: DroneProfileOptional = { notes: 'test' };
-    expect(withStyle.flightStyle).toBe('aggressive');
-    expect(withoutStyle.flightStyle).toBeUndefined();
+  it('is required in DroneProfileRequired', () => {
+    const profile: DroneProfileRequired = {
+      name: 'Test',
+      size: '5"',
+      battery: '6S',
+      weight: 650,
+      flightStyle: 'aggressive',
+    };
+    expect(profile.flightStyle).toBe('aggressive');
+    expect(profile.weight).toBe(650);
   });
 
   it('is inherited by ProfileCreationInput', () => {
@@ -31,19 +36,15 @@ describe('FlightStyle type', () => {
       },
       name: 'Test',
       size: '5"',
-      battery: '4S',
+      battery: '6S',
+      weight: 650,
       flightStyle: 'smooth',
     };
     expect(input.flightStyle).toBe('smooth');
   });
 
-  it('is inherited by ProfileUpdateInput', () => {
+  it('is optional in ProfileUpdateInput', () => {
     const update: ProfileUpdateInput = { flightStyle: 'balanced' };
     expect(update.flightStyle).toBe('balanced');
-  });
-
-  it('defaults to undefined when not set', () => {
-    const profile: DroneProfileOptional = {};
-    expect(profile.flightStyle).toBeUndefined();
   });
 });

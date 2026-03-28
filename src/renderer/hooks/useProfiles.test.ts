@@ -12,28 +12,35 @@ describe('useProfiles', () => {
       size: '5"',
       battery: '4S',
       connectionCount: 10,
-      lastConnected: new Date().toISOString()
+      lastConnected: new Date().toISOString(),
     },
     {
       id: 'profile-2',
       name: 'Tiny Whoop',
       fcSerialNumber: 'DEF456',
-      size: '2"',
+      size: '1"',
       battery: '1S',
       connectionCount: 5,
-      lastConnected: new Date().toISOString()
-    }
+      lastConnected: new Date().toISOString(),
+    },
   ];
 
   const mockFullProfile: DroneProfile = {
     ...mockProfiles[0],
     weight: 650,
+    flightStyle: 'balanced',
     motorKV: 2400,
     propSize: '5.1"',
     snapshotIds: [],
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-    fcInfo: { variant: 'BTFL', version: '4.4.0', target: 'STM32F405', boardName: 'BETAFLIGHTF4', apiVersion: { protocol: 0, major: 1, minor: 46 } }
+    fcInfo: {
+      variant: 'BTFL',
+      version: '4.4.0',
+      target: 'STM32F405',
+      boardName: 'BETAFLIGHTF4',
+      apiVersion: { protocol: 0, major: 1, minor: 46 },
+    },
   };
 
   beforeEach(() => {
@@ -72,7 +79,7 @@ describe('useProfiles', () => {
 
   it('sets loading state while loading', async () => {
     vi.mocked(window.betaflight.listProfiles).mockImplementation(
-      () => new Promise(resolve => setTimeout(() => resolve(mockProfiles), 100))
+      () => new Promise((resolve) => setTimeout(() => resolve(mockProfiles), 100))
     );
 
     const { result } = renderHook(() => useProfiles());
@@ -95,13 +102,20 @@ describe('useProfiles', () => {
 
     const input = {
       fcSerialNumber: 'ABC123',
-      fcInfo: { variant: 'BTFL', version: '4.4.0', target: 'STM32F405', boardName: 'BETAFLIGHTF4', apiVersion: { protocol: 0, major: 1, minor: 46 } },
+      fcInfo: {
+        variant: 'BTFL',
+        version: '4.4.0',
+        target: 'STM32F405',
+        boardName: 'BETAFLIGHTF4',
+        apiVersion: { protocol: 0, major: 1, minor: 46 },
+      },
       name: 'New Profile',
       size: '5"' as const,
-      battery: '4S' as const,
+      battery: '6S' as const,
       weight: 650,
-      motorKV: 2400,
-      propSize: '5.1"'
+      flightStyle: 'balanced' as const,
+      motorKV: 1950,
+      propSize: '5.1"',
     };
 
     const profile = await result.current.createProfile(input);
@@ -119,10 +133,16 @@ describe('useProfiles', () => {
       expect(result.current.profiles).toBeDefined();
     });
 
-    const profile = await result.current.createProfileFromPreset('5inch-freestyle', 'My Custom Name');
+    const profile = await result.current.createProfileFromPreset(
+      '5inch-freestyle',
+      'My Custom Name'
+    );
 
     expect(profile).toEqual(mockFullProfile);
-    expect(window.betaflight.createProfileFromPreset).toHaveBeenCalledWith('5inch-freestyle', 'My Custom Name');
+    expect(window.betaflight.createProfileFromPreset).toHaveBeenCalledWith(
+      '5inch-freestyle',
+      'My Custom Name'
+    );
   });
 
   it('updates profile successfully', async () => {
@@ -231,13 +251,20 @@ describe('useProfiles', () => {
 
     const input = {
       fcSerialNumber: 'ABC123',
-      fcInfo: { variant: 'BTFL', version: '4.4.0', target: 'STM32F405', boardName: 'BETAFLIGHTF4', apiVersion: { protocol: 0, major: 1, minor: 46 } },
+      fcInfo: {
+        variant: 'BTFL',
+        version: '4.4.0',
+        target: 'STM32F405',
+        boardName: 'BETAFLIGHTF4',
+        apiVersion: { protocol: 0, major: 1, minor: 46 },
+      },
       name: 'New Profile',
       size: '5"' as const,
-      battery: '4S' as const,
+      battery: '6S' as const,
       weight: 650,
-      motorKV: 2400,
-      propSize: '5.1"'
+      flightStyle: 'balanced' as const,
+      motorKV: 1950,
+      propSize: '5.1"',
     };
 
     await expect(result.current.createProfile(input)).rejects.toThrow(errorMessage);
@@ -250,7 +277,9 @@ describe('useProfiles', () => {
   it('reloads profiles when profile changed event fires', async () => {
     let profileChangeCallback: ((profile: DroneProfile | null) => void) | null = null;
 
-    vi.mocked(window.betaflight.onProfileChanged).mockImplementation(((callback: (profile: DroneProfile | null) => void) => {
+    vi.mocked(window.betaflight.onProfileChanged).mockImplementation(((
+      callback: (profile: DroneProfile | null) => void
+    ) => {
       profileChangeCallback = callback;
       return () => {};
     }) as any);

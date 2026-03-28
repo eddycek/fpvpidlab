@@ -39,14 +39,12 @@ export const PROFILE = {
 // Default values based on drone size
 export const SIZE_DEFAULTS = {
   '1"': { weight: 25, motorKV: 19000, battery: '1S' as const, propSize: '31mm' },
-  '2"': { weight: 50, motorKV: 8000, battery: '1S' as const, propSize: '40mm' },
   '2.5"': { weight: 120, motorKV: 3000, battery: '3S' as const, propSize: '2.5"' },
   '3"': { weight: 180, motorKV: 3000, battery: '4S' as const, propSize: '3"' },
-  '4"': { weight: 350, motorKV: 2650, battery: '4S' as const, propSize: '4"' },
-  '5"': { weight: 650, motorKV: 2400, battery: '4S' as const, propSize: '5.1"' },
-  '6"': { weight: 800, motorKV: 2000, battery: '6S' as const, propSize: '6"' },
-  '7"': { weight: 900, motorKV: 1800, battery: '6S' as const, propSize: '7"' },
-  '10"': { weight: 1500, motorKV: 1400, battery: '6S' as const, propSize: '10"' },
+  '4"': { weight: 350, motorKV: 2000, battery: '6S' as const, propSize: '4"' },
+  '5"': { weight: 650, motorKV: 1950, battery: '6S' as const, propSize: '5.1"' },
+  '6"': { weight: 850, motorKV: 1900, battery: '6S' as const, propSize: '6"' },
+  '7"': { weight: 950, motorKV: 1700, battery: '6S' as const, propSize: '7"' },
 } as const;
 
 /**
@@ -161,25 +159,20 @@ function preset(
 
 // Preset profiles — values derived from SIZE_DEFAULTS, only overrides where different
 export const PRESET_PROFILES = {
-  'tiny-whoop': preset('1"', 'Tiny Whoop (1")', 'Ultra micro indoor whoop, 1S battery', 'balanced'),
-  'micro-whoop': preset(
-    '2"',
-    'Micro Whoop (2")',
-    'Micro whoop for indoor flying, 1S battery',
-    'balanced'
-  ),
-  '3inch-cinewhoop': preset(
-    '3"',
-    '3" Cinewhoop',
-    'Indoor/cinematic whoop with ducted props',
-    'smooth'
-  ),
-  '4inch-toothpick': preset(
+  'tiny-whoop': preset('1"', 'Tiny Whoop', 'Ultra micro indoor whoop, 1S battery', 'balanced'),
+  '3inch-whoop': preset('3"', '3" Whoop', 'Indoor/cinematic whoop with ducted props', 'smooth', {
+    weight: 150,
+    motorKV: 3600,
+    battery: '3S' as const,
+  }),
+  '3inch-freestyle': preset('3"', '3" Freestyle', 'Lightweight 3 inch freestyle quad', 'balanced', {
+    weight: 200,
+  }),
+  '4inch-freestyle': preset(
     '4"',
-    '4" Toothpick',
-    'Lightweight 4 inch toothpick for indoor/outdoor',
-    'balanced',
-    { battery: '3S' as const, weight: 300, motorKV: 2800 }
+    '4" Freestyle',
+    'Versatile 4 inch freestyle quad, 6S power',
+    'balanced'
   ),
   '5inch-freestyle': preset(
     '5"',
@@ -192,26 +185,13 @@ export const PRESET_PROFILES = {
     '5" Race',
     'Lightweight 5 inch racing quad with aggressive tuning',
     'aggressive',
-    { propSize: '5"', weight: 580, motorKV: 2650 }
+    { propSize: '5"', weight: 500, motorKV: 2650 }
   ),
-  '5inch-cinematic': preset(
-    '5"',
-    '5" Cinematic',
-    'Heavy cinematic quad with GoPro, smooth tuning',
-    'smooth',
-    { battery: '6S' as const, weight: 750, motorKV: 1960 }
-  ),
-  '6inch-longrange': preset('6"', '6" Long Range', 'Mid-range cruiser with 6S power', 'smooth'),
+  '6inch-longrange': preset('6"', '6" Long Range', 'Mid-range cruiser with 6S power', 'balanced'),
   '7inch-longrange': preset(
     '7"',
     '7" Long Range',
     'Long range cruiser with smooth flight characteristics',
-    'smooth'
-  ),
-  '10inch-ultra-longrange': preset(
-    '10"',
-    '10" Ultra Long Range',
-    'Ultra long range platform for exploration',
     'smooth'
   ),
 };

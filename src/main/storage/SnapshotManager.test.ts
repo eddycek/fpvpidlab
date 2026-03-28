@@ -28,6 +28,18 @@ function createMockMSPClient(connected = true): MSPClient {
   } as any;
 }
 
+function makeProfileInput(serial: string, name = 'Test', size: '5"' | '3"' = '5"') {
+  return {
+    fcSerialNumber: serial,
+    fcInfo: mockFCInfo,
+    name,
+    size,
+    battery: '6S' as const,
+    weight: 650,
+    flightStyle: 'balanced' as const,
+  };
+}
+
 describe('SnapshotManager', () => {
   let snapshotDir: string;
   let profileDir: string;
@@ -64,13 +76,7 @@ describe('SnapshotManager', () => {
 
   it('creates snapshot with FC info and CLI diff', async () => {
     // Create a profile so there's a current profile
-    const profile = await profileManager.createProfile({
-      fcSerialNumber: 'SN-001',
-      fcInfo: mockFCInfo,
-      name: 'Test',
-      size: '5"',
-      battery: '4S',
-    });
+    const profile = await profileManager.createProfile(makeProfileInput('SN-001'));
 
     const snap = await manager.createSnapshot('My Backup', 'manual');
 
@@ -87,26 +93,14 @@ describe('SnapshotManager', () => {
   });
 
   it('creates auto snapshot with createdBy=auto', async () => {
-    await profileManager.createProfile({
-      fcSerialNumber: 'SN-002',
-      fcInfo: mockFCInfo,
-      name: 'Test',
-      size: '5"',
-      battery: '4S',
-    });
+    await profileManager.createProfile(makeProfileInput('SN-002'));
 
     const snap = await manager.createSnapshot('Auto backup', 'auto');
     expect(snap.metadata.createdBy).toBe('auto');
   });
 
   it('creates baseline and sets baselineSnapshotId', async () => {
-    const profile = await profileManager.createProfile({
-      fcSerialNumber: 'SN-003',
-      fcInfo: mockFCInfo,
-      name: 'Test',
-      size: '5"',
-      battery: '4S',
-    });
+    const profile = await profileManager.createProfile(makeProfileInput('SN-003'));
 
     const snap = await manager.createSnapshot('Baseline', 'baseline');
 
@@ -115,13 +109,7 @@ describe('SnapshotManager', () => {
   });
 
   it('creates snapshot with tuning metadata', async () => {
-    await profileManager.createProfile({
-      fcSerialNumber: 'SN-META',
-      fcInfo: mockFCInfo,
-      name: 'Test',
-      size: '5"',
-      battery: '4S',
-    });
+    await profileManager.createProfile(makeProfileInput('SN-META'));
 
     const snap = await manager.createSnapshot('Pre-tuning #1 (Filter Tune)', 'auto', {
       tuningSessionNumber: 1,
@@ -135,13 +123,7 @@ describe('SnapshotManager', () => {
   });
 
   it('propagates tuning metadata to listSnapshots', async () => {
-    await profileManager.createProfile({
-      fcSerialNumber: 'SN-LIST-META',
-      fcInfo: mockFCInfo,
-      name: 'Test',
-      size: '5"',
-      battery: '4S',
-    });
+    await profileManager.createProfile(makeProfileInput('SN-LIST-META'));
 
     await manager.createSnapshot('Pre-tuning #2 (Flash Tune)', 'auto', {
       tuningSessionNumber: 2,
@@ -168,13 +150,7 @@ describe('SnapshotManager', () => {
   // ─── createBaselineIfMissing ─────────────────────────────────
 
   it('creates baseline when none exists', async () => {
-    await profileManager.createProfile({
-      fcSerialNumber: 'SN-BL',
-      fcInfo: mockFCInfo,
-      name: 'Test',
-      size: '5"',
-      battery: '4S',
-    });
+    await profileManager.createProfile(makeProfileInput('SN-BL'));
 
     await manager.createBaselineIfMissing();
 
@@ -183,13 +159,7 @@ describe('SnapshotManager', () => {
   });
 
   it('skips if baseline already exists', async () => {
-    await profileManager.createProfile({
-      fcSerialNumber: 'SN-BL2',
-      fcInfo: mockFCInfo,
-      name: 'Test',
-      size: '5"',
-      battery: '4S',
-    });
+    await profileManager.createProfile(makeProfileInput('SN-BL2'));
 
     await manager.createSnapshot('Baseline', 'baseline');
     const callCountBefore = (mockMSP.exportCLIDiff as any).mock.calls.length;
@@ -203,13 +173,7 @@ describe('SnapshotManager', () => {
   // ─── loadSnapshot ────────────────────────────────────────────
 
   it('loads previously saved snapshot', async () => {
-    await profileManager.createProfile({
-      fcSerialNumber: 'SN-LD',
-      fcInfo: mockFCInfo,
-      name: 'Test',
-      size: '5"',
-      battery: '4S',
-    });
+    await profileManager.createProfile(makeProfileInput('SN-LD'));
 
     const created = await manager.createSnapshot('Test');
     const loaded = await manager.loadSnapshot(created.id);
@@ -225,13 +189,7 @@ describe('SnapshotManager', () => {
   // ─── deleteSnapshot ──────────────────────────────────────────
 
   it('deletes non-baseline snapshot', async () => {
-    const profile = await profileManager.createProfile({
-      fcSerialNumber: 'SN-DL',
-      fcInfo: mockFCInfo,
-      name: 'Test',
-      size: '5"',
-      battery: '4S',
-    });
+    const profile = await profileManager.createProfile(makeProfileInput('SN-DL'));
 
     const snap = await manager.createSnapshot('Deletable', 'manual');
     await manager.deleteSnapshot(snap.id);
@@ -242,26 +200,14 @@ describe('SnapshotManager', () => {
   });
 
   it('prevents deleting baseline snapshot (tracked in manager)', async () => {
-    await profileManager.createProfile({
-      fcSerialNumber: 'SN-NB',
-      fcInfo: mockFCInfo,
-      name: 'Test',
-      size: '5"',
-      battery: '4S',
-    });
+    await profileManager.createProfile(makeProfileInput('SN-NB'));
 
     const baseline = await manager.createSnapshot('Baseline', 'baseline');
     await expect(manager.deleteSnapshot(baseline.id)).rejects.toThrow('Cannot delete baseline');
   });
 
   it('prevents deleting profile baseline snapshot', async () => {
-    await profileManager.createProfile({
-      fcSerialNumber: 'SN-PB',
-      fcInfo: mockFCInfo,
-      name: 'Test',
-      size: '5"',
-      battery: '4S',
-    });
+    await profileManager.createProfile(makeProfileInput('SN-PB'));
 
     const baseline = await manager.createSnapshot('Baseline', 'baseline');
 
@@ -277,24 +223,12 @@ describe('SnapshotManager', () => {
   // ─── listSnapshots ───────────────────────────────────────────
 
   it('lists snapshots filtered by current profile', async () => {
-    await profileManager.createProfile({
-      fcSerialNumber: 'SN-P1',
-      fcInfo: mockFCInfo,
-      name: 'Drone 1',
-      size: '5"',
-      battery: '4S',
-    });
+    await profileManager.createProfile(makeProfileInput('SN-P1', 'Drone 1'));
 
     const snap1 = await manager.createSnapshot('Snap A', 'manual');
 
     // Create second profile and switch to it
-    await profileManager.createProfile({
-      fcSerialNumber: 'SN-P2',
-      fcInfo: mockFCInfo,
-      name: 'Drone 2',
-      size: '3"',
-      battery: '4S',
-    });
+    await profileManager.createProfile(makeProfileInput('SN-P2', 'Drone 2', '3"'));
 
     const snap2 = await manager.createSnapshot('Snap B', 'manual');
 
@@ -305,13 +239,7 @@ describe('SnapshotManager', () => {
   });
 
   it('returns snapshots sorted newest first', async () => {
-    await profileManager.createProfile({
-      fcSerialNumber: 'SN-SORT',
-      fcInfo: mockFCInfo,
-      name: 'Test',
-      size: '5"',
-      battery: '4S',
-    });
+    await profileManager.createProfile(makeProfileInput('SN-SORT'));
 
     const first = await manager.createSnapshot('First', 'manual');
     await new Promise((r) => setTimeout(r, 10));
@@ -325,13 +253,7 @@ describe('SnapshotManager', () => {
   // ─── exportSnapshot ──────────────────────────────────────────
 
   it('exports snapshot to destination path', async () => {
-    await profileManager.createProfile({
-      fcSerialNumber: 'SN-EXP',
-      fcInfo: mockFCInfo,
-      name: 'Test',
-      size: '5"',
-      battery: '4S',
-    });
+    await profileManager.createProfile(makeProfileInput('SN-EXP'));
 
     const snap = await manager.createSnapshot('Export Me');
     const destPath = join(snapshotDir, '..', 'exported.json');
@@ -344,13 +266,7 @@ describe('SnapshotManager', () => {
   // ─── getBaseline ─────────────────────────────────────────────
 
   it('returns baseline via profile baselineSnapshotId', async () => {
-    await profileManager.createProfile({
-      fcSerialNumber: 'SN-GB',
-      fcInfo: mockFCInfo,
-      name: 'Test',
-      size: '5"',
-      battery: '4S',
-    });
+    await profileManager.createProfile(makeProfileInput('SN-GB'));
 
     const baseline = await manager.createSnapshot('Baseline', 'baseline');
     const result = await manager.getBaseline();
@@ -360,13 +276,7 @@ describe('SnapshotManager', () => {
   });
 
   it('returns null when no baseline exists', async () => {
-    await profileManager.createProfile({
-      fcSerialNumber: 'SN-NB2',
-      fcInfo: mockFCInfo,
-      name: 'Test',
-      size: '5"',
-      battery: '4S',
-    });
+    await profileManager.createProfile(makeProfileInput('SN-NB2'));
 
     const result = await manager.getBaseline();
     expect(result).toBeNull();

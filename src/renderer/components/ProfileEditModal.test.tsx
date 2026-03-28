@@ -10,9 +10,10 @@ describe('ProfileEditModal', () => {
     name: '5" Freestyle',
     fcSerialNumber: 'ABC123',
     size: '5"',
-    battery: '4S',
+    battery: '6S',
     weight: 650,
-    motorKV: 2400,
+    flightStyle: 'balanced',
+    motorKV: 1950,
     propSize: '5.1"',
     notes: 'My racing quad',
     snapshotIds: [],
@@ -20,7 +21,13 @@ describe('ProfileEditModal', () => {
     lastConnected: new Date().toISOString(),
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-    fcInfo: { variant: 'BTFL', version: '4.4.0', target: 'STM32F405', boardName: 'MATEKF405', apiVersion: { protocol: 0, major: 1, minor: 46 } }
+    fcInfo: {
+      variant: 'BTFL',
+      version: '4.4.0',
+      target: 'STM32F405',
+      boardName: 'MATEKF405',
+      apiVersion: { protocol: 0, major: 1, minor: 46 },
+    },
   };
 
   const mockOnSave = vi.fn();
@@ -32,44 +39,26 @@ describe('ProfileEditModal', () => {
   });
 
   it('renders modal with title', () => {
-    render(
-      <ProfileEditModal
-        profile={mockProfile}
-        onSave={mockOnSave}
-        onCancel={mockOnCancel}
-      />
-    );
+    render(<ProfileEditModal profile={mockProfile} onSave={mockOnSave} onCancel={mockOnCancel} />);
 
     expect(screen.getByText('Edit Profile')).toBeInTheDocument();
     expect(screen.getByText(/Update drone configuration for MATEKF405/i)).toBeInTheDocument();
   });
 
   it('displays all form fields with current values', () => {
-    render(
-      <ProfileEditModal
-        profile={mockProfile}
-        onSave={mockOnSave}
-        onCancel={mockOnCancel}
-      />
-    );
+    render(<ProfileEditModal profile={mockProfile} onSave={mockOnSave} onCancel={mockOnCancel} />);
 
     expect(screen.getByDisplayValue('5" Freestyle')).toBeInTheDocument();
     expect(screen.getByDisplayValue('5"')).toBeInTheDocument();
     expect(screen.getByDisplayValue('5.1"')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('4S')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('6S')).toBeInTheDocument();
     expect(screen.getByDisplayValue('650')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('2400')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('1950')).toBeInTheDocument();
     expect(screen.getByDisplayValue('My racing quad')).toBeInTheDocument();
   });
 
   it('shows required field indicators', () => {
-    render(
-      <ProfileEditModal
-        profile={mockProfile}
-        onSave={mockOnSave}
-        onCancel={mockOnCancel}
-      />
-    );
+    render(<ProfileEditModal profile={mockProfile} onSave={mockOnSave} onCancel={mockOnCancel} />);
 
     const requiredMarkers = screen.getAllByText('*');
     expect(requiredMarkers.length).toBeGreaterThan(0);
@@ -77,13 +66,7 @@ describe('ProfileEditModal', () => {
 
   it('allows editing profile name', async () => {
     const user = userEvent.setup();
-    render(
-      <ProfileEditModal
-        profile={mockProfile}
-        onSave={mockOnSave}
-        onCancel={mockOnCancel}
-      />
-    );
+    render(<ProfileEditModal profile={mockProfile} onSave={mockOnSave} onCancel={mockOnCancel} />);
 
     const nameInput = screen.getByDisplayValue('5" Freestyle');
     await user.clear(nameInput);
@@ -94,13 +77,7 @@ describe('ProfileEditModal', () => {
 
   it('allows changing drone size', async () => {
     const user = userEvent.setup();
-    render(
-      <ProfileEditModal
-        profile={mockProfile}
-        onSave={mockOnSave}
-        onCancel={mockOnCancel}
-      />
-    );
+    render(<ProfileEditModal profile={mockProfile} onSave={mockOnSave} onCancel={mockOnCancel} />);
 
     const sizeSelect = screen.getByDisplayValue('5"');
     await user.selectOptions(sizeSelect, '7"');
@@ -110,29 +87,17 @@ describe('ProfileEditModal', () => {
 
   it('allows changing battery type', async () => {
     const user = userEvent.setup();
-    render(
-      <ProfileEditModal
-        profile={mockProfile}
-        onSave={mockOnSave}
-        onCancel={mockOnCancel}
-      />
-    );
+    render(<ProfileEditModal profile={mockProfile} onSave={mockOnSave} onCancel={mockOnCancel} />);
 
-    const batterySelect = screen.getByDisplayValue('4S');
-    await user.selectOptions(batterySelect, '6S');
+    const batterySelect = screen.getByDisplayValue('6S');
+    await user.selectOptions(batterySelect, '4S');
 
-    expect(screen.getByDisplayValue('6S')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('4S')).toBeInTheDocument();
   });
 
   it('allows changing weight', async () => {
     const user = userEvent.setup();
-    render(
-      <ProfileEditModal
-        profile={mockProfile}
-        onSave={mockOnSave}
-        onCancel={mockOnCancel}
-      />
-    );
+    render(<ProfileEditModal profile={mockProfile} onSave={mockOnSave} onCancel={mockOnCancel} />);
 
     const weightInput = screen.getByDisplayValue('650');
     await user.clear(weightInput);
@@ -143,15 +108,9 @@ describe('ProfileEditModal', () => {
 
   it('allows changing motor KV', async () => {
     const user = userEvent.setup();
-    render(
-      <ProfileEditModal
-        profile={mockProfile}
-        onSave={mockOnSave}
-        onCancel={mockOnCancel}
-      />
-    );
+    render(<ProfileEditModal profile={mockProfile} onSave={mockOnSave} onCancel={mockOnCancel} />);
 
-    const kvInput = screen.getByDisplayValue('2400');
+    const kvInput = screen.getByDisplayValue('1950');
     await user.clear(kvInput);
     await user.type(kvInput, '2650');
 
@@ -160,13 +119,7 @@ describe('ProfileEditModal', () => {
 
   it('allows editing notes', async () => {
     const user = userEvent.setup();
-    render(
-      <ProfileEditModal
-        profile={mockProfile}
-        onSave={mockOnSave}
-        onCancel={mockOnCancel}
-      />
-    );
+    render(<ProfileEditModal profile={mockProfile} onSave={mockOnSave} onCancel={mockOnCancel} />);
 
     const notesTextarea = screen.getByDisplayValue('My racing quad');
     await user.clear(notesTextarea);
@@ -177,13 +130,7 @@ describe('ProfileEditModal', () => {
 
   it('calls onCancel when cancel button clicked', async () => {
     const user = userEvent.setup();
-    render(
-      <ProfileEditModal
-        profile={mockProfile}
-        onSave={mockOnSave}
-        onCancel={mockOnCancel}
-      />
-    );
+    render(<ProfileEditModal profile={mockProfile} onSave={mockOnSave} onCancel={mockOnCancel} />);
 
     const cancelButton = screen.getByRole('button', { name: /cancel/i });
     await user.click(cancelButton);
@@ -193,13 +140,7 @@ describe('ProfileEditModal', () => {
 
   it('calls onSave with updated values when save button clicked', async () => {
     const user = userEvent.setup();
-    render(
-      <ProfileEditModal
-        profile={mockProfile}
-        onSave={mockOnSave}
-        onCancel={mockOnCancel}
-      />
-    );
+    render(<ProfileEditModal profile={mockProfile} onSave={mockOnSave} onCancel={mockOnCancel} />);
 
     const nameInput = screen.getByDisplayValue('5" Freestyle');
     await user.clear(nameInput);
@@ -213,9 +154,9 @@ describe('ProfileEditModal', () => {
         expect.objectContaining({
           name: 'Updated Name',
           size: '5"',
-          battery: '4S',
+          battery: '6S',
           weight: 650,
-          motorKV: 2400
+          motorKV: 1950,
         })
       );
     });
@@ -223,13 +164,7 @@ describe('ProfileEditModal', () => {
 
   it('disables save button when name is empty', async () => {
     const user = userEvent.setup();
-    render(
-      <ProfileEditModal
-        profile={mockProfile}
-        onSave={mockOnSave}
-        onCancel={mockOnCancel}
-      />
-    );
+    render(<ProfileEditModal profile={mockProfile} onSave={mockOnSave} onCancel={mockOnCancel} />);
 
     const nameInput = screen.getByDisplayValue('5" Freestyle');
     await user.clear(nameInput);
@@ -240,15 +175,9 @@ describe('ProfileEditModal', () => {
 
   it('shows loading state while saving', async () => {
     const user = userEvent.setup();
-    mockOnSave.mockImplementation(() => new Promise(resolve => setTimeout(resolve, 100)));
+    mockOnSave.mockImplementation(() => new Promise((resolve) => setTimeout(resolve, 100)));
 
-    render(
-      <ProfileEditModal
-        profile={mockProfile}
-        onSave={mockOnSave}
-        onCancel={mockOnCancel}
-      />
-    );
+    render(<ProfileEditModal profile={mockProfile} onSave={mockOnSave} onCancel={mockOnCancel} />);
 
     const saveButton = screen.getByRole('button', { name: /save changes/i });
     await user.click(saveButton);
@@ -259,15 +188,9 @@ describe('ProfileEditModal', () => {
 
   it('disables cancel button while saving', async () => {
     const user = userEvent.setup();
-    mockOnSave.mockImplementation(() => new Promise(resolve => setTimeout(resolve, 100)));
+    mockOnSave.mockImplementation(() => new Promise((resolve) => setTimeout(resolve, 100)));
 
-    render(
-      <ProfileEditModal
-        profile={mockProfile}
-        onSave={mockOnSave}
-        onCancel={mockOnCancel}
-      />
-    );
+    render(<ProfileEditModal profile={mockProfile} onSave={mockOnSave} onCancel={mockOnCancel} />);
 
     const saveButton = screen.getByRole('button', { name: /save changes/i });
     await user.click(saveButton);
@@ -276,16 +199,10 @@ describe('ProfileEditModal', () => {
     expect(cancelButton).toBeDisabled();
   });
 
-  it('defaults flight style to balanced for profiles without it', () => {
-    render(
-      <ProfileEditModal
-        profile={mockProfile}
-        onSave={mockOnSave}
-        onCancel={mockOnCancel}
-      />
-    );
+  it('shows balanced flight style when profile has balanced', () => {
+    render(<ProfileEditModal profile={mockProfile} onSave={mockOnSave} onCancel={mockOnCancel} />);
 
-    // Balanced should be selected by default (mockProfile has no flightStyle)
+    // Balanced should be selected (mockProfile has flightStyle: 'balanced')
     const balancedBtn = screen.getByText('Balanced (default)').closest('.flight-style-option');
     expect(balancedBtn?.classList.contains('selected')).toBe(true);
   });
@@ -297,11 +214,7 @@ describe('ProfileEditModal', () => {
     };
 
     render(
-      <ProfileEditModal
-        profile={aggressiveProfile}
-        onSave={mockOnSave}
-        onCancel={mockOnCancel}
-      />
+      <ProfileEditModal profile={aggressiveProfile} onSave={mockOnSave} onCancel={mockOnCancel} />
     );
 
     const aggressiveBtn = screen.getByText('Aggressive').closest('.flight-style-option');
@@ -310,13 +223,7 @@ describe('ProfileEditModal', () => {
 
   it('includes flightStyle in save output', async () => {
     const user = userEvent.setup();
-    render(
-      <ProfileEditModal
-        profile={mockProfile}
-        onSave={mockOnSave}
-        onCancel={mockOnCancel}
-      />
-    );
+    render(<ProfileEditModal profile={mockProfile} onSave={mockOnSave} onCancel={mockOnCancel} />);
 
     // Change to smooth
     await user.click(screen.getByText('Smooth'));
@@ -337,17 +244,12 @@ describe('ProfileEditModal', () => {
     const minimalProfile: DroneProfile = {
       ...mockProfile,
       propSize: undefined,
-      weight: undefined,
       motorKV: undefined,
-      notes: undefined
+      notes: undefined,
     };
 
     render(
-      <ProfileEditModal
-        profile={minimalProfile}
-        onSave={mockOnSave}
-        onCancel={mockOnCancel}
-      />
+      <ProfileEditModal profile={minimalProfile} onSave={mockOnSave} onCancel={mockOnCancel} />
     );
 
     expect(screen.getByText('Edit Profile')).toBeInTheDocument();

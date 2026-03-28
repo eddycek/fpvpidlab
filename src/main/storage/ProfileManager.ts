@@ -11,7 +11,7 @@ import type {
   DroneProfileMetadata,
   ProfileCreationInput,
   ProfileUpdateInput,
-  PresetProfile
+  PresetProfile,
 } from '@shared/types/profile.types';
 import { logger } from '../utils/logger';
 
@@ -42,10 +42,11 @@ export class ProfileManager {
       name: input.name,
       size: input.size,
       battery: input.battery,
+      weight: input.weight,
+      flightStyle: input.flightStyle,
 
       // Optional fields
       propSize: input.propSize,
-      weight: input.weight,
       motorKV: input.motorKV,
       notes: input.notes || '',
 
@@ -60,7 +61,7 @@ export class ProfileManager {
 
       // Snapshots
       snapshotIds: [],
-      baselineSnapshotId: undefined
+      baselineSnapshotId: undefined,
     };
 
     await this.storage.saveProfile(profile);
@@ -87,8 +88,9 @@ export class ProfileManager {
       propSize: preset.propSize,
       battery: preset.battery,
       weight: preset.weight,
+      flightStyle: preset.flightStyle,
       motorKV: preset.motorKV,
-      notes: preset.notes
+      notes: preset.notes,
     };
 
     return this.createProfile(input);
@@ -106,7 +108,7 @@ export class ProfileManager {
     const updatedProfile: DroneProfile = {
       ...profile,
       ...updates,
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     };
 
     await this.storage.saveProfile(updatedProfile);
@@ -135,7 +137,9 @@ export class ProfileManager {
     // Delete the profile
     await this.storage.deleteProfile(id);
 
-    logger.info(`Profile deleted: ${id} (snapshots: ${profile.snapshotIds.length}, wasActive: ${wasActive})`);
+    logger.info(
+      `Profile deleted: ${id} (snapshots: ${profile.snapshotIds.length}, wasActive: ${wasActive})`
+    );
   }
 
   /**
@@ -144,14 +148,14 @@ export class ProfileManager {
   async listProfiles(): Promise<DroneProfileMetadata[]> {
     const profiles = await this.storage.loadProfiles();
 
-    return Object.values(profiles).map(profile => ({
+    return Object.values(profiles).map((profile) => ({
       id: profile.id,
       fcSerialNumber: profile.fcSerialNumber,
       name: profile.name,
       size: profile.size,
       battery: profile.battery,
       lastConnected: profile.lastConnected,
-      connectionCount: profile.connectionCount
+      connectionCount: profile.connectionCount,
     }));
   }
 
@@ -180,7 +184,7 @@ export class ProfileManager {
 
     // Update last connected and connection count
     const updatedProfile = await this.updateProfile(id, {
-      lastConnected: new Date().toISOString()
+      lastConnected: new Date().toISOString(),
     });
 
     // Increment connection count
@@ -220,7 +224,11 @@ export class ProfileManager {
   /**
    * Link snapshot to profile
    */
-  async linkSnapshot(profileId: string, snapshotId: string, isBaseline: boolean = false): Promise<void> {
+  async linkSnapshot(
+    profileId: string,
+    snapshotId: string,
+    isBaseline: boolean = false
+  ): Promise<void> {
     const profile = await this.storage.loadProfile(profileId);
     if (!profile) {
       throw new Error(`Profile ${profileId} not found`);
@@ -249,7 +257,7 @@ export class ProfileManager {
       throw new Error(`Profile ${profileId} not found`);
     }
 
-    profile.snapshotIds = profile.snapshotIds.filter(id => id !== snapshotId);
+    profile.snapshotIds = profile.snapshotIds.filter((id) => id !== snapshotId);
 
     if (profile.baselineSnapshotId === snapshotId) {
       profile.baselineSnapshotId = undefined;

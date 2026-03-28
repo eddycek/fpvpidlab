@@ -10,16 +10,23 @@ describe('ProfileDeleteModal', () => {
     name: '5" Freestyle',
     fcSerialNumber: 'ABC123',
     size: '5"',
-    battery: '4S',
+    battery: '6S',
     weight: 650,
-    motorKV: 2400,
+    flightStyle: 'balanced',
+    motorKV: 1950,
     propSize: '5.1"',
     snapshotIds: ['snapshot-1', 'snapshot-2', 'snapshot-3'],
     connectionCount: 10,
     lastConnected: new Date().toISOString(),
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-    fcInfo: { variant: 'BTFL', version: '4.4.0', target: 'STM32F405', boardName: 'MATEKF405', apiVersion: { protocol: 0, major: 1, minor: 46 } }
+    fcInfo: {
+      variant: 'BTFL',
+      version: '4.4.0',
+      target: 'STM32F405',
+      boardName: 'MATEKF405',
+      apiVersion: { protocol: 0, major: 1, minor: 46 },
+    },
   };
 
   const mockOnConfirm = vi.fn();
@@ -58,7 +65,7 @@ describe('ProfileDeleteModal', () => {
     expect(screen.getByText('Size')).toBeInTheDocument();
     expect(screen.getByText('5"')).toBeInTheDocument();
     expect(screen.getByText('Battery')).toBeInTheDocument();
-    expect(screen.getByText('4S')).toBeInTheDocument();
+    expect(screen.getByText('6S')).toBeInTheDocument();
   });
 
   it('displays snapshot count', () => {
@@ -168,7 +175,7 @@ describe('ProfileDeleteModal', () => {
 
   it('shows loading state while deleting', async () => {
     const user = userEvent.setup();
-    mockOnConfirm.mockImplementation(() => new Promise(resolve => setTimeout(resolve, 100)));
+    mockOnConfirm.mockImplementation(() => new Promise((resolve) => setTimeout(resolve, 100)));
 
     render(
       <ProfileDeleteModal
@@ -188,7 +195,7 @@ describe('ProfileDeleteModal', () => {
 
   it('disables buttons while deleting', async () => {
     const user = userEvent.setup();
-    mockOnConfirm.mockImplementation(() => new Promise(resolve => setTimeout(resolve, 100)));
+    mockOnConfirm.mockImplementation(() => new Promise((resolve) => setTimeout(resolve, 100)));
 
     render(
       <ProfileDeleteModal

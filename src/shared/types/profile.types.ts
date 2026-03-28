@@ -10,7 +10,7 @@ import type { FCInfo } from './common.types';
 // Enums
 // ============================================================================
 
-export type DroneSize = '1"' | '2"' | '2.5"' | '3"' | '4"' | '5"' | '6"' | '7"' | '10"';
+export type DroneSize = '1"' | '2.5"' | '3"' | '4"' | '5"' | '6"' | '7"';
 export type BatteryType = '1S' | '2S' | '3S' | '4S' | '6S';
 
 /**
@@ -32,6 +32,8 @@ export interface DroneProfileRequired {
   name: string;
   size: DroneSize;
   battery: BatteryType;
+  weight: number; // AUW in grams
+  flightStyle: FlightStyle;
 }
 
 /**
@@ -39,10 +41,8 @@ export interface DroneProfileRequired {
  */
 export interface DroneProfileOptional {
   propSize?: string;
-  weight?: number; // AUW in grams
   motorKV?: number;
   notes?: string;
-  flightStyle?: FlightStyle;
   lastConnected?: string;
   bfPidProfileIndex?: number; // preferred BF PID profile (0-based), undefined = FC default
   bfPidProfileLabels?: Record<number, string>; // user labels: {0: "Stock", 1: "Tuned"}

@@ -16,26 +16,26 @@ describe('PRESET_PROFILES', () => {
     expect(PRESET_PROFILES['5inch-race'].flightStyle).toBe('aggressive');
   });
 
-  it('maps cinematic preset to smooth', () => {
-    expect(PRESET_PROFILES['5inch-cinematic'].flightStyle).toBe('smooth');
+  it('maps whoop preset to smooth', () => {
+    expect(PRESET_PROFILES['3inch-whoop'].flightStyle).toBe('smooth');
   });
 
-  it('maps cinewhoop preset to smooth', () => {
-    expect(PRESET_PROFILES['3inch-cinewhoop'].flightStyle).toBe('smooth');
-  });
-
-  it('maps long-range presets to smooth', () => {
-    expect(PRESET_PROFILES['6inch-longrange'].flightStyle).toBe('smooth');
+  it('maps long-range presets correctly', () => {
+    expect(PRESET_PROFILES['6inch-longrange'].flightStyle).toBe('balanced');
     expect(PRESET_PROFILES['7inch-longrange'].flightStyle).toBe('smooth');
-    expect(PRESET_PROFILES['10inch-ultra-longrange'].flightStyle).toBe('smooth');
   });
 
-  it('maps freestyle preset to balanced', () => {
+  it('maps freestyle presets to balanced', () => {
     expect(PRESET_PROFILES['5inch-freestyle'].flightStyle).toBe('balanced');
+    expect(PRESET_PROFILES['3inch-freestyle'].flightStyle).toBe('balanced');
+    expect(PRESET_PROFILES['4inch-freestyle'].flightStyle).toBe('balanced');
   });
 
-  it('maps whoop presets to balanced', () => {
+  it('maps tiny whoop to balanced', () => {
     expect(PRESET_PROFILES['tiny-whoop'].flightStyle).toBe('balanced');
-    expect(PRESET_PROFILES['micro-whoop'].flightStyle).toBe('balanced');
+  });
+
+  it('has 8 presets', () => {
+    expect(presetIds).toHaveLength(8);
   });
 });
