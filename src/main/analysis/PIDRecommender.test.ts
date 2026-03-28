@@ -6,6 +6,8 @@ import {
   extractFeedforwardContext,
   extractDMinContext,
   extractTPAContext,
+  extractItermRelaxCutoff,
+  recommendItermRelaxCutoff,
 } from './PIDRecommender';
 import type { DMinContext, TPAContext } from './PIDRecommender';
 import type { TransferFunctionContext } from './PIDRecommender';
@@ -2125,5 +2127,80 @@ describe('ruleId assignment', () => {
       expect(rec.ruleId).toBeDefined();
       expect(rec.ruleId!.length).toBeGreaterThan(0);
     }
+  });
+});
+
+describe('extractItermRelaxCutoff', () => {
+  it('should extract iterm_relax_cutoff from BBL headers', () => {
+    const headers = new Map([['iterm_relax_cutoff', '15']]);
+    expect(extractItermRelaxCutoff(headers)).toBe(15);
+  });
+
+  it('should return undefined when header is missing', () => {
+    const headers = new Map<string, string>();
+    expect(extractItermRelaxCutoff(headers)).toBeUndefined();
+  });
+
+  it('should return undefined for non-numeric values', () => {
+    const headers = new Map([['iterm_relax_cutoff', 'abc']]);
+    expect(extractItermRelaxCutoff(headers)).toBeUndefined();
+  });
+});
+
+describe('recommendItermRelaxCutoff', () => {
+  it('should return undefined when cutoff is undefined', () => {
+    expect(recommendItermRelaxCutoff(undefined, 'balanced')).toBeUndefined();
+  });
+
+  it('should return undefined when cutoff is within range for balanced', () => {
+    // Balanced typical = 12, 50% deviation = 6. So 12 is in range.
+    expect(recommendItermRelaxCutoff(12, 'balanced')).toBeUndefined();
+  });
+
+  it('should return undefined when cutoff is just within 50% threshold', () => {
+    // Balanced typical = 12, 50% = 6 deviation. cutoff=18 → deviation = 6/12 = 0.5 = threshold
+    expect(recommendItermRelaxCutoff(18, 'balanced')).toBeUndefined();
+  });
+
+  it('should recommend for balanced style when cutoff is too high', () => {
+    // cutoff=30, typical=12, deviation = 18/12 = 1.5 > 0.5
+    const rec = recommendItermRelaxCutoff(30, 'balanced');
+    expect(rec).toBeDefined();
+    expect(rec!.setting).toBe('iterm_relax_cutoff');
+    expect(rec!.currentValue).toBe(30);
+    expect(rec!.recommendedValue).toBe(12);
+    expect(rec!.ruleId).toBe('P-IRELAX');
+    expect(rec!.confidence).toBe('medium');
+    expect(rec!.reason).toContain('freestyle');
+  });
+
+  it('should recommend for smooth style when cutoff is too high', () => {
+    // cutoff=15, typical=7, deviation = 8/7 > 0.5
+    const rec = recommendItermRelaxCutoff(15, 'smooth');
+    expect(rec).toBeDefined();
+    expect(rec!.recommendedValue).toBe(7);
+    expect(rec!.reason).toContain('cinematic');
+    expect(rec!.reason).toContain('smoother');
+  });
+
+  it('should recommend for aggressive style when cutoff is too low', () => {
+    // cutoff=10, typical=25, deviation = 15/25 = 0.6 > 0.5
+    const rec = recommendItermRelaxCutoff(10, 'aggressive');
+    expect(rec).toBeDefined();
+    expect(rec!.recommendedValue).toBe(25);
+    expect(rec!.reason).toContain('racing');
+    expect(rec!.reason).toContain('snappiness');
+  });
+
+  it('should not recommend for aggressive style when cutoff is already in range', () => {
+    // cutoff=25, typical=25, deviation = 0
+    expect(recommendItermRelaxCutoff(25, 'aggressive')).toBeUndefined();
+  });
+
+  it('should include style-appropriate description in reason', () => {
+    const rec = recommendItermRelaxCutoff(30, 'smooth');
+    expect(rec).toBeDefined();
+    expect(rec!.reason).toContain('cinematic');
+    expect(rec!.reason).toContain('5-10');
   });
 });

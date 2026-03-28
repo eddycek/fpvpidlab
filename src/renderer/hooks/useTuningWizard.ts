@@ -252,8 +252,9 @@ export function useTuningWizard(logId: string, mode: TuningMode = 'full'): UseTu
       const pidRecs = allPidRecs.filter(
         (r) => r.setting.startsWith('pid_') && r.currentValue !== r.recommendedValue
       );
+      // CLI-based settings: feedforward_*, iterm_relax_*, and any other non-MSP settings
       const ffRecs = allPidRecs.filter(
-        (r) => r.setting.startsWith('feedforward_') && r.currentValue !== r.recommendedValue
+        (r) => !r.setting.startsWith('pid_') && r.currentValue !== r.recommendedValue
       );
 
       const hasChanges = filterRecs.length + pidRecs.length + ffRecs.length > 0;

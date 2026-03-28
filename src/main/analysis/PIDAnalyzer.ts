@@ -37,6 +37,8 @@ import {
   extractFeedforwardContext,
   extractDMinContext,
   extractTPAContext,
+  extractItermRelaxCutoff,
+  recommendItermRelaxCutoff,
 } from './PIDRecommender';
 import type { TransferFunctionContext } from './PIDRecommender';
 import {
@@ -364,6 +366,13 @@ async function analyzePIDCore(params: CoreParams): Promise<PIDAnalysisResult> {
   const stepFFRecs = recommendFeedforward(feedforwardAnalysis ?? undefined, feedforwardContext);
   const ffRecommendations = mergeFFRecommendations(rcLinkBaselineRecs, stepFFRecs);
   rawRecommendations.push(...ffRecommendations);
+
+  // I-term relax cutoff recommendation (flight-style-aware advisory)
+  const itermRelaxCutoff = rawHeaders ? extractItermRelaxCutoff(rawHeaders) : undefined;
+  const itermRelaxRec = recommendItermRelaxCutoff(itermRelaxCutoff, flightStyle);
+  if (itermRelaxRec) {
+    rawRecommendations.push(itermRelaxRec);
+  }
 
   // Quality-adjusted confidence — no blanket cap, gating handles it
   const recommendations = adjustPIDConfidenceByQuality(

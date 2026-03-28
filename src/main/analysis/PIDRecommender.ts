@@ -22,6 +22,8 @@ import {
   QUAD_SIZE_BOUNDS,
   DEFAULT_QUAD_SIZE_BOUNDS,
   BANDWIDTH_LOW_HZ_BY_STYLE,
+  ITERM_RELAX_CUTOFF_BY_STYLE,
+  ITERM_RELAX_DEVIATION_THRESHOLD,
   type QuadSizeBounds,
 } from './constants';
 
@@ -917,6 +919,50 @@ function applyTPAAdvisory(recommendations: PIDRecommendation[], tpa: TPAContext)
 
     rec.reason += ` Note: TPA is active (${tpa.rate}% attenuation above ${tpa.breakpoint ?? 1350}). Effective D is reduced at high throttle — step responses from high-throttle maneuvers may show less damping than the configured D value.`;
   }
+}
+
+/**
+ * Extract iterm_relax_cutoff from BBL raw headers.
+ * Returns undefined if the header is not present.
+ */
+export function extractItermRelaxCutoff(rawHeaders: Map<string, string>): number | undefined {
+  return parseIntOr(rawHeaders.get('iterm_relax_cutoff'));
+}
+
+/**
+ * Recommend iterm_relax_cutoff based on flight style and current value.
+ *
+ * Returns an informational recommendation when the current cutoff is >50%
+ * away from the style-appropriate typical value. The recommendation is
+ * advisory — the user decides whether to apply.
+ */
+export function recommendItermRelaxCutoff(
+  currentCutoff: number | undefined,
+  flightStyle: FlightStyle
+): PIDRecommendation | undefined {
+  if (currentCutoff === undefined) return undefined;
+
+  const range = ITERM_RELAX_CUTOFF_BY_STYLE[flightStyle];
+  const deviation = Math.abs(currentCutoff - range.typical) / range.typical;
+
+  if (deviation <= ITERM_RELAX_DEVIATION_THRESHOLD) return undefined;
+
+  const styleName =
+    flightStyle === 'smooth' ? 'cinematic' : flightStyle === 'aggressive' ? 'racing' : 'freestyle';
+
+  return {
+    setting: 'iterm_relax_cutoff',
+    currentValue: currentCutoff,
+    recommendedValue: range.typical,
+    reason:
+      `I-term relax cutoff is ${currentCutoff} but typical for ${styleName} flying is ${range.min}-${range.max}. ` +
+      (currentCutoff > range.max
+        ? 'A lower value gives smoother recovery from flips and rolls.'
+        : 'A higher value improves response snappiness during quick maneuvers.'),
+    impact: 'both',
+    confidence: 'medium',
+    ruleId: 'P-IRELAX',
+  };
 }
 
 function clamp(value: number, min: number, max: number): number {
