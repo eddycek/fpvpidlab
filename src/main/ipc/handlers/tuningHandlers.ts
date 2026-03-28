@@ -218,7 +218,11 @@ export function registerTuningHandlers(deps: HandlerDependencies): void {
               }
             }
           } catch (e) {
-            logger.warn('Could not create post-tuning snapshot (non-fatal):', e);
+            const errMsg = e instanceof Error ? e.message : String(e);
+            logger.warn(
+              `Could not create post-tuning snapshot (non-fatal): ${errMsg}`,
+              e instanceof Error ? e.stack : e
+            );
           }
         }
 

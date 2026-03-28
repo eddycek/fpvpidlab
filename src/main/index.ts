@@ -100,7 +100,7 @@ async function initialize(): Promise<void> {
   }
 
   // Create Tuning Session manager
-  const tuningStoragePath = join(app.getPath('userData'), 'data/tuning');
+  const tuningStoragePath = join(app.getPath('userData'), 'data');
   tuningSessionManager = new TuningSessionManager(tuningStoragePath);
   await tuningSessionManager.initialize();
 

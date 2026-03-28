@@ -503,6 +503,40 @@ describe('MSPClient.getBoardInfo', () => {
     expect(result.boardName).toBe('STM32F405');
   });
 
+  it('sanitizes control characters from targetName', async () => {
+    const { client, sendCommand } = createClientWithStub();
+    // Build a response with control chars in targetName manually
+    const arr: number[] = [];
+    // boardId (4 bytes)
+    for (const c of 'S7X2') arr.push(c.charCodeAt(0));
+    // hwRevision (2 bytes LE)
+    arr.push(0, 0);
+    // boardType (1 byte)
+    arr.push(0);
+    // targetName with control chars: "STM32\t\x11\x04\x00F7X2"
+    const rawTarget = 'STM32\t\x11\x04\x00F7X2';
+    arr.push(rawTarget.length);
+    for (let i = 0; i < rawTarget.length; i++) arr.push(rawTarget.charCodeAt(i));
+    // boardName length 0
+    arr.push(0);
+    // manufacturerId length 0
+    arr.push(0);
+    // signature length 0
+    arr.push(0);
+    // mcuTypeId + configurationState
+    arr.push(0, 0);
+
+    sendCommand.mockResolvedValue({
+      command: MSPCommand.MSP_BOARD_INFO,
+      data: Buffer.from(arr),
+    });
+
+    const result = await client.getBoardInfo();
+    expect(result.targetName).toBe('STM32F7X2');
+    // boardName should fallback to cleaned targetName
+    expect(result.boardName).toBe('STM32F7X2');
+  });
+
   it('throws on response shorter than 9 bytes', async () => {
     const { client, sendCommand } = createClientWithStub();
     sendCommand.mockResolvedValue({

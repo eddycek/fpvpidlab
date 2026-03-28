@@ -302,7 +302,8 @@ export class MSPClient extends EventEmitter {
     const targetNameLength = response.data[7];
 
     let offset = 8;
-    const targetName = response.data.toString('utf-8', offset, offset + targetNameLength);
+    const rawTargetName = response.data.toString('utf-8', offset, offset + targetNameLength);
+    const targetName = rawTargetName.replace(/[\x00-\x1F\x7F]/g, '').trim();
     offset += targetNameLength;
 
     let boardName = '';

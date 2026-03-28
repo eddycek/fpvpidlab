@@ -746,6 +746,66 @@ describe('TuningStatusBanner', () => {
     expect(onViewGuide).toHaveBeenCalledWith('filter_verification');
   });
 
+  // Flash-full warning tests
+
+  it('shows flash-full warning during filter_flight_pending when flash has data', () => {
+    renderBanner(baseSession, false, { flashUsedSize: 1000 });
+
+    expect(
+      screen.getByText(/Flash memory contains old data\. Erase before flying/)
+    ).toBeInTheDocument();
+  });
+
+  it('shows flash-full warning during pid_flight_pending when flash has data', () => {
+    renderBanner(
+      { ...baseSession, tuningType: TUNING_TYPE.PID, phase: TUNING_PHASE.PID_FLIGHT_PENDING },
+      false,
+      { flashUsedSize: 5000 }
+    );
+
+    expect(
+      screen.getByText(/Flash memory contains old data\. Erase before flying/)
+    ).toBeInTheDocument();
+  });
+
+  it('shows SD card variant of flash-full warning', () => {
+    renderBanner(baseSession, false, { flashUsedSize: 5000, storageType: 'sdcard' });
+
+    expect(screen.getByText(/SD card contains old logs\. Erase before flying/)).toBeInTheDocument();
+  });
+
+  it('does not show flash-full warning when flash is empty', () => {
+    renderBanner(baseSession, false, { flashUsedSize: 0 });
+
+    expect(screen.queryByText(/Flash memory contains old data/)).not.toBeInTheDocument();
+  });
+
+  it('does not show flash-full warning after erase', () => {
+    renderBanner(baseSession, true, { flashUsedSize: 0 });
+
+    expect(screen.queryByText(/Flash memory contains old data/)).not.toBeInTheDocument();
+  });
+
+  it('does not show flash-full warning in demo mode', () => {
+    renderBanner(baseSession, false, { flashUsedSize: 5000, isDemoMode: true });
+
+    expect(screen.queryByText(/Flash memory contains old data/)).not.toBeInTheDocument();
+  });
+
+  it('does not show flash-full warning for non-flight-pending phases', () => {
+    renderBanner({ ...baseSession, phase: TUNING_PHASE.FILTER_ANALYSIS }, false, {
+      flashUsedSize: 5000,
+    });
+
+    expect(screen.queryByText(/Flash memory contains old data/)).not.toBeInTheDocument();
+  });
+
+  it('does not show flash-full warning when eraseSkipped (showErasedState=true)', () => {
+    renderBanner({ ...baseSession, eraseSkipped: true }, false, { flashUsedSize: 5000 });
+
+    expect(screen.queryByText(/Flash memory contains old data/)).not.toBeInTheDocument();
+  });
+
   it('passes pid_verification guide mode for PID Tune verification', async () => {
     const user = userEvent.setup();
     renderBanner(
