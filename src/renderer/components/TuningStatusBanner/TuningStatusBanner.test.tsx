@@ -459,13 +459,21 @@ describe('TuningStatusBanner', () => {
 
   // flashUsedSize-based erased state tests
 
-  it('shows erased state when flash is physically empty on reconnect (flashUsedSize=0)', () => {
+  it('does NOT show erased state for flashUsedSize=0 without explicit erase action', () => {
+    // Prevents false positive when getBlackboxInfo() returns stale usedSize=0
+    // during CLI mode race condition on connect
     renderBanner(baseSession, false, { flashUsedSize: 0 });
+
+    expect(screen.getByText('Erase Flash')).toBeInTheDocument();
+    expect(screen.queryByText(/Flash erased!/)).not.toBeInTheDocument();
+  });
+
+  it('shows erased state for flashUsedSize=0 when eraseCompleted is set', () => {
+    renderBanner({ ...baseSession, eraseCompleted: true }, false, { flashUsedSize: 0 });
 
     expect(
       screen.getByText(/Flash erased! Disconnect your drone and fly the filter test flight/)
     ).toBeInTheDocument();
-    expect(screen.queryByText('Erase Flash')).not.toBeInTheDocument();
   });
 
   it('shows Erase Flash when flash has data (flashUsedSize > 0)', () => {
@@ -482,7 +490,7 @@ describe('TuningStatusBanner', () => {
     expect(screen.queryByText(/Flash erased!/)).not.toBeInTheDocument();
   });
 
-  it('shows erased state for pid_flight_pending when flash is empty', () => {
+  it('does NOT show erased state for pid_flight_pending with flashUsedSize=0 only', () => {
     renderBanner(
       { ...baseSession, tuningType: TUNING_TYPE.PID, phase: TUNING_PHASE.PID_FLIGHT_PENDING },
       false,
@@ -491,10 +499,8 @@ describe('TuningStatusBanner', () => {
       }
     );
 
-    expect(
-      screen.getByText(/Flash erased! Disconnect your drone and fly the PID test flight/)
-    ).toBeInTheDocument();
-    expect(screen.queryByText('Erase Flash')).not.toBeInTheDocument();
+    expect(screen.getByText('Erase Flash')).toBeInTheDocument();
+    expect(screen.queryByText(/Flash erased!/)).not.toBeInTheDocument();
   });
 
   it('does not show erased state for non-flight-pending phase even with flashUsedSize=0', () => {

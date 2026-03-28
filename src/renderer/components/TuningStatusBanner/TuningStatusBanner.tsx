@@ -232,10 +232,11 @@ export function TuningStatusBanner({
   }
 
   const flashHasData = flashUsedSize != null && flashUsedSize > 0;
+  // Only show erased state when an explicit erase action was taken.
+  // Do NOT use flashUsedSize===0 as a fallback — it can be stale/wrong
+  // due to race condition (getBlackboxInfo() during CLI mode returns 0).
   const showErasedState =
-    ((isFlightPending || isVerification) &&
-      !flashHasData &&
-      (flashErased || flashUsedSize === 0)) ||
+    ((isFlightPending || isVerification) && !flashHasData && flashErased) ||
     (isFlightPending && !!session.eraseSkipped) ||
     ((isFlightPending || isVerification) && !!session.eraseCompleted);
 
