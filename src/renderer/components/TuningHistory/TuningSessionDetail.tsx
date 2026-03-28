@@ -35,7 +35,7 @@ function flightCount(record: CompletedTuningRecord): number {
 }
 
 export function TuningSessionDetail({ record, onReanalyzeVerification }: TuningSessionDetailProps) {
-  const isFilterTune = record.tuningType === TUNING_TYPE.FILTER || !record.tuningType;
+  const isFilterTune = record.tuningType === TUNING_TYPE.FILTER;
   const isPidTune = record.tuningType === TUNING_TYPE.PID;
   const isFlashTune = record.tuningType === TUNING_TYPE.FLASH;
 

@@ -248,7 +248,6 @@ function AppContent() {
           } else if (importPhase === TUNING_PHASE.FLASH_LOG_READY) {
             await tuning.updatePhase(TUNING_PHASE.FLASH_ANALYSIS, { quickLogId: imported.id });
           } else if (
-            importPhase === TUNING_PHASE.VERIFICATION_PENDING ||
             importPhase === TUNING_PHASE.FILTER_VERIFICATION_PENDING ||
             importPhase === TUNING_PHASE.PID_VERIFICATION_PENDING
           ) {
@@ -296,7 +295,6 @@ function AppContent() {
               eraseCompleted: undefined,
             });
           } else if (
-            phase === TUNING_PHASE.VERIFICATION_PENDING ||
             phase === TUNING_PHASE.FILTER_VERIFICATION_PENDING ||
             phase === TUNING_PHASE.PID_VERIFICATION_PENDING
           ) {
@@ -370,7 +368,7 @@ function AppContent() {
               ? TUNING_PHASE.FILTER_VERIFICATION_PENDING
               : tuning.session?.tuningType === TUNING_TYPE.PID
                 ? TUNING_PHASE.PID_VERIFICATION_PENDING
-                : TUNING_PHASE.VERIFICATION_PENDING;
+                : TUNING_PHASE.FLASH_VERIFICATION_PENDING;
           await tuning.updatePhase(verPhase);
           await window.betaflight.eraseBlackboxFlash();
           setErasedForPhase(verPhase);

@@ -105,7 +105,7 @@ function flightCount(session: TuningSession): number {
 }
 
 function completionTitle(session: TuningSession): string {
-  const label = TUNING_TYPE_LABELS[session.tuningType ?? TUNING_TYPE.FILTER];
+  const label = TUNING_TYPE_LABELS[session.tuningType];
   return `${label} Complete`;
 }
 
@@ -117,7 +117,7 @@ export function TuningCompletionSummary({
   onReanalyzeVerification,
   historyRecordId,
 }: TuningCompletionSummaryProps) {
-  const isFilterTune = session.tuningType === TUNING_TYPE.FILTER || !session.tuningType;
+  const isFilterTune = session.tuningType === TUNING_TYPE.FILTER;
   const isPidTune = session.tuningType === TUNING_TYPE.PID;
   const isFlashTune = session.tuningType === TUNING_TYPE.FLASH;
 

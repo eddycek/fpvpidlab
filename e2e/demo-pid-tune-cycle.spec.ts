@@ -99,7 +99,7 @@ test.describe.serial('PID Tune cycle', () => {
 
     await demo.clickButton('Erase & Verify');
 
-    // Erase + auto-flight → reconnect with verification data → verification_pending
+    // Erase + auto-flight → reconnect with verification data → pid_verification_pending
     await demo.waitForText('Download Log', 20_000);
     await demo.clickButton('Download Log');
 

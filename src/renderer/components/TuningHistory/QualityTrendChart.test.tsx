@@ -141,6 +141,7 @@ describe('QualityTrendChart', () => {
     const nullRecord: CompletedTuningRecord = {
       id: 'r0',
       profileId: 'p1',
+      tuningType: TUNING_TYPE.FILTER,
       startedAt: '2026-01-01T00:00:00Z',
       completedAt: '2026-01-15T00:00:00Z',
       baselineSnapshotId: null,

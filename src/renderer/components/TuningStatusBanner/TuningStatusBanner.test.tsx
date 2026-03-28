@@ -377,9 +377,13 @@ describe('TuningStatusBanner', () => {
     expect(onAction).toHaveBeenCalledWith('prepare_verification');
   });
 
-  it('shows verification_pending UI with Download Log', async () => {
+  it('shows flash_verification_pending UI with Download Log', async () => {
     const user = userEvent.setup();
-    renderBanner({ ...baseSession, phase: TUNING_PHASE.VERIFICATION_PENDING });
+    renderBanner({
+      ...baseSession,
+      tuningType: TUNING_TYPE.FLASH,
+      phase: TUNING_PHASE.FLASH_VERIFICATION_PENDING,
+    });
 
     expect(screen.getByText(/Download the verification log/)).toBeInTheDocument();
     expect(screen.getByText('Download Log')).toBeInTheDocument();
@@ -388,11 +392,12 @@ describe('TuningStatusBanner', () => {
     expect(onAction).toHaveBeenCalledWith('download_log');
   });
 
-  it('shows verification_pending UI with Analyze when log downloaded', async () => {
+  it('shows flash_verification_pending UI with Analyze when log downloaded', async () => {
     const user = userEvent.setup();
     renderBanner({
       ...baseSession,
-      phase: TUNING_PHASE.VERIFICATION_PENDING,
+      tuningType: TUNING_TYPE.FLASH,
+      phase: TUNING_PHASE.FLASH_VERIFICATION_PENDING,
       verificationLogId: 'log-ver',
     });
 
@@ -512,7 +517,7 @@ describe('TuningStatusBanner', () => {
   });
 
   it('shows Download Log for verification_pending when flash has data (reconnect after flight)', () => {
-    renderBanner({ ...baseSession, phase: TUNING_PHASE.VERIFICATION_PENDING }, false, {
+    renderBanner({ ...baseSession, phase: TUNING_PHASE.FLASH_VERIFICATION_PENDING }, false, {
       flashUsedSize: 1000,
     });
 
@@ -521,7 +526,7 @@ describe('TuningStatusBanner', () => {
   });
 
   it('shows Download Log when flashErased is stale but flash has data', () => {
-    renderBanner({ ...baseSession, phase: TUNING_PHASE.VERIFICATION_PENDING }, true, {
+    renderBanner({ ...baseSession, phase: TUNING_PHASE.FLASH_VERIFICATION_PENDING }, true, {
       flashUsedSize: 8000,
     });
 
@@ -549,7 +554,7 @@ describe('TuningStatusBanner', () => {
   });
 
   it('shows Import File button in verification_pending without log', () => {
-    renderBanner({ ...baseSession, phase: TUNING_PHASE.VERIFICATION_PENDING }, false, {
+    renderBanner({ ...baseSession, phase: TUNING_PHASE.FLASH_VERIFICATION_PENDING }, false, {
       flashUsedSize: 1000,
     });
 
@@ -689,8 +694,8 @@ describe('TuningStatusBanner', () => {
     expect(screen.getByText('Flash Tune')).toBeInTheDocument();
   });
 
-  it('shows Filter Tune badge by default when tuningType is undefined', () => {
-    renderBanner({ ...baseSession, tuningType: undefined });
+  it('shows Filter Tune badge for filter sessions', () => {
+    renderBanner({ ...baseSession, tuningType: TUNING_TYPE.FILTER });
 
     const badge = document.querySelector('.tuning-type-badge');
     expect(badge?.textContent).toBe('Filter Tune');
@@ -713,7 +718,7 @@ describe('TuningStatusBanner', () => {
       {
         ...baseSession,
         tuningType: 'flash',
-        phase: TUNING_PHASE.VERIFICATION_PENDING,
+        phase: TUNING_PHASE.FLASH_VERIFICATION_PENDING,
         eraseCompleted: true,
       },
       false,

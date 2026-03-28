@@ -2,11 +2,12 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { useTuningSession } from './useTuningSession';
 import type { TuningSession } from '@shared/types/tuning.types';
-import { TUNING_PHASE } from '@shared/constants';
+import { TUNING_PHASE, TUNING_TYPE } from '@shared/constants';
 
 const mockSession: TuningSession = {
   profileId: 'profile-1',
   phase: TUNING_PHASE.FILTER_FLIGHT_PENDING,
+  tuningType: TUNING_TYPE.FILTER,
   startedAt: '2026-02-10T10:00:00Z',
   updatedAt: '2026-02-10T10:00:00Z',
 };
@@ -208,6 +209,7 @@ describe('useTuningSession', () => {
     const sessionB: TuningSession = {
       profileId: 'profile-2',
       phase: TUNING_PHASE.PID_FLIGHT_PENDING,
+      tuningType: TUNING_TYPE.PID,
       startedAt: '2026-02-11T10:00:00Z',
       updatedAt: '2026-02-11T10:00:00Z',
     };

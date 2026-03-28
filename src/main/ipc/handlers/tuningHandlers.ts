@@ -199,8 +199,7 @@ export function registerTuningHandlers(deps: HandlerDependencies): void {
                   const history = await tuningHistoryManager.getHistory(profileId);
                   sessionNumber = history.length + 1;
                 }
-                const tuningType = (session.tuningType ??
-                  'filter') as keyof typeof TUNING_TYPE_LABELS;
+                const tuningType = session.tuningType as keyof typeof TUNING_TYPE_LABELS;
                 const label = `Post-tuning #${sessionNumber} (${TUNING_TYPE_LABELS[tuningType]})`;
                 sendProgress({
                   stage: 'save',
@@ -417,7 +416,7 @@ export function registerTuningHandlers(deps: HandlerDependencies): void {
             await tuningHistoryManager.archiveSession(completedSession);
             logger.info(`Tuning session archived to history for profile ${profileId}`);
             emitEvent('workflow', 'tuning_completed', {
-              mode: completedSession.tuningType ?? 'filter',
+              mode: completedSession.tuningType,
               qualityScore: (completedSession as any).qualityScore ?? 0,
             });
             deps.eventCollector?.setActiveSessionId(undefined);
@@ -432,7 +431,7 @@ export function registerTuningHandlers(deps: HandlerDependencies): void {
 
         const updated = await tuningSessionManager.updatePhase(profileId, phase, data);
         emitEvent('workflow', 'phase_changed', {
-          mode: updated.tuningType ?? 'filter',
+          mode: updated.tuningType,
           to: phase,
         });
         sendTuningSessionChanged(updated);
@@ -479,7 +478,7 @@ export function registerTuningHandlers(deps: HandlerDependencies): void {
       const abandonedSession = await tuningSessionManager.getSession(profileId);
       if (abandonedSession) {
         emitEvent('workflow', 'tuning_abandoned', {
-          mode: abandonedSession.tuningType ?? 'filter',
+          mode: abandonedSession.tuningType,
           atPhase: abandonedSession.phase,
         });
         deps.eventCollector?.setActiveSessionId(undefined);

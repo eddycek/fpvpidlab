@@ -6,37 +6,8 @@
 
 import { promises as fs } from 'fs';
 import { join } from 'path';
-import type { DroneProfile, DroneSize } from '@shared/types/profile.types';
-import { SIZE_DEFAULTS } from '@shared/constants';
+import type { DroneProfile } from '@shared/types/profile.types';
 import { logger } from '../utils/logger';
-
-/** Map removed drone sizes to their closest current equivalent */
-const LEGACY_SIZE_MAP: Record<string, DroneSize> = {
-  '2"': '2.5"',
-  '10"': '7"',
-};
-
-/**
- * Backfill required fields and normalize removed sizes for profiles
- * created before weight/flightStyle became mandatory or before size removal.
- * Mutates in-place for efficiency.
- */
-export function migrateProfile(profile: DroneProfile): DroneProfile {
-  // Normalize removed sizes
-  const mappedSize = LEGACY_SIZE_MAP[profile.size as string];
-  if (mappedSize) {
-    (profile as any).size = mappedSize;
-  }
-
-  if (profile.weight == null || profile.weight === 0) {
-    const defaults = SIZE_DEFAULTS[profile.size as keyof typeof SIZE_DEFAULTS];
-    profile.weight = defaults?.weight ?? 650;
-  }
-  if (!profile.flightStyle) {
-    profile.flightStyle = 'balanced';
-  }
-  return profile;
-}
 
 export class ProfileStorage {
   private storagePath: string;
@@ -74,9 +45,6 @@ export class ProfileStorage {
       const data = await fs.readFile(this.profilesFile, 'utf-8');
       const parsed = JSON.parse(data);
       const profiles: Record<string, DroneProfile> = parsed.profiles || {};
-      for (const profile of Object.values(profiles)) {
-        migrateProfile(profile);
-      }
       return profiles;
     } catch (error) {
       logger.error('Failed to load profiles:', error);

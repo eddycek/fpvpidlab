@@ -70,6 +70,7 @@ const verificationMetrics: FilterMetricsSummary = {
 const baseSession: TuningSession = {
   profileId: 'profile-1',
   phase: TUNING_PHASE.COMPLETED,
+  tuningType: TUNING_TYPE.FILTER,
   startedAt: '2026-02-10T10:00:00Z',
   updatedAt: '2026-02-10T10:30:00Z',
   filterLogId: 'log-f1',

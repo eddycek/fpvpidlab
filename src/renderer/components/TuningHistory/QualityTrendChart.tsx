@@ -129,7 +129,7 @@ export function QualityTrendChart({ history }: QualityTrendChartProps) {
         const componentLabels = score.components
           .map((c) => `${c.label}: ${c.score}/${c.maxPoints}`)
           .join(', ');
-        const rawType = record.tuningType ?? 'filter';
+        const rawType = record.tuningType;
         const profileLabel =
           record.bfPidProfileIndex != null ? `P${record.bfPidProfileIndex + 1}` : null;
         const point: TrendDataPoint = {
@@ -138,7 +138,7 @@ export function QualityTrendChart({ history }: QualityTrendChartProps) {
           date: formatDateFull(record.completedAt),
           score: score.overall,
           tier: TIER_LABELS[score.tier],
-          tuningType: record.tuningType ? TUNING_TYPE_LABELS[record.tuningType] : 'Tuning',
+          tuningType: TUNING_TYPE_LABELS[record.tuningType],
           tuningTypeRaw: rawType,
           noiseLevel: record.filterMetrics?.noiseLevel ?? 'unknown',
           filterChanges: record.appliedFilterChanges.length,

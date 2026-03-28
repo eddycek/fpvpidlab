@@ -13,6 +13,7 @@ function makeCompletedSession(
   return {
     profileId,
     phase: TUNING_PHASE.COMPLETED,
+    tuningType: TUNING_TYPE.FILTER,
     startedAt: '2026-01-15T10:00:00.000Z',
     updatedAt: '2026-01-15T12:00:00.000Z',
     baselineSnapshotId: 'snap-baseline',
@@ -122,6 +123,7 @@ describe('TuningHistoryManager', () => {
       const session: TuningSession = {
         profileId: 'profile-1',
         phase: TUNING_PHASE.FILTER_ANALYSIS,
+        tuningType: TUNING_TYPE.FILTER,
         startedAt: '2026-01-15T10:00:00.000Z',
         updatedAt: '2026-01-15T11:00:00.000Z',
       };

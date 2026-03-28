@@ -61,7 +61,7 @@ function getPhaseUI(
     | 'pid_applied'
     | 'filter_verification_pending'
     | 'pid_verification_pending'
-    | 'verification_pending'
+    | 'flash_verification_pending'
     | 'flash_applied'
   >,
   PhaseUI
@@ -190,8 +190,8 @@ export function TuningStatusBanner({
 
   const isFilterVerification = session.phase === TUNING_PHASE.FILTER_VERIFICATION_PENDING;
   const isPidVerification = session.phase === TUNING_PHASE.PID_VERIFICATION_PENDING;
-  const isLegacyVerification = session.phase === TUNING_PHASE.VERIFICATION_PENDING;
-  const isVerification = isFilterVerification || isPidVerification || isLegacyVerification;
+  const isFlashVerification = session.phase === TUNING_PHASE.FLASH_VERIFICATION_PENDING;
+  const isVerification = isFilterVerification || isPidVerification || isFlashVerification;
 
   const isFlightPending =
     session.phase === TUNING_PHASE.FILTER_FLIGHT_PENDING ||
@@ -219,7 +219,7 @@ export function TuningStatusBanner({
           | 'pid_applied'
           | 'filter_verification_pending'
           | 'pid_verification_pending'
-          | 'verification_pending'
+          | 'flash_verification_pending'
           | 'flash_applied'
         >
       ];
@@ -253,8 +253,7 @@ export function TuningStatusBanner({
   const getVerificationGuideMode = (): FlightGuideMode => {
     if (session.tuningType === TUNING_TYPE.FILTER) return 'filter_verification';
     if (session.tuningType === TUNING_TYPE.PID) return 'pid_verification';
-    if (isFlashTune) return 'flash_verification';
-    return 'verification';
+    return 'flash_verification';
   };
 
   const renderActions = () => {
@@ -401,7 +400,7 @@ export function TuningStatusBanner({
         <span
           className={`tuning-type-badge ${isFlashTune ? 'flash' : session.tuningType === TUNING_TYPE.PID ? 'pid' : 'filter'}`}
         >
-          {TUNING_TYPE_LABELS[session.tuningType ?? TUNING_TYPE.FILTER]}
+          {TUNING_TYPE_LABELS[session.tuningType]}
         </span>
         {session.bfPidProfileIndex != null && (
           <span className="tuning-profile-badge">Profile {session.bfPidProfileIndex + 1}</span>

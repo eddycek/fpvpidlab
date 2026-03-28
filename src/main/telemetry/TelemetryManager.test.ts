@@ -364,7 +364,8 @@ describe('TelemetryManager', () => {
       const mockHistoryManager = {
         getHistory: vi.fn().mockResolvedValue([
           {
-            // Minimal record — no tuningType, no metrics, no applied changes
+            // Minimal record — no metrics, no applied changes
+            tuningType: 'filter',
             startedAt: '2026-03-16T10:00:00.000Z',
             completedAt: '2026-03-16T10:05:00.000Z',
             appliedFilterChanges: [],
@@ -385,7 +386,7 @@ describe('TelemetryManager', () => {
 
       expect(bundle.sessions).toHaveLength(1);
       const s = bundle.sessions[0];
-      expect(s.mode).toBe('filter'); // default for old records
+      expect(s.mode).toBe('filter');
       expect(s.durationSec).toBe(300);
       expect(s.rules).toEqual([]);
       expect(s.metrics).toEqual({});

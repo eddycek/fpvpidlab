@@ -179,8 +179,8 @@ export interface CompletedTuningRecord {
   /** When the tuning session was completed (ISO string) */
   completedAt: string;
 
-  /** Filter, PID, or Flash (quick). Defaults to 'filter' for old records. */
-  tuningType?: TuningType;
+  /** Filter, PID, or Flash (quick) */
+  tuningType: TuningType;
 
   /** Snapshot IDs (nullable — may not exist if skipped or deleted) */
   baselineSnapshotId: string | null;

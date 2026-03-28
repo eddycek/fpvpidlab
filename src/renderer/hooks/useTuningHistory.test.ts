@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
 import { useTuningHistory } from './useTuningHistory';
-import { TUNING_PHASE } from '@shared/constants';
+import { TUNING_PHASE, TUNING_TYPE } from '@shared/constants';
 
 describe('useTuningHistory', () => {
   beforeEach(() => {
@@ -13,6 +13,7 @@ describe('useTuningHistory', () => {
       {
         id: 'r1',
         profileId: 'p1',
+        tuningType: TUNING_TYPE.FILTER,
         startedAt: '2026-01-01',
         completedAt: '2026-01-01',
         appliedFilterChanges: [],

@@ -295,9 +295,9 @@ async function initialize(): Promise<void> {
             // Smart reconnect for verification phases: if flash has data after erase,
             // user has flown — clear eraseCompleted so UI shows Download button
             const isVerificationPhase =
-              session.phase === TUNING_PHASE.VERIFICATION_PENDING ||
               session.phase === TUNING_PHASE.FILTER_VERIFICATION_PENDING ||
-              session.phase === TUNING_PHASE.PID_VERIFICATION_PENDING;
+              session.phase === TUNING_PHASE.PID_VERIFICATION_PENDING ||
+              session.phase === TUNING_PHASE.FLASH_VERIFICATION_PENDING;
             if (isVerificationPhase && session.eraseCompleted) {
               const bbInfo = await mspClient.getBlackboxInfo();
               if (bbInfo.storageType === 'flash' && bbInfo.hasLogs && bbInfo.usedSize > 0) {

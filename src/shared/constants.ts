@@ -94,8 +94,8 @@ export const TUNING_PHASE = {
   FLASH_LOG_READY: 'flash_log_ready' as const,
   FLASH_ANALYSIS: 'flash_analysis' as const,
   FLASH_APPLIED: 'flash_applied' as const,
+  FLASH_VERIFICATION_PENDING: 'flash_verification_pending' as const,
   // Shared phases
-  VERIFICATION_PENDING: 'verification_pending' as const,
   COMPLETED: 'completed' as const,
 };
 

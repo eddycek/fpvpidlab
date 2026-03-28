@@ -50,8 +50,8 @@ export type TuningPhase =
   | 'flash_log_ready' // Flash Tune: FC reconnected, ready to download log
   | 'flash_analysis' // Flash Tune: log downloaded, analyzing (filter + Wiener in parallel)
   | 'flash_applied' // Flash Tune: all changes applied, ready for verification
+  | 'flash_verification_pending' // Flash Tune: waiting for verification flight
   // Shared phases
-  | 'verification_pending' // DEPRECATED — only for legacy sessions
   | 'completed'; // Tuning done
 
 /** A single setting change applied during tuning */
@@ -69,8 +69,8 @@ export interface TuningSession {
   /** Current phase of the tuning process */
   phase: TuningPhase;
 
-  /** Filter, PID, or Flash tuning. Defaults to 'filter' for backward compat. */
-  tuningType?: TuningType;
+  /** Filter, PID, or Flash tuning */
+  tuningType: TuningType;
 
   /** When the session was started (ISO string) */
   startedAt: string;

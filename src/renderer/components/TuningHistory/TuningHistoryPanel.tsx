@@ -91,8 +91,7 @@ export function TuningHistoryPanel({
                   <span
                     className={`tuning-type-badge tuning-type-${record.tuningType === TUNING_TYPE.FLASH ? 'flash' : record.tuningType === TUNING_TYPE.PID ? 'pid' : 'filter'}`}
                   >
-                    {TUNING_TYPE_LABELS[record.tuningType ?? TUNING_TYPE.FILTER] ??
-                      record.tuningType}
+                    {TUNING_TYPE_LABELS[record.tuningType]}
                   </span>
                   {record.bfPidProfileIndex != null && (
                     <span className="tuning-history-profile-badge">

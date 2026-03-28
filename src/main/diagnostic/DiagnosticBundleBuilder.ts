@@ -218,7 +218,7 @@ export async function buildDiagnosticBundle(
     appVersion: APP_VERSION,
     userEmail,
     userNote,
-    mode: record.tuningType ?? 'filter',
+    mode: record.tuningType,
     droneSize,
     flightStyle,
     bfVersion,

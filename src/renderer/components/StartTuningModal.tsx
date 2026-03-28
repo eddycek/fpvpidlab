@@ -27,7 +27,7 @@ function computeProfileStats(
     stats.sessionCount++;
     if (!stats.lastTunedAt) {
       stats.lastTunedAt = record.completedAt;
-      stats.lastTuningType = record.tuningType ?? null;
+      stats.lastTuningType = record.tuningType;
     }
   }
   return map;

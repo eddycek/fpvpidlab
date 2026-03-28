@@ -203,25 +203,11 @@ export class SnapshotManager {
   }
 
   async getBaseline(): Promise<ConfigurationSnapshot | null> {
-    // Try to get baseline from current profile first
     if (this.profileManager) {
       const currentProfile = await this.profileManager.getCurrentProfile();
       if (currentProfile?.baselineSnapshotId) {
         return await this.loadSnapshot(currentProfile.baselineSnapshotId);
       }
-    }
-
-    // Fallback to old method for backward compatibility
-    if (!this.baselineId) {
-      const snapshots = await this.listSnapshots();
-      const baseline = snapshots.find((s) => s.type === 'baseline');
-      if (baseline) {
-        this.baselineId = baseline.id;
-      }
-    }
-
-    if (this.baselineId) {
-      return await this.loadSnapshot(this.baselineId);
     }
 
     return null;

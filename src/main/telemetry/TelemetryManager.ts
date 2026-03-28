@@ -326,8 +326,7 @@ export class TelemetryManager {
     profile: any,
     meta: any
   ): TelemetrySessionRecord {
-    // Mode — default to 'filter' for old records without tuningType
-    const mode: TelemetrySessionRecord['mode'] = record.tuningType ?? 'filter';
+    const mode: TelemetrySessionRecord['mode'] = record.tuningType;
 
     // Duration from timestamps
     let durationSec = 0;
