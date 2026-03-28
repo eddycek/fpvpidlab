@@ -250,6 +250,8 @@ export function TuningStatusBanner({
   const showBBWarning =
     isFlightPending && !showErasedState && bbSettingsOk === false && !isDemoMode;
 
+  const showFlashFullWarning = isFlightPending && !showErasedState && flashHasData && !isDemoMode;
+
   const getVerificationGuideMode = (): FlightGuideMode => {
     if (session.tuningType === TUNING_TYPE.FILTER) return 'filter_verification';
     if (session.tuningType === TUNING_TYPE.PID) return 'pid_verification';
@@ -422,6 +424,15 @@ export function TuningStatusBanner({
       </div>
 
       <div className="tuning-status-body">
+        {showFlashFullWarning && (
+          <div className="tuning-bb-warning">
+            <span>
+              {isSDCard
+                ? 'SD card contains old logs. Erase before flying to ensure fresh recordings.'
+                : 'Flash memory contains old data. Erase before flying to ensure fresh recordings.'}
+            </span>
+          </div>
+        )}
         {showBBWarning && (
           <div className="tuning-bb-warning">
             <span>Blackbox settings need to be fixed before flying. Data may be unusable.</span>
