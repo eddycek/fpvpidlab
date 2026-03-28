@@ -448,8 +448,8 @@ export const RC_SMOOTHING_ADVISORY_MIN_HZ = 150;
 
 /**
  * Look up the RC link profile for a given link rate.
- * Returns undefined if rate is undefined or no profile matches (should not happen
- * since profiles cover 0-Infinity).
+ * Returns undefined if rate is undefined or ≤0 (invalid).
+ * For valid positive rates, a profile is always found (bands cover 1-Infinity).
  */
 export function lookupRCLinkProfile(rcLinkRateHz: number | undefined): RCLinkProfile | undefined {
   if (rcLinkRateHz === undefined || rcLinkRateHz <= 0) return undefined;

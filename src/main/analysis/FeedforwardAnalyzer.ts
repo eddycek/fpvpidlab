@@ -6,7 +6,7 @@
  *    profiles for the detected RC link rate. Generates recommendations when settings deviate
  *    >30% from the baseline (or wrong averaging mode).
  * 2. **Step-response refinement** (existing): Analyzes leading-edge overshoot and small-step
- *    jitter to fine-tune ff_smooth_factor and feedforward_jitter_factor.
+ *    jitter to fine-tune feedforward_smooth_factor and feedforward_jitter_factor.
  *
  * Designed to work alongside the existing FF-dominated detection in PIDAnalyzer/PIDRecommender.
  */
@@ -213,7 +213,7 @@ export function recommendRCLinkBaseline(
       recommendedValue: profile.smoothFactor,
       reason:
         `Your RC link rate is ${ffContext.rcLinkRateHz} Hz (${profile.label}). ` +
-        `Community presets recommend smooth_factor=${profile.smoothFactor} for this link rate ` +
+        `Community presets recommend feedforward_smooth_factor=${profile.smoothFactor} for this link rate ` +
         `(currently ${currentSmooth}). ` +
         (profile.smoothFactor > currentSmooth
           ? 'Increasing smooth factor reduces FF jitter without losing response.'
@@ -233,7 +233,7 @@ export function recommendRCLinkBaseline(
       recommendedValue: profile.jitterFactor,
       reason:
         `Your RC link rate is ${ffContext.rcLinkRateHz} Hz (${profile.label}). ` +
-        `Community presets recommend jitter_factor=${profile.jitterFactor} for this link rate ` +
+        `Community presets recommend feedforward_jitter_factor=${profile.jitterFactor} for this link rate ` +
         `(currently ${currentJitter}). ` +
         (profile.jitterFactor > currentJitter
           ? 'Increasing jitter factor attenuates FF noise from RC link jitter.'
