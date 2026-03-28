@@ -19,11 +19,17 @@ export function useBlackboxInfo() {
 
     try {
       const blackboxInfo = await window.betaflight.getBlackboxInfo();
-      // Guard: if we previously had valid storage and new response says "none",
-      // keep the previous info — FC flash chip temporarily unreadable after erase
+      // Guard: flash chip temporarily unreadable after erase — keep previous storage type.
+      // Only for flash→none transition (SD card removal is a legitimate none).
       setInfo((prev) => {
-        if (prev && prev.storageType !== 'none' && blackboxInfo.storageType === 'none') {
-          return { ...prev, usedSize: 0, hasLogs: false };
+        if (prev && prev.storageType === 'flash' && blackboxInfo.storageType === 'none') {
+          return {
+            ...prev,
+            usedSize: 0,
+            hasLogs: false,
+            freeSize: prev.totalSize,
+            usagePercent: 0,
+          };
         }
         return blackboxInfo;
       });

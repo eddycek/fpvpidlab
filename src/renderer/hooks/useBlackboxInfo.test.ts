@@ -166,10 +166,12 @@ describe('useBlackboxInfo', () => {
     await result.current.refresh();
 
     await waitFor(() => {
-      // Should keep 'flash' storageType but update usedSize to 0
+      // Should keep 'flash' storageType but update usedSize/freeSize/usagePercent
       expect(result.current.info?.storageType).toBe('flash');
       expect(result.current.info?.usedSize).toBe(0);
       expect(result.current.info?.hasLogs).toBe(false);
+      expect(result.current.info?.freeSize).toBe(mockBlackboxInfo.totalSize);
+      expect(result.current.info?.usagePercent).toBe(0);
     });
   });
 
