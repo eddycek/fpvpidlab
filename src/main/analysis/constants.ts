@@ -610,3 +610,51 @@ export const FF_MAX_RATE_LIMIT_DEFAULT = 90;
 
 /** Recommended feedforward_max_rate_limit for racing */
 export const FF_MAX_RATE_LIMIT_RACE_RECOMMENDED = 100;
+
+// ---- TPA (Throttle PID Attenuation) Advisory ----
+// Source: docs/PID_TUNING_KNOWLEDGE.md Section 10
+// Community preset values by size and author.
+
+/** TPA mode values: 0 = D-only (BF default), 1 = PD (attenuates both P and D) */
+export const TPA_MODE_D_ONLY = 0;
+export const TPA_MODE_PD = 1;
+
+/** TPA settings by drone size category.
+ * Larger quads need more TPA (higher rate, lower breakpoint) because
+ * high-throttle noise is more pronounced on bigger props.
+ * Source: SupaflyFPV 4.5 presets, Karate Race, BF defaults. */
+export interface TPASizeProfile {
+  /** Recommended tpa_rate (0-250) */
+  rate: number;
+  /** Recommended tpa_breakpoint (throttle value, 0-2000) */
+  breakpoint: number;
+  /** Recommended tpa_mode (0=D, 1=PD) */
+  mode: number;
+}
+
+export const TPA_BY_SIZE: Record<string, TPASizeProfile> = {
+  small: { rate: 50, breakpoint: 1500, mode: TPA_MODE_D_ONLY },
+  standard: { rate: 65, breakpoint: 1350, mode: TPA_MODE_D_ONLY },
+  large: { rate: 80, breakpoint: 1250, mode: TPA_MODE_D_ONLY },
+};
+
+/**
+ * Map drone sizes to TPA size categories.
+ * 1-4" → small, 5" → standard, 6-7" → large.
+ */
+export const TPA_SIZE_CATEGORY: Record<DroneSize, keyof typeof TPA_BY_SIZE> = {
+  '1"': 'small',
+  '2.5"': 'small',
+  '3"': 'small',
+  '4"': 'small',
+  '5"': 'standard',
+  '6"': 'large',
+  '7"': 'large',
+};
+
+/** Minimum deviation (fraction) from size-appropriate TPA settings (rate/breakpoint) to trigger recommendation */
+export const TPA_RATE_DEVIATION_THRESHOLD = 0.3; // 30%
+
+/** Noise increase (dB) from DynamicLowpassAnalysis above which TPA mode PD is suggested
+ * for standard 5" quads. SupaflyFPV 5" uses PD mode; 6-7" stays D-only. */
+export const TPA_SEVERE_NOISE_INCREASE_DB = 10;

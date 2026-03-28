@@ -33,6 +33,12 @@ import {
   PIDSUM_LIMIT_WEIGHT_THRESHOLD_G,
   FF_MAX_RATE_LIMIT_DEFAULT,
   FF_MAX_RATE_LIMIT_RACE_RECOMMENDED,
+  TPA_BY_SIZE,
+  TPA_SIZE_CATEGORY,
+  TPA_RATE_DEVIATION_THRESHOLD,
+  TPA_SEVERE_NOISE_INCREASE_DB,
+  TPA_MODE_D_ONLY,
+  TPA_MODE_PD,
   type QuadSizeBounds,
 } from './constants';
 
@@ -723,19 +729,32 @@ export function extractDMinContext(rawHeaders: Map<string, string>): DMinContext
  */
 export interface TPAContext {
   active: boolean;
-  rate?: number; // 0-100, percentage of attenuation
+  rate?: number; // 0-250, amount of attenuation
   breakpoint?: number; // throttle value where TPA starts (0-2000)
+  mode?: number; // 0 = D-only, 1 = PD
+  /** BF 4.5+ low-throttle TPA fields (undefined when FW doesn't support them) */
+  lowRate?: number; // 0-100
+  lowBreakpoint?: number; // 0-2000
+  lowAlways?: number; // 0 = OFF, 1 = ON
 }
 
 export function extractTPAContext(rawHeaders: Map<string, string>): TPAContext {
   const tpaRate = parseIntOr(rawHeaders.get('tpa_rate'));
   const tpaBreakpoint = parseIntOr(rawHeaders.get('tpa_breakpoint'));
+  const tpaMode = parseIntOr(rawHeaders.get('tpa_mode'));
+  const tpaLowRate = parseIntOr(rawHeaders.get('tpa_low_rate'));
+  const tpaLowBreakpoint = parseIntOr(rawHeaders.get('tpa_low_breakpoint'));
+  const tpaLowAlways = parseIntOr(rawHeaders.get('tpa_low_always'));
   const active = (tpaRate ?? 0) > 0;
 
   return {
     active,
     ...(tpaRate !== undefined ? { rate: tpaRate } : {}),
     ...(tpaBreakpoint !== undefined ? { breakpoint: tpaBreakpoint } : {}),
+    ...(tpaMode !== undefined ? { mode: tpaMode } : {}),
+    ...(tpaLowRate !== undefined ? { lowRate: tpaLowRate } : {}),
+    ...(tpaLowBreakpoint !== undefined ? { lowBreakpoint: tpaLowBreakpoint } : {}),
+    ...(tpaLowAlways !== undefined ? { lowAlways: tpaLowAlways } : {}),
   };
 }
 
@@ -1170,6 +1189,118 @@ export function recommendFFMaxRateLimit(
     informational: true,
     ruleId: 'P-FF-RATELIM',
   };
+}
+
+/**
+ * Recommend TPA settings based on drone size and noise profile.
+ *
+ * Generates advisory recommendations for tpa_mode, tpa_rate, tpa_breakpoint,
+ * and BF 4.5+ tpa_low_always based on:
+ * - Drone size (larger quads need more aggressive TPA)
+ * - Throttle-dependent noise severity (from DynamicLowpassAnalysis)
+ * - Current TPA settings from BBL headers
+ *
+ * All recommendations are informational (advisory) with low confidence.
+ * Rule ID: P-TPA
+ */
+export function recommendTPA(
+  tpaContext: TPAContext | undefined,
+  droneSize: DroneSize | undefined,
+  throttleNoiseIncreaseDeltaDb?: number
+): PIDRecommendation[] {
+  const recs: PIDRecommendation[] = [];
+  if (!tpaContext) return recs;
+
+  const sizeCategory = droneSize ? TPA_SIZE_CATEGORY[droneSize] : 'standard';
+  const sizeProfile = TPA_BY_SIZE[sizeCategory];
+  const sizeLabel = sizeCategory === 'small' ? '1-4"' : sizeCategory === 'large' ? '6-7"' : '5"';
+
+  // Rule P-TPA-RATE: TPA rate advisory based on drone size
+  if (tpaContext.rate !== undefined) {
+    const deviation = Math.abs(tpaContext.rate - sizeProfile.rate) / sizeProfile.rate;
+    if (deviation > TPA_RATE_DEVIATION_THRESHOLD) {
+      const direction = tpaContext.rate > sizeProfile.rate ? 'high' : 'low';
+      recs.push({
+        setting: 'tpa_rate',
+        currentValue: tpaContext.rate,
+        recommendedValue: sizeProfile.rate,
+        reason:
+          `TPA rate is ${tpaContext.rate} which is ${direction} for a ${sizeLabel} build (typical: ${sizeProfile.rate}). ` +
+          (direction === 'high'
+            ? 'Too much TPA can reduce PID authority at high throttle, causing sluggish response during punch-outs.'
+            : 'Too little TPA may allow noise-amplified oscillations at high throttle.'),
+        impact: 'both',
+        confidence: 'low',
+        informational: true,
+        ruleId: 'P-TPA',
+      });
+    }
+  }
+
+  // Rule P-TPA-BP: TPA breakpoint advisory based on drone size
+  if (tpaContext.breakpoint !== undefined) {
+    const bpDeviation =
+      Math.abs(tpaContext.breakpoint - sizeProfile.breakpoint) / sizeProfile.breakpoint;
+    if (bpDeviation > TPA_RATE_DEVIATION_THRESHOLD) {
+      recs.push({
+        setting: 'tpa_breakpoint',
+        currentValue: tpaContext.breakpoint,
+        recommendedValue: sizeProfile.breakpoint,
+        reason:
+          `TPA breakpoint is ${tpaContext.breakpoint} but typical for ${sizeLabel} builds is ${sizeProfile.breakpoint}. ` +
+          (tpaContext.breakpoint > sizeProfile.breakpoint
+            ? 'A lower breakpoint starts attenuation earlier, reducing noise at mid-to-high throttle.'
+            : 'A higher breakpoint preserves full PID authority through more of the throttle range.'),
+        impact: 'both',
+        confidence: 'low',
+        informational: true,
+        ruleId: 'P-TPA',
+      });
+    }
+  }
+
+  // Rule P-TPA-MODE: If throttle-dependent noise is severe AND mode is D-only,
+  // suggest PD mode (SupaflyFPV pattern for 5" only — 6-7" stays D-only per KB Section 10)
+  if (
+    throttleNoiseIncreaseDeltaDb !== undefined &&
+    throttleNoiseIncreaseDeltaDb >= TPA_SEVERE_NOISE_INCREASE_DB &&
+    tpaContext.mode !== undefined &&
+    tpaContext.mode === TPA_MODE_D_ONLY &&
+    sizeCategory === 'standard'
+  ) {
+    recs.push({
+      setting: 'tpa_mode',
+      currentValue: tpaContext.mode,
+      recommendedValue: TPA_MODE_PD,
+      reason:
+        `Noise increases ${Math.round(throttleNoiseIncreaseDeltaDb)} dB from low to high throttle. ` +
+        'Switching TPA mode from D-only to PD attenuates both P and D at high throttle, ' +
+        'reducing noise-driven oscillations more effectively (SupaflyFPV 5" pattern).',
+      impact: 'both',
+      confidence: 'low',
+      informational: true,
+      ruleId: 'P-TPA',
+    });
+  }
+
+  // Rule P-TPA-LOW: BF 4.5+ tpa_low_always advisory
+  if (tpaContext.lowAlways !== undefined && tpaContext.lowAlways === 0) {
+    recs.push({
+      setting: 'tpa_low_always',
+      currentValue: 0,
+      recommendedValue: 1,
+      reason:
+        'Low-throttle TPA is available (BF 4.5+) but disabled. ' +
+        'Enabling tpa_low_always attenuates PID gains at low throttle too, ' +
+        'reducing motor noise during descents and idle (SupaflyFPV pattern).',
+      impact: 'both',
+      confidence: 'low',
+      informational: true,
+      ruleId: 'P-TPA',
+    });
+  }
+
+  return recs;
 }
 
 function clamp(value: number, min: number, max: number): number {

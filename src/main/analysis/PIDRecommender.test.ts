@@ -14,6 +14,7 @@ import {
   extractPidsumLimits,
   recommendPidsumLimits,
   recommendFFMaxRateLimit,
+  recommendTPA,
 } from './PIDRecommender';
 import type { DMinContext, TPAContext } from './PIDRecommender';
 import type { TransferFunctionContext } from './PIDRecommender';
@@ -2576,5 +2577,178 @@ describe('recommendFFMaxRateLimit', () => {
 
   it('should not recommend when value is undefined', () => {
     expect(recommendFFMaxRateLimit(undefined, 'aggressive')).toBeUndefined();
+  });
+});
+
+// ---- Task 8: TPA Tuning Advisory ----
+
+describe('extractTPAContext (extended fields)', () => {
+  it('should extract tpa_mode from BBL headers', () => {
+    const headers = new Map([
+      ['tpa_rate', '65'],
+      ['tpa_breakpoint', '1350'],
+      ['tpa_mode', '1'],
+    ]);
+    const ctx = extractTPAContext(headers);
+    expect(ctx.mode).toBe(1);
+    expect(ctx.rate).toBe(65);
+    expect(ctx.breakpoint).toBe(1350);
+  });
+
+  it('should extract BF 4.5+ low-throttle TPA fields', () => {
+    const headers = new Map([
+      ['tpa_rate', '50'],
+      ['tpa_breakpoint', '1250'],
+      ['tpa_mode', '0'],
+      ['tpa_low_rate', '20'],
+      ['tpa_low_breakpoint', '1050'],
+      ['tpa_low_always', '0'],
+    ]);
+    const ctx = extractTPAContext(headers);
+    expect(ctx.lowRate).toBe(20);
+    expect(ctx.lowBreakpoint).toBe(1050);
+    expect(ctx.lowAlways).toBe(0);
+  });
+
+  it('should leave low-throttle fields undefined when headers missing', () => {
+    const headers = new Map([
+      ['tpa_rate', '65'],
+      ['tpa_breakpoint', '1350'],
+    ]);
+    const ctx = extractTPAContext(headers);
+    expect(ctx.lowRate).toBeUndefined();
+    expect(ctx.lowAlways).toBeUndefined();
+    expect(ctx.mode).toBeUndefined();
+  });
+});
+
+describe('recommendTPA', () => {
+  it('should return empty array when tpaContext is undefined', () => {
+    expect(recommendTPA(undefined, '5"')).toEqual([]);
+  });
+
+  it('should not recommend when TPA rate is within range for 5" build', () => {
+    const ctx: TPAContext = { active: true, rate: 65, breakpoint: 1350, mode: 0 };
+    const recs = recommendTPA(ctx, '5"');
+    const rateRec = recs.find((r) => r.setting === 'tpa_rate');
+    expect(rateRec).toBeUndefined();
+  });
+
+  it('should recommend TPA rate adjustment for 5" build when rate is too low', () => {
+    const ctx: TPAContext = { active: true, rate: 30, breakpoint: 1350, mode: 0 };
+    const recs = recommendTPA(ctx, '5"');
+    const rateRec = recs.find((r) => r.setting === 'tpa_rate');
+    expect(rateRec).toBeDefined();
+    expect(rateRec!.recommendedValue).toBe(65);
+    expect(rateRec!.ruleId).toBe('P-TPA');
+    expect(rateRec!.confidence).toBe('low');
+    expect(rateRec!.informational).toBe(true);
+  });
+
+  it('should recommend TPA rate for 7" build (large category)', () => {
+    const ctx: TPAContext = { active: true, rate: 40, breakpoint: 1350, mode: 0 };
+    const recs = recommendTPA(ctx, '7"');
+    const rateRec = recs.find((r) => r.setting === 'tpa_rate');
+    expect(rateRec).toBeDefined();
+    expect(rateRec!.recommendedValue).toBe(80);
+    expect(rateRec!.reason).toContain('6-7"');
+  });
+
+  it('should recommend TPA rate for 3" build (small category)', () => {
+    const ctx: TPAContext = { active: true, rate: 90, breakpoint: 1350, mode: 0 };
+    const recs = recommendTPA(ctx, '3"');
+    const rateRec = recs.find((r) => r.setting === 'tpa_rate');
+    expect(rateRec).toBeDefined();
+    expect(rateRec!.recommendedValue).toBe(50);
+    expect(rateRec!.reason).toContain('1-4"');
+    expect(rateRec!.reason).toContain('high');
+  });
+
+  it('should recommend TPA breakpoint when significantly off-target', () => {
+    const ctx: TPAContext = { active: true, rate: 65, breakpoint: 1800, mode: 0 };
+    const recs = recommendTPA(ctx, '5"');
+    const bpRec = recs.find((r) => r.setting === 'tpa_breakpoint');
+    expect(bpRec).toBeDefined();
+    expect(bpRec!.recommendedValue).toBe(1350);
+    expect(bpRec!.reason).toContain('lower breakpoint');
+  });
+
+  it('should not recommend TPA breakpoint when within range', () => {
+    const ctx: TPAContext = { active: true, rate: 65, breakpoint: 1350, mode: 0 };
+    const recs = recommendTPA(ctx, '5"');
+    const bpRec = recs.find((r) => r.setting === 'tpa_breakpoint');
+    expect(bpRec).toBeUndefined();
+  });
+
+  it('should recommend PD mode when throttle noise is severe and mode is D-only on 5"', () => {
+    const ctx: TPAContext = { active: true, rate: 65, breakpoint: 1350, mode: 0 };
+    const recs = recommendTPA(ctx, '5"', 12);
+    const modeRec = recs.find((r) => r.setting === 'tpa_mode');
+    expect(modeRec).toBeDefined();
+    expect(modeRec!.currentValue).toBe(0);
+    expect(modeRec!.recommendedValue).toBe(1);
+    expect(modeRec!.reason).toContain('PD');
+    expect(modeRec!.reason).toContain('SupaflyFPV');
+  });
+
+  it('should not recommend PD mode when noise is below threshold', () => {
+    const ctx: TPAContext = { active: true, rate: 65, breakpoint: 1350, mode: 0 };
+    const recs = recommendTPA(ctx, '5"', 5);
+    const modeRec = recs.find((r) => r.setting === 'tpa_mode');
+    expect(modeRec).toBeUndefined();
+  });
+
+  it('should not recommend PD mode when already in PD mode', () => {
+    const ctx: TPAContext = { active: true, rate: 65, breakpoint: 1350, mode: 1 };
+    const recs = recommendTPA(ctx, '5"', 15);
+    const modeRec = recs.find((r) => r.setting === 'tpa_mode');
+    expect(modeRec).toBeUndefined();
+  });
+
+  it('should not recommend PD mode for 7" build even with severe noise', () => {
+    const ctx: TPAContext = { active: true, rate: 80, breakpoint: 1250, mode: 0 };
+    const recs = recommendTPA(ctx, '7"', 15);
+    const modeRec = recs.find((r) => r.setting === 'tpa_mode');
+    expect(modeRec).toBeUndefined();
+  });
+
+  it('should recommend tpa_low_always when available and disabled', () => {
+    const ctx: TPAContext = { active: true, rate: 65, breakpoint: 1350, mode: 0, lowAlways: 0 };
+    const recs = recommendTPA(ctx, '5"');
+    const lowRec = recs.find((r) => r.setting === 'tpa_low_always');
+    expect(lowRec).toBeDefined();
+    expect(lowRec!.recommendedValue).toBe(1);
+    expect(lowRec!.reason).toContain('BF 4.5+');
+  });
+
+  it('should not recommend tpa_low_always when already enabled', () => {
+    const ctx: TPAContext = { active: true, rate: 65, breakpoint: 1350, mode: 0, lowAlways: 1 };
+    const recs = recommendTPA(ctx, '5"');
+    const lowRec = recs.find((r) => r.setting === 'tpa_low_always');
+    expect(lowRec).toBeUndefined();
+  });
+
+  it('should not recommend tpa_low_always when field is not present (pre-4.5)', () => {
+    const ctx: TPAContext = { active: true, rate: 65, breakpoint: 1350, mode: 0 };
+    const recs = recommendTPA(ctx, '5"');
+    const lowRec = recs.find((r) => r.setting === 'tpa_low_always');
+    expect(lowRec).toBeUndefined();
+  });
+
+  it('should use standard 5" defaults when droneSize is undefined', () => {
+    const ctx: TPAContext = { active: true, rate: 30, breakpoint: 1350, mode: 0 };
+    const recs = recommendTPA(ctx, undefined);
+    const rateRec = recs.find((r) => r.setting === 'tpa_rate');
+    expect(rateRec).toBeDefined();
+    expect(rateRec!.recommendedValue).toBe(65);
+  });
+
+  it('should generate multiple recommendations when multiple settings are off', () => {
+    const ctx: TPAContext = { active: true, rate: 30, breakpoint: 1800, mode: 0, lowAlways: 0 };
+    // 5" triggers all 4: rate + breakpoint + mode (PD) + lowAlways
+    const recs = recommendTPA(ctx, '5"', 15);
+    expect(recs.length).toBe(4);
+    expect(recs.every((r) => r.ruleId === 'P-TPA')).toBe(true);
+    expect(recs.every((r) => r.confidence === 'low')).toBe(true);
   });
 });

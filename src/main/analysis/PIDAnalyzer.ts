@@ -45,6 +45,7 @@ import {
   extractPidsumLimits,
   recommendPidsumLimits,
   recommendFFMaxRateLimit,
+  recommendTPA,
 } from './PIDRecommender';
 import type { TransferFunctionContext } from './PIDRecommender';
 import {
@@ -285,6 +286,7 @@ interface CoreParams {
   flightStyle: FlightStyle;
   droneSize?: DroneSize;
   droneWeight?: number;
+  throttleNoiseIncreaseDeltaDb?: number;
   historyObservations?: PIDObservation[];
   onProgress?: (progress: AnalysisProgress) => void;
   startTime: number;
@@ -301,6 +303,7 @@ async function analyzePIDCore(params: CoreParams): Promise<PIDAnalysisResult> {
     flightStyle,
     droneSize,
     droneWeight,
+    throttleNoiseIncreaseDeltaDb,
     historyObservations,
     onProgress,
     startTime,
@@ -406,6 +409,10 @@ async function analyzePIDCore(params: CoreParams): Promise<PIDAnalysisResult> {
     rawRecommendations.push(ffMaxRateLimitRec);
   }
 
+  // TPA tuning advisory (size + noise-based)
+  const tpaRecs = recommendTPA(tpaContext, droneSize, throttleNoiseIncreaseDeltaDb);
+  rawRecommendations.push(...tpaRecs);
+
   // Quality-adjusted confidence — no blanket cap, gating handles it
   const recommendations = adjustPIDConfidenceByQuality(
     rawRecommendations,
@@ -510,7 +517,8 @@ export async function analyzePID(
   flightStyle: FlightStyle = 'balanced',
   historyObservations?: PIDObservation[],
   droneSize?: DroneSize,
-  droneWeight?: number
+  droneWeight?: number,
+  throttleNoiseIncreaseDeltaDb?: number
 ): Promise<PIDAnalysisResult> {
   const startTime = performance.now();
   const extracted = await extractViaStepResponse(flightData, onProgress);
@@ -524,6 +532,7 @@ export async function analyzePID(
     flightStyle,
     droneSize,
     droneWeight,
+    throttleNoiseIncreaseDeltaDb,
     historyObservations,
     onProgress,
     startTime,
@@ -546,7 +555,8 @@ export async function analyzeTransferFunction(
   flightStyle: FlightStyle = 'balanced',
   historyObservations?: PIDObservation[],
   droneSize?: DroneSize,
-  droneWeight?: number
+  droneWeight?: number,
+  throttleNoiseIncreaseDeltaDb?: number
 ): Promise<PIDAnalysisResult & { transferFunction: TransferFunctionResult }> {
   const startTime = performance.now();
   const extracted = await extractViaWiener(flightData, onProgress);
@@ -560,6 +570,7 @@ export async function analyzeTransferFunction(
     flightStyle,
     droneSize,
     droneWeight,
+    throttleNoiseIncreaseDeltaDb,
     historyObservations,
     onProgress,
     startTime,
