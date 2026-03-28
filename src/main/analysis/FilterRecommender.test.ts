@@ -1054,11 +1054,20 @@ describe('recommendRpmFilterQ', () => {
 // ---- D-term LPF Dynamic Expo Advisory (F-DEXP) ----
 
 describe('recommendDtermDynExpo', () => {
-  it('should return undefined when D-term LPF is disabled', () => {
+  it('should return undefined when D-term dynamic LPF is not active', () => {
     const settings: CurrentFilterSettings = {
       ...DEFAULT_FILTER_SETTINGS,
-      dterm_lpf1_static_hz: 0,
+      dterm_lpf1_dyn_min_hz: 0, // dynamic LPF disabled
       dterm_lpf1_dyn_expo: 5,
+    };
+    expect(recommendDtermDynExpo(settings, 'aggressive')).toBeUndefined();
+  });
+
+  it('should return undefined when dterm_lpf1_dyn_min_hz is not available', () => {
+    const settings: CurrentFilterSettings = {
+      ...DEFAULT_FILTER_SETTINGS,
+      dterm_lpf1_dyn_expo: 5,
+      // dterm_lpf1_dyn_min_hz undefined → not active
     };
     expect(recommendDtermDynExpo(settings, 'aggressive')).toBeUndefined();
   });
@@ -1066,6 +1075,7 @@ describe('recommendDtermDynExpo', () => {
   it('should return undefined when expo is not available', () => {
     const settings: CurrentFilterSettings = {
       ...DEFAULT_FILTER_SETTINGS,
+      dterm_lpf1_dyn_min_hz: 80,
     };
     expect(recommendDtermDynExpo(settings, 'aggressive')).toBeUndefined();
   });
@@ -1073,6 +1083,7 @@ describe('recommendDtermDynExpo', () => {
   it('should return undefined when flight style is not provided', () => {
     const settings: CurrentFilterSettings = {
       ...DEFAULT_FILTER_SETTINGS,
+      dterm_lpf1_dyn_min_hz: 80,
       dterm_lpf1_dyn_expo: 5,
     };
     expect(recommendDtermDynExpo(settings, undefined)).toBeUndefined();
@@ -1081,6 +1092,7 @@ describe('recommendDtermDynExpo', () => {
   it('should return undefined when expo is within range for balanced style', () => {
     const settings: CurrentFilterSettings = {
       ...DEFAULT_FILTER_SETTINGS,
+      dterm_lpf1_dyn_min_hz: 80,
       dterm_lpf1_dyn_expo: 5,
     };
     expect(recommendDtermDynExpo(settings, 'balanced')).toBeUndefined();
@@ -1089,6 +1101,7 @@ describe('recommendDtermDynExpo', () => {
   it('should recommend higher expo for aggressive/racing flight style', () => {
     const settings: CurrentFilterSettings = {
       ...DEFAULT_FILTER_SETTINGS,
+      dterm_lpf1_dyn_min_hz: 80, // dynamic LPF active
       dterm_lpf1_dyn_expo: 5, // default, but racing needs 7-10
     };
     const rec = recommendDtermDynExpo(settings, 'aggressive');
@@ -1104,6 +1117,7 @@ describe('recommendDtermDynExpo', () => {
   it('should recommend lower expo for smooth/cinematic flight style when too high', () => {
     const settings: CurrentFilterSettings = {
       ...DEFAULT_FILTER_SETTINGS,
+      dterm_lpf1_dyn_min_hz: 80, // dynamic LPF active
       dterm_lpf1_dyn_expo: 8, // too high for cinematic
     };
     const rec = recommendDtermDynExpo(settings, 'smooth');
@@ -1117,6 +1131,7 @@ describe('recommendDtermDynExpo', () => {
   it('should return undefined when expo is already in range for aggressive', () => {
     const settings: CurrentFilterSettings = {
       ...DEFAULT_FILTER_SETTINGS,
+      dterm_lpf1_dyn_min_hz: 80,
       dterm_lpf1_dyn_expo: 8, // within 7-10 for aggressive
     };
     expect(recommendDtermDynExpo(settings, 'aggressive')).toBeUndefined();
@@ -1125,6 +1140,7 @@ describe('recommendDtermDynExpo', () => {
   it('should return undefined when expo is already in range for smooth', () => {
     const settings: CurrentFilterSettings = {
       ...DEFAULT_FILTER_SETTINGS,
+      dterm_lpf1_dyn_min_hz: 80,
       dterm_lpf1_dyn_expo: 4, // within 3-5 for smooth
     };
     expect(recommendDtermDynExpo(settings, 'smooth')).toBeUndefined();

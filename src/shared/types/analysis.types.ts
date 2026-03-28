@@ -239,6 +239,8 @@ export interface CurrentFilterSettings {
   rpm_filter_q?: number;
   /** D-term LPF1 dynamic expo (0-10, controls how aggressively dynamic LPF tracks throttle) */
   dterm_lpf1_dyn_expo?: number;
+  /** D-term LPF1 dynamic minimum Hz (>0 means dynamic D-term LPF is active) */
+  dterm_lpf1_dyn_min_hz?: number;
 }
 
 /** Default filter settings (Betaflight 4.4+ defaults) */

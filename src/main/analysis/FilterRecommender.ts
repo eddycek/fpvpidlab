@@ -693,7 +693,7 @@ export function recommendRpmFilterQ(
 
 /**
  * Recommend D-term LPF1 dynamic expo adjustment based on flight style.
- * Only fires when D-term dynamic LPF is active (dterm_lpf1_static_hz > 0).
+ * Only fires when D-term dynamic LPF is active (dterm_lpf1_dyn_min_hz > 0).
  *
  * Racing benefits from higher expo (7-10) — less D filtering at high throttle.
  * Cinematic benefits from lower expo (3-5) — smoother D-term at all throttles.
@@ -704,8 +704,9 @@ export function recommendDtermDynExpo(
   current: CurrentFilterSettings,
   flightStyle?: FlightStyle
 ): FilterRecommendation | undefined {
-  // D-term dynamic LPF must be active (static cutoff > 0)
-  if (current.dterm_lpf1_static_hz <= 0) return undefined;
+  // D-term dynamic LPF must be active (dyn_min_hz > 0 means dynamic mode is on)
+  const dynActive = (current.dterm_lpf1_dyn_min_hz ?? 0) > 0;
+  if (!dynActive) return undefined;
 
   // Need flight style and current expo to make a recommendation
   if (!flightStyle || current.dterm_lpf1_dyn_expo === undefined) return undefined;

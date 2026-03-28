@@ -89,7 +89,8 @@ export function registerAnalysisHandlers(deps: HandlerDependencies): void {
             currentSettings.dyn_notch_count === undefined ||
             currentSettings.dyn_notch_q === undefined ||
             currentSettings.rpm_filter_q === undefined ||
-            currentSettings.dterm_lpf1_dyn_expo === undefined)
+            currentSettings.dterm_lpf1_dyn_expo === undefined ||
+            currentSettings.dterm_lpf1_dyn_min_hz === undefined)
         ) {
           const enriched = enrichSettingsFromBBLHeaders(currentSettings, session.header.rawHeaders);
           if (enriched) {

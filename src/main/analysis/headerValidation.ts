@@ -173,5 +173,16 @@ export function enrichSettingsFromBBLHeaders(
     }
   }
 
+  if (enriched.dterm_lpf1_dyn_min_hz === undefined) {
+    const dynMinStr = rawHeaders.get('dterm_lpf1_dyn_min_hz');
+    if (dynMinStr !== undefined) {
+      const dynMin = parseInt(dynMinStr, 10);
+      if (!isNaN(dynMin)) {
+        enriched.dterm_lpf1_dyn_min_hz = dynMin;
+        changed = true;
+      }
+    }
+  }
+
   return changed ? enriched : null;
 }

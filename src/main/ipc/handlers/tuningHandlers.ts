@@ -112,22 +112,23 @@ export function registerTuningHandlers(deps: HandlerDependencies): void {
 
         // Stage 2: Apply filter recommendations via CLI
         let appliedFilters = 0;
-        const needsCLI = input.filterRecommendations.length > 0 || ffRecs.length > 0;
+        // Filter out informational/advisory-only recommendations — they are for display only
+        const actionableFilterRecs = input.filterRecommendations.filter((r) => !r.informational);
+        const needsCLI = actionableFilterRecs.length > 0 || ffRecs.length > 0;
         if (needsCLI) {
           sendProgress({ stage: 'filter', message: 'Entering CLI mode...', percent: 50 });
           await mspClient.connection.enterCLI();
         }
 
-        if (input.filterRecommendations.length > 0) {
+        if (actionableFilterRecs.length > 0) {
           try {
-            for (const rec of input.filterRecommendations) {
+            for (const rec of actionableFilterRecs) {
               const value = Math.round(rec.recommendedValue);
               const cmd = `set ${rec.setting} = ${value}`;
               sendProgress({
                 stage: 'filter',
                 message: `Setting ${rec.setting} = ${value}...`,
-                percent:
-                  50 + Math.round((appliedFilters / input.filterRecommendations.length) * 25),
+                percent: 50 + Math.round((appliedFilters / actionableFilterRecs.length) * 25),
               });
               const response = await mspClient.connection.sendCLICommand(cmd);
               validateCLIResponse(cmd, response);
@@ -146,7 +147,7 @@ export function registerTuningHandlers(deps: HandlerDependencies): void {
               filterError
             );
             throw new Error(
-              `Filter changes failed (${appliedFilters}/${input.filterRecommendations.length} applied). ` +
+              `Filter changes failed (${appliedFilters}/${actionableFilterRecs.length} applied). ` +
                 `${appliedPIDs > 0 ? `${appliedPIDs} PID changes were already written to FC RAM. ` : ''}` +
                 `FC was NOT saved — power cycle to discard, or restore from pre-tuning snapshot.`
             );
