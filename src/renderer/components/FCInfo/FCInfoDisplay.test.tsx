@@ -628,8 +628,7 @@ describe('FCInfoDisplay', () => {
     render(<FCInfoDisplay />);
 
     await waitFor(() => {
-      expect(screen.getByText('Rates')).toBeInTheDocument();
-      expect(screen.getByText('ACTUAL')).toBeInTheDocument();
+      expect(screen.getByText('Actual Rates')).toBeInTheDocument();
       expect(screen.getByText('RC Rate (R/P/Y):')).toBeInTheDocument();
       expect(screen.getByText('15 / 15 / 12')).toBeInTheDocument();
       expect(screen.getByText('Rate (R/P/Y):')).toBeInTheDocument();
@@ -650,7 +649,7 @@ describe('FCInfoDisplay', () => {
       expect(screen.getByText('BTFL')).toBeInTheDocument();
     });
 
-    expect(screen.queryByText('Rates')).not.toBeInTheDocument();
+    expect(screen.queryByText('Actual Rates')).not.toBeInTheDocument();
   });
 
   it('calls getRatesConfig on mount when connected', async () => {
@@ -668,7 +667,7 @@ describe('FCInfoDisplay', () => {
     });
   });
 
-  it('displays correct rates type badge', async () => {
+  it('does not show rates type badge (removed in favor of heading)', async () => {
     vi.mocked(window.betaflight.getRatesConfig).mockResolvedValue({
       ratesType: 'QUICK',
       roll: { rcRate: 180, rate: 80, rcExpo: 50, rateLimit: 1998 },
@@ -679,7 +678,10 @@ describe('FCInfoDisplay', () => {
     render(<FCInfoDisplay />);
 
     await waitFor(() => {
-      expect(screen.getByText('QUICK')).toBeInTheDocument();
+      expect(screen.getByText('Actual Rates')).toBeInTheDocument();
     });
+
+    // Badge should not be rendered
+    expect(screen.queryByText('QUICK')).not.toBeInTheDocument();
   });
 });

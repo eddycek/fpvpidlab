@@ -212,9 +212,7 @@ export function FCInfoDisplay() {
 
           {ratesConfig && (
             <div className="fc-rates-section">
-              <h3 className="fc-rates-title">
-                Rates <span className="fc-rates-type">{ratesConfig.ratesType}</span>
-              </h3>
+              <h3 className="fc-rates-title">Actual Rates</h3>
               <div className="fc-rates-grid">
                 <span className="fc-rates-label">RC Rate (R/P/Y):</span>
                 <span className="fc-rates-value">
