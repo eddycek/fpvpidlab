@@ -99,7 +99,7 @@ When disabled, no data is collected or sent. The installation ID is preserved (i
 
 | Environment | Upload URL | Health |
 |-------------|-----------|--------|
-| Dev | `https://telemetry.dev.fpvpidlab.app/v1/collect` | `/health` |
+| Dev | `https://telemetry-dev.fpvpidlab.app/v1/collect` | `/health` |
 | Prod | `https://telemetry.fpvpidlab.app/v1/collect` | `/health` |
 
 Admin stats (requires `X-Admin-Key` header):

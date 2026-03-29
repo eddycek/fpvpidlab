@@ -14,7 +14,7 @@ report_email      = "you@example.com"
 report_from_email = "onboarding@resend.dev"
 
 # Custom domains — set zone_id for fpvpidlab.app zone
-# Dev:  domain = "telemetry.dev.fpvpidlab.app", license_domain = "license.dev.fpvpidlab.app"
+# Dev:  domain = "telemetry-dev.fpvpidlab.app", license_domain = "license-dev.fpvpidlab.app"
 # Prod: domain = "telemetry.fpvpidlab.app",     license_domain = "license.fpvpidlab.app"
 # domain         = "telemetry.fpvpidlab.app"
 # license_domain = "license.fpvpidlab.app"

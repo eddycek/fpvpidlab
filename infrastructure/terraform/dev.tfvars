@@ -4,6 +4,6 @@ report_email          = "eddycek.ve@gmail.com"
 report_from_email     = "onboarding@resend.dev"
 
 # Custom domains on fpvpidlab.app
-domain         = "telemetry.dev.fpvpidlab.app"
-license_domain = "license.dev.fpvpidlab.app"
+domain         = "telemetry-dev.fpvpidlab.app"
+license_domain = "license-dev.fpvpidlab.app"
 zone_id        = "af45954750b3e4049aff81f392661124"

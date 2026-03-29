@@ -16,10 +16,10 @@ All resources are managed via **Terraform** with state in Cloudflare R2. CI/CD d
 
 | | Dev | Prod |
 |---|---|---|
-| Worker URL | `telemetry.dev.fpvpidlab.app` | `telemetry.fpvpidlab.app` |
+| Worker URL | `telemetry-dev.fpvpidlab.app` | `telemetry.fpvpidlab.app` |
 | R2 bucket | `pidlab-telemetry-dev` | `pidlab-telemetry` |
 | Cron trigger | Disabled | Daily 07:00 UTC |
-| Custom domain | `telemetry.dev.fpvpidlab.app` | `telemetry.fpvpidlab.app` |
+| Custom domain | `telemetry-dev.fpvpidlab.app` | `telemetry.fpvpidlab.app` |
 | Terraform state | `pidlab-tfstate` → `dev/terraform.tfstate` | `pidlab-tfstate` → `prod/terraform.tfstate` |
 
 Data is fully isolated — dev and prod never share a bucket.
@@ -279,8 +279,8 @@ PIDLAB_ENV=prod ./infrastructure/scripts/generate-key.sh
 ### Health Checks
 
 ```bash
-curl -sf https://telemetry.dev.fpvpidlab.app/health
-curl -sf https://license.dev.fpvpidlab.app/health
+curl -sf https://telemetry-dev.fpvpidlab.app/health
+curl -sf https://license-dev.fpvpidlab.app/health
 ```
 
 ### Ed25519 Keypair
