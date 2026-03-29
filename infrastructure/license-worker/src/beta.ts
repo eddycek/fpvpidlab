@@ -1,4 +1,4 @@
-import type { Env, BetaWhitelistRow } from './types';
+import type { Env, BetaWhitelistRow, LicenseRow } from './types';
 import { generateLicenseKey } from './keygen';
 import { sendEmail, confirmationEmail, approvalEmail, rejectionEmail } from './email';
 import { signupPage, thankYouPage, adminBetaPage } from './betaPages';
@@ -141,6 +141,26 @@ export async function handleAdminBetaList(
     .bind(...params)
     .all<BetaWhitelistRow>();
 
+  // Enrich approved entries with license data
+  const entries = await Promise.all(
+    result.results.map(async (row) => {
+      const entry = formatBetaEntry(row);
+      if (row.license_id) {
+        const license = await env.LICENSE_DB.prepare(
+          'SELECT license_key, activated_at, last_validated_at FROM licenses WHERE id = ?'
+        )
+          .bind(row.license_id)
+          .first<Pick<LicenseRow, 'license_key' | 'activated_at' | 'last_validated_at'>>();
+        if (license) {
+          entry.licenseKey = license.license_key;
+          entry.activatedAt = license.activated_at ? toISOString(license.activated_at) : null;
+          entry.lastUsedAt = license.last_validated_at ? toISOString(license.last_validated_at) : null;
+        }
+      }
+      return entry;
+    })
+  );
+
   // Stats
   const [pending, approved, rejected, total] = await Promise.all([
     env.LICENSE_DB.prepare("SELECT COUNT(*) as count FROM beta_whitelist WHERE status = 'pending'").first<{ count: number }>(),
@@ -150,7 +170,7 @@ export async function handleAdminBetaList(
   ]);
 
   return Response.json({
-    entries: result.results.map(formatBetaEntry),
+    entries,
     stats: {
       pending: pending?.count ?? 0,
       approved: approved?.count ?? 0,
@@ -216,13 +236,14 @@ export async function handleAdminBetaApprove(
 
   // Send approval email
   const { subject, html } = approvalEmail(entry.name, licenseKey);
-  await sendEmail(env, { to: entry.email, subject, html });
+  const emailSent = await sendEmail(env, { to: entry.email, subject, html });
 
   return Response.json({
     id: entryId,
     status: 'approved',
     licenseKey: licenseKey,
     licenseId: license.id,
+    emailSent,
   });
 }
 
@@ -253,12 +274,28 @@ export async function handleAdminBetaReject(
 
   // Send rejection email
   const { subject, html } = rejectionEmail(entry.name);
-  await sendEmail(env, { to: entry.email, subject, html });
+  const emailSent = await sendEmail(env, { to: entry.email, subject, html });
 
-  return Response.json({ id: entryId, status: 'rejected' });
+  return Response.json({ id: entryId, status: 'rejected', emailSent });
 }
 
-function formatBetaEntry(row: BetaWhitelistRow) {
+interface BetaEntryResponse {
+  id: string;
+  name: string;
+  email: string;
+  quadCount: number;
+  platform: string;
+  comment: string;
+  status: string;
+  licenseId: string | null;
+  licenseKey: string | null;
+  activatedAt: string | null;
+  lastUsedAt: string | null;
+  createdAt: string;
+  reviewedAt: string | null;
+}
+
+function formatBetaEntry(row: BetaWhitelistRow): BetaEntryResponse {
   return {
     id: row.id,
     name: row.name,
@@ -268,6 +305,9 @@ function formatBetaEntry(row: BetaWhitelistRow) {
     comment: row.comment,
     status: row.status,
     licenseId: row.license_id,
+    licenseKey: null,
+    activatedAt: null,
+    lastUsedAt: null,
     createdAt: toISOString(row.created_at),
     reviewedAt: row.reviewed_at ? toISOString(row.reviewed_at) : null,
   };

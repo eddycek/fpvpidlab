@@ -145,6 +145,12 @@ export function adminBetaPage(): string {
     .filter-row { display: flex; gap: 8px; margin-bottom: 16px; }
     .filter-row select { width: auto; }
     .empty { text-align: center; padding: 40px; color: #8b949e; }
+    .license-key { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 12px; color: #58a6ff; }
+    .muted { color: #484f58; font-size: 13px; }
+    .toast { position: fixed; top: 16px; right: 16px; padding: 12px 20px; border-radius: 8px; font-size: 14px; font-weight: 500; z-index: 100; animation: fadeIn 0.2s; }
+    .toast-success { background: #0d3117; color: #3fb950; border: 1px solid #238636; }
+    .toast-warning { background: #3d2e00; color: #d29922; border: 1px solid #9e6a03; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
   </style>
 </head>
 <body>
@@ -186,6 +192,8 @@ export function adminBetaPage(): string {
             <th>Quads</th>
             <th>Platform</th>
             <th>Status</th>
+            <th>License Key</th>
+            <th>Last Used</th>
             <th>Date</th>
             <th>Actions</th>
           </tr>
@@ -300,44 +308,88 @@ export function adminBetaPage(): string {
         var tr = document.createElement('tr');
         tr.id = 'row-' + e.id;
 
-        var cells = [
-          e.name,
-          e.email,
-          e.quadCount,
-          e.platform,
-          '<span class="badge badge-' + e.status + '">' + e.status + '</span>',
-          new Date(e.createdAt).toLocaleDateString(),
-          ''
-        ];
+        // Name
+        var td0 = document.createElement('td');
+        td0.textContent = e.name;
+        tr.appendChild(td0);
 
-        cells.forEach(function(c, i) {
-          var td = document.createElement('td');
-          if (i === 4) {
-            td.innerHTML = c;
-          } else if (i === 6) {
-            td.className = 'actions';
-            if (e.status === 'pending') {
-              var approveBtn = document.createElement('button');
-              approveBtn.className = 'btn-approve';
-              approveBtn.textContent = 'Approve';
-              approveBtn.onclick = function() { doAction(e.id, 'approve', this); };
-              var rejectBtn = document.createElement('button');
-              rejectBtn.className = 'btn-reject';
-              rejectBtn.textContent = 'Reject';
-              rejectBtn.onclick = function() { doAction(e.id, 'reject', this); };
-              td.appendChild(approveBtn);
-              td.appendChild(rejectBtn);
-            }
-          } else {
-            td.textContent = c;
-          }
-          tr.appendChild(td);
-        });
+        // Email
+        var td1 = document.createElement('td');
+        td1.textContent = e.email;
+        tr.appendChild(td1);
 
-        // Expandable comment row
+        // Quads
+        var td2 = document.createElement('td');
+        td2.textContent = e.quadCount;
+        tr.appendChild(td2);
+
+        // Platform
+        var td3 = document.createElement('td');
+        td3.textContent = e.platform;
+        tr.appendChild(td3);
+
+        // Status badge
+        var td4 = document.createElement('td');
+        var badge = document.createElement('span');
+        badge.className = 'badge badge-' + e.status;
+        badge.textContent = e.status;
+        td4.appendChild(badge);
+        tr.appendChild(td4);
+
+        // License Key
+        var td5 = document.createElement('td');
+        if (e.licenseKey) {
+          var keySpan = document.createElement('span');
+          keySpan.className = 'license-key';
+          keySpan.textContent = e.licenseKey;
+          td5.appendChild(keySpan);
+        } else {
+          td5.className = 'muted';
+          td5.textContent = '-';
+        }
+        tr.appendChild(td5);
+
+        // Last Used
+        var td6 = document.createElement('td');
+        if (e.lastUsedAt) {
+          td6.textContent = new Date(e.lastUsedAt).toLocaleDateString();
+        } else if (e.activatedAt) {
+          td6.textContent = new Date(e.activatedAt).toLocaleDateString();
+        } else if (e.licenseKey) {
+          td6.className = 'muted';
+          td6.textContent = 'not activated';
+        } else {
+          td6.className = 'muted';
+          td6.textContent = '-';
+        }
+        tr.appendChild(td6);
+
+        // Date
+        var td7 = document.createElement('td');
+        td7.textContent = new Date(e.createdAt).toLocaleDateString();
+        tr.appendChild(td7);
+
+        // Actions
+        var td8 = document.createElement('td');
+        td8.className = 'actions';
+        if (e.status === 'pending') {
+          var approveBtn = document.createElement('button');
+          approveBtn.className = 'btn-approve';
+          approveBtn.textContent = 'Approve';
+          approveBtn.onclick = function() { doAction(e.id, 'approve', this); };
+          var rejectBtn = document.createElement('button');
+          rejectBtn.className = 'btn-reject';
+          rejectBtn.textContent = 'Reject';
+          rejectBtn.onclick = function() { doAction(e.id, 'reject', this); };
+          td8.appendChild(approveBtn);
+          td8.appendChild(rejectBtn);
+        }
+        tr.appendChild(td8);
+
+        // Comment row
         var commentTr = document.createElement('tr');
         var commentTd = document.createElement('td');
-        commentTd.colSpan = 7;
+        commentTd.colSpan = 9;
         commentTd.style.cssText = 'padding: 4px 12px 12px; color: #8b949e; font-size: 13px; border-bottom: 1px solid #30363d;';
         commentTd.textContent = e.comment;
         commentTr.appendChild(commentTd);
@@ -347,9 +399,24 @@ export function adminBetaPage(): string {
       });
     }
 
+    function showToast(message, type) {
+      var existing = document.querySelector('.toast');
+      if (existing) existing.remove();
+      var toast = document.createElement('div');
+      toast.className = 'toast toast-' + type;
+      toast.textContent = message;
+      document.body.appendChild(toast);
+      setTimeout(function() { toast.remove(); }, 4000);
+    }
+
     function doAction(id, action, btn) {
       btn.disabled = true;
       api('PUT', '/admin/beta/' + id + '/' + action).then(function(data) {
+        if (data.emailSent === false) {
+          showToast('Action completed but email failed to send.', 'warning');
+        } else {
+          showToast(action === 'approve' ? 'Approved — license key sent via email.' : 'Rejected.', 'success');
+        }
         loadData();
       }).catch(function(err) {
         alert('Failed: ' + err.message);
