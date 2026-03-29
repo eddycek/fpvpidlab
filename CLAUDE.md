@@ -87,7 +87,7 @@ npm run rebuild
 - FFT analysis: `src/main/analysis/` (noise analysis & filter tuning)
 - Step response analysis: `src/main/analysis/` (PID tuning via step metrics)
 - Telemetry: `src/main/telemetry/TelemetryManager.ts` (opt-in anonymous usage data collection + upload), `TelemetryEventCollector.ts` (structured event logging — errors, workflow, analysis)
-- Diagnostic: `src/main/diagnostic/DiagnosticBundleBuilder.ts` (builds diagnostic bundles for support reports, Pro only)
+- Diagnostic: `src/main/diagnostic/DiagnosticBundleBuilder.ts` (builds diagnostic bundles for support reports, Pro only). Optional BBL flight data upload (fire-and-forget)
 - Debug server: `src/main/debug/DebugServer.ts` (HTTP endpoints for tooling, port 9300)
 
 **Preload Script** (`src/preload/index.ts`)
@@ -173,7 +173,7 @@ IPC handlers are split into domain modules under `src/main/ipc/handlers/`:
 | `telemetryHandlers.ts` | 3 | Telemetry settings get/set, manual upload trigger |
 | `licenseHandlers.ts` | 4 | License activate, get status, remove, validate |
 | `updateHandlers.ts` | 2 | Auto-update check, install |
-| `diagnosticHandlers.ts` | 1 | Build and upload diagnostic report bundle (Pro only) |
+| `diagnosticHandlers.ts` | 1 | Build and upload diagnostic report bundle + fire-and-forget BBL flight data upload (Pro only) |
 | `index.ts` | — | DI container, `registerIPCHandlers()` |
 
 **Request-Response Pattern**:
@@ -230,7 +230,7 @@ window.betaflight.onConnectionChanged((status) => {
 - `recommendationTraces` stored on `TuningSession` during apply, archived to history
 - Upload via Electron `net.fetch()` to CF Worker endpoint (gzipped JSON)
 - Skipped in demo mode
-- Diagnostic reports: Pro-only gzipped bundles with recommendations, analysis data, FC config. `POST /v1/diagnostic` (submit), `GET/PATCH /admin/diagnostics/{reportId}` (review/resolve), `GET /admin/diagnostics` (list), `GET /admin/diagnostics/summary` (counts for cron). Stored in R2 under `diagnostics/{reportId}/`. Rate-limited 1/hour per installation. Design doc: `docs/DIAGNOSTIC_REPORTS.md`
+- Diagnostic reports: Pro-only gzipped bundles with recommendations, analysis data, FC config. Optional BBL flight data upload (fire-and-forget after bundle submit, 50 MB max, 120s timeout). `POST /v1/diagnostic` (submit), `PUT /v1/diagnostic/{id}/bbl` (streaming BBL upload), `GET/PATCH /admin/diagnostics/{reportId}` (review/resolve), `GET /admin/diagnostics/{id}/bbl` (admin BBL download), `GET /admin/diagnostics` (list), `GET /admin/diagnostics/summary` (counts for cron). Stored in R2 under `diagnostics/{reportId}/`. BBL files have 30-day retention (cron cleanup). Rate-limited 1/hour per installation. Design doc: `docs/DIAGNOSTIC_REPORTS.md`
 - Cron daily email includes diagnostic report summary (new/reviewing/needs-bbl counts)
 - IPC: `TELEMETRY_GET_SETTINGS`, `TELEMETRY_SET_ENABLED`, `TELEMETRY_SEND_NOW`
 - Design doc: `docs/TELEMETRY_COLLECTION.md`
@@ -593,7 +593,7 @@ Renderer components subscribe to events:
 ## Configuration & Constants
 
 ### Important Files
-- `src/shared/constants.ts` - MSP codes, Betaflight vendor IDs, preset profiles, size defaults, DIAGNOSTIC upload URLs
+- `src/shared/constants.ts` - MSP codes, Betaflight vendor IDs, preset profiles, size defaults, DIAGNOSTIC upload URLs + BBL size/timeout limits
 - `src/shared/types/*.types.ts` - Shared type definitions (common, profile, pid, blackbox, analysis, diagnostic)
 - `src/shared/constants/flightGuide.ts` - Flight guide phases, tips, and tuning workflow steps
 - `src/shared/constants/metricTooltips.ts` - Centralized chart descriptions and metric tooltip strings (CHART_DESCRIPTIONS, METRIC_TOOLTIPS)
@@ -768,7 +768,7 @@ Investigates user-submitted diagnostic reports. Downloads the report bundle from
 
 **Usage:** `/diagnose <reportId>` or `/diagnose dev <reportId>` (defaults to prod)
 
-**Investigation flow:** Fetch report → mark as reviewing → analyze each recommendation against source code (FilterRecommender, PIDRecommender, TransferFunctionEstimator, constants.ts) → check FC config (RPM filter, D-min, TPA) → classify root cause → generate structured report → offer to resolve
+**Investigation flow:** Fetch report → mark as reviewing → download BBL if available (cross-reference against analysis) → analyze each recommendation against source code (FilterRecommender, PIDRecommender, TransferFunctionEstimator, constants.ts) → check FC config (RPM filter, D-min, TPA) → classify root cause → generate structured report → offer to resolve
 
 **Root cause classifications:** Rule too aggressive, rule too conservative, wrong rule fired, data quality issue, parser issue, edge case, user error, FC config conflict
 

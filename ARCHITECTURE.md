@@ -1,6 +1,6 @@
 # Architecture Overview
 
-**Last Updated:** March 28, 2026 | **Phase 4 Complete, Phase 6 Complete** | **2800 unit tests, 134 files + 37 Playwright E2E tests**
+**Last Updated:** March 29, 2026 | **Phase 4 Complete, Phase 6 Complete** | **2821 unit tests, 134 files + 37 Playwright E2E tests**
 
 ---
 
@@ -516,7 +516,7 @@ TuningSession {
 | Telemetry (3) | `get_settings`, `set_enabled`, `send_now` | Anonymous usage telemetry settings + manual upload |
 | License (4) | `activate`, `get_status`, `remove`, `validate` | License activation, status, removal |
 | Update (2) | `check`, `install` | Auto-update check, install |
-| Diagnostic (1) | `send_report` | Build diagnostic bundle, gzip, upload to CF Worker (Pro only) |
+| Diagnostic (1) | `send_report` | Build diagnostic bundle, gzip, upload to CF Worker + fire-and-forget BBL upload (Pro only) |
 
 **16 Event types** (Main → Renderer):
 
@@ -842,7 +842,7 @@ Hardware error (FC timeout, USB disconnect)
 
 ## Testing Strategy
 
-**2800 unit tests across 134 files + 37 Playwright E2E tests**. See [TESTING.md](./TESTING.md) for complete inventory.
+**2821 unit tests across 134 files + 37 Playwright E2E tests**. See [TESTING.md](./TESTING.md) for complete inventory.
 
 | Area | Files | Tests |
 |------|-------|-------|
@@ -853,12 +853,12 @@ Hardware error (FC timeout, USB disconnect)
 | MSP Protocol & Client | 4 | 186 |
 | MSC (Mass Storage) | 2 | 45 |
 | Storage Managers | 7 | 127 |
-| IPC Handlers | 3 | 120 |
+| IPC Handlers | 3 | 127 |
 | Telemetry | 2 | 38 |
-| Diagnostic | 1 | 12 |
+| Diagnostic | 1 | 14 |
 | License | 1 | 12 |
 | Auto-Updater | 1 | 12 |
-| UI Components + Charts + Contexts | 50 | 744 |
+| UI Components + Charts + Contexts | 50 | 751 |
 | React Hooks + Utils | 17 | 183 |
 | Shared Constants & Utils | 5 | 98 |
 | E2E Workflows (Vitest) | 1 | 20 |

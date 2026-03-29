@@ -167,7 +167,7 @@ npm run test:ui           # Visual interface with DOM snapshots
 
 ## Test Inventory
 
-**Total: 2800 unit tests across 134 files + 37 Playwright E2E tests across 7 spec files** (last verified: March 28, 2026)
+**Total: 2821 unit tests across 134 files + 37 Playwright E2E tests across 7 spec files** (last verified: March 29, 2026)
 
 ### UI Components
 
@@ -218,7 +218,7 @@ npm run test:ui           # Visual interface with DOM snapshots
 | `TelemetrySettings/TelemetrySettingsModal.test.tsx` | 7 | Telemetry settings modal, toggle switch, send now, installation ID display, close/overlay dismiss |
 | `LicenseSettings/LicenseSettingsModal.test.tsx` | 8 | License settings modal, activate, error, dismiss, comparison table |
 | `UpdateNotification/UpdateNotification.test.tsx` | 4 | Update notification render, events, changelog, install |
-| `DiagnosticReport/ReportIssueModal.test.tsx` | 6 | Report issue modal form fields, submit with email/note, empty submit, sending state, cancel, privacy note |
+| `DiagnosticReport/ReportIssueModal.test.tsx` | 13 | Report issue modal form fields, submit with email/note, empty submit, sending state, cancel, privacy note, flight data checkbox (show/hide, default checked, submit with includeFlightData, BBL in privacy note) |
 | `DiagnosticReport/ReportIssueButton.test.tsx` | 6 | Report issue button Pro gate, Free user hidden, modal open, submit success, submit failure, button variant |
 
 ### Charts
@@ -265,7 +265,7 @@ npm run test:ui           # Visual interface with DOM snapshots
 |------|-------|-------------|
 | `ipc/handlers.test.ts` | 109 | All 51 IPC handler channels: connection, FC info, profiles, snapshots, blackbox, PID config, analysis (filter+PID+TF), tuning apply (PID+filter+FF), snapshot restore, tuning session, BB settings fix, BF PID profile selection, handler registration |
 | `ipc/handlers/telemetryHandlers.test.ts` | 4 | Telemetry IPC handlers: get settings, set enabled, send now, error when manager null |
-| `ipc/handlers/diagnosticHandlers.test.ts` | 7 | Diagnostic IPC handler: send report, bundle build, gzip upload, Pro license gate, error handling |
+| `ipc/handlers/diagnosticHandlers.test.ts` | 14 | Diagnostic IPC handler: send report, bundle build, gzip upload, Pro license gate, error handling, BBL upload (fire-and-forget, skip when disabled, file not found, upload failure, verification log selection, telemetry event) |
 
 ### MSP Protocol & Client
 
