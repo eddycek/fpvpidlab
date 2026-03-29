@@ -12,7 +12,7 @@ Overview of all design documents in this directory. Completed documents are arch
 
 | Document | Status | Description |
 |----------|--------|-------------|
-| [TUNING_PRECISION_IMPROVEMENTS](./TUNING_PRECISION_IMPROVEMENTS.md) | **Active** | Research-based tuning accuracy improvements: ~~Wiener deconvolution~~ (done), ~~proportional PID scaling~~ (done), ~~data quality scoring~~ (done), ~~flight quality score~~ (done), ~~throttle spectrograms~~ (done), chirp analysis |
+| [CHIRP_FLIGHT_ANALYSIS](./CHIRP_FLIGHT_ANALYSIS.md) | **Proposed** | Chirp signal system identification for BF 4.6+ — exponential frequency sweep, per-axis sequential execution, coherence validation, high-precision transfer functions |
 | [UX_IMPROVEMENT_IDEAS](./UX_IMPROVEMENT_IDEAS.md) | **Active** | Backlog of UX improvement ideas (4/7 done, rest are future work) |
 | [PAYMENT_AND_INVOICING](./PAYMENT_AND_INVOICING.md) | **Proposed** | Stripe payment gateway + Trivi API invoicing. End-to-end purchase → invoice → license delivery flow |
 | [LICENSE_KEY_SYSTEM](./LICENSE_KEY_SYSTEM.md) | **Active** | Freemium licensing via CF Workers + D1. Ed25519 keys, offline grace period, admin API |
@@ -39,6 +39,7 @@ Overview of all design documents in this directory. Completed documents are arch
 | [TUNING_WORKFLOW_REVISION](./complete/TUNING_WORKFLOW_REVISION.md) | Stateful tuning workflow design. (Historical: originally described Deep Tune 10-phase state machine; later evolved into 3-mode architecture: Filter Tune, PID Tune, Flash Tune) |
 | [PRESET_GAP_ANALYSIS](./complete/PRESET_GAP_ANALYSIS.md) | Gap analysis vs community presets — all 11 tasks implemented (PRs #314–#323) |
 | [DIAGNOSTIC_REPORTS](./complete/DIAGNOSTIC_REPORTS.md) | Diagnostic report bundles for support investigation. Pro-only, gzipped upload to CF Worker + optional BBL flight data upload (PRs #310–#338) |
+| [TUNING_PRECISION_IMPROVEMENTS](./complete/TUNING_PRECISION_IMPROVEMENTS.md) | 14 research-based tuning accuracy improvements — all implemented (Wiener deconvolution, proportional PID scaling, data quality scoring, throttle spectrograms, etc.). Chirp analysis extracted to standalone doc |
 
 ## Status Legend
 
