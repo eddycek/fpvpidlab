@@ -30,7 +30,7 @@ import { TelemetryEventCollector } from './telemetry/TelemetryEventCollector';
 import { LicenseManager } from './license/LicenseManager';
 import { initAutoUpdater } from './updater';
 import { logger } from './utils/logger';
-import { SNAPSHOT, PROFILE, TUNING_PHASE } from '@shared/constants';
+import { SNAPSHOT, PROFILE, TUNING_PHASE, TUNING_TYPE_LABELS } from '@shared/constants';
 import { MockMSPClient, DEMO_FC_SERIAL } from './demo/MockMSPClient';
 import { generateFilterDemoBBL } from './demo/DemoDataGenerator';
 import {
@@ -397,8 +397,30 @@ async function initialize(): Promise<void> {
               }
             }
 
-            // Post-tuning snapshot is now created during apply (before save & reboot)
-            // to avoid race conditions with UI phase transitions.
+            // Create post-tuning snapshot on reconnect (after reboot, MSP is available)
+            if (!session.postTuningSnapshotId && isAppliedOrVerification) {
+              try {
+                let sessionNumber = 1;
+                const history = await tuningHistoryManager.getHistory(existingProfile.id);
+                sessionNumber = history.length + 1;
+                const tuningType = session.tuningType as keyof typeof TUNING_TYPE_LABELS;
+                const label = `Post-tuning #${sessionNumber} (${TUNING_TYPE_LABELS[tuningType]})`;
+                const snapshot = await snapshotManager.createSnapshot(label, 'auto', {
+                  tuningSessionNumber: sessionNumber,
+                  tuningType,
+                  snapshotRole: 'post-tuning',
+                });
+                await tuningSessionManager.updatePhase(existingProfile.id, session.phase, {
+                  postTuningSnapshotId: snapshot.id,
+                });
+                logger.info(`Post-tuning snapshot created on reconnect: ${snapshot.id}`);
+              } catch (snapErr) {
+                logger.warn(
+                  'Could not create post-tuning snapshot on reconnect (non-fatal):',
+                  snapErr
+                );
+              }
+            }
           }
         } catch (err) {
           logger.warn('Smart reconnect check failed (non-fatal):', err);

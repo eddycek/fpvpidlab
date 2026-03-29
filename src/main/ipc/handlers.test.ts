@@ -1299,8 +1299,9 @@ describe('IPC Handlers', () => {
       expect(res.data.rebooted).toBe(false);
     });
 
-    it('creates post-tuning snapshot during apply', async () => {
-      // Setup: active session without post-tuning snapshot
+    it('does not create post-tuning snapshot during apply (deferred to reconnect)', async () => {
+      // Post-tuning snapshot is now created on reconnect (after reboot), not during apply.
+      // Creating it during apply fails because FC is in CLI mode → MSP timeout.
       mockTuningMgr.getSession.mockResolvedValue({
         profileId: 'prof-1',
         phase: TUNING_PHASE.PID_APPLIED,
@@ -1312,12 +1313,8 @@ describe('IPC Handlers', () => {
       const { event } = createMockEvent();
       const res = await invokeWithEvent(IPCChannel.TUNING_APPLY_RECOMMENDATIONS, event, baseInput);
       expect(res.success).toBe(true);
-      // Post-tuning snapshot created before save & reboot
-      expect(mockSnapshotMgr.createSnapshot).toHaveBeenCalledWith(
-        'Post-tuning #1 (Filter Tune)',
-        'auto',
-        { tuningSessionNumber: 1, tuningType: 'filter', snapshotRole: 'post-tuning' }
-      );
+      // Snapshot NOT created during apply — deferred to reconnect
+      expect(mockSnapshotMgr.createSnapshot).not.toHaveBeenCalled();
     });
 
     it('applies feedforward recommendations via CLI', async () => {
