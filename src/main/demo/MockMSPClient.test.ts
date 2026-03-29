@@ -335,20 +335,20 @@ describe('MockMSPClient', () => {
       await vi.advanceTimersByTimeAsync(500);
       await connectPromise;
 
-      const events: string[] = [];
-      client.on('disconnected', () => events.push('disconnected'));
-      client.on('connected', () => events.push('connected'));
+      const statuses: boolean[] = [];
+      client.on('connection-changed', (s: { connected: boolean }) => statuses.push(s.connected));
 
       const rebootPromise = client.saveAndReboot();
       await vi.advanceTimersByTimeAsync(2000);
       await rebootPromise;
 
-      expect(events).toContain('disconnected');
-      expect(events).toContain('connected');
+      // Should emit disconnected then connected via connection-changed
+      expect(statuses).toContain(false);
+      expect(statuses).toContain(true);
       expect(client.isConnected()).toBe(true);
     });
 
-    it('keeps rebootPending true through reconnect', async () => {
+    it('clears rebootPending after reconnect', async () => {
       const connectPromise = client.simulateConnect();
       await vi.advanceTimersByTimeAsync(500);
       await connectPromise;
@@ -360,8 +360,8 @@ describe('MockMSPClient', () => {
       await vi.advanceTimersByTimeAsync(2000);
       await rebootPromise;
 
-      // rebootPending remains true after reconnect (caller clears it)
-      expect(client.rebootPending).toBe(true);
+      // saveAndReboot() now clears rebootPending after reconnect
+      expect(client.rebootPending).toBe(false);
       expect(client.isConnected()).toBe(true);
     });
   });

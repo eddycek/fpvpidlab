@@ -1092,7 +1092,7 @@ describe('MSPClient.saveAndReboot', () => {
     );
   });
 
-  it('sets rebootPending before save', async () => {
+  it('sets rebootPending before save and clears after', async () => {
     const { client, mockConn } = createClientWithStub();
     let flagDuringSave = false;
     mockConn.enterCLI.mockImplementation(async () => {
@@ -1102,7 +1102,8 @@ describe('MSPClient.saveAndReboot', () => {
     await client.saveAndReboot();
 
     expect(flagDuringSave).toBe(true);
-    expect(client.rebootPending).toBe(true);
+    // saveAndReboot() now clears rebootPending after reconnect attempt completes
+    expect(client.rebootPending).toBe(false);
   });
 
   it('skips enterCLI when already in CLI mode', async () => {
@@ -1128,10 +1129,10 @@ describe('MSPClient.saveAndReboot', () => {
 // ─── rebootPending flag ──────────────────────────────────────────────
 
 describe('MSPClient.rebootPending', () => {
-  it('clearRebootPending clears the flag', async () => {
+  it('clearRebootPending clears the flag', () => {
     const { client } = createClientWithStub();
 
-    await client.saveAndReboot();
+    client.setRebootPending();
     expect(client.rebootPending).toBe(true);
 
     client.clearRebootPending();

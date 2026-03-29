@@ -75,7 +75,7 @@ export interface ApplyRecommendationsInput {
 
 /** Progress during recommendation application */
 export interface ApplyRecommendationsProgress {
-  stage: 'pid' | 'filter' | 'feedforward' | 'save';
+  stage: 'pid' | 'filter' | 'feedforward' | 'save' | 'reboot' | 'verify' | 'snapshot' | 'done';
   message: string;
   percent: number;
 }

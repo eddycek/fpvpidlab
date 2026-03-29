@@ -40,7 +40,7 @@ export function TuningWizard({ logId, mode = 'full', onExit, onApplyComplete }: 
   const wizard = useTuningWizard(logId, mode);
   const applyCalled = useRef(false);
 
-  // Notify parent when apply completes successfully
+  // Notify parent when apply completes, then auto-close wizard
   useEffect(() => {
     if (wizard.applyState === 'done' && !applyCalled.current) {
       applyCalled.current = true;
@@ -111,6 +111,11 @@ export function TuningWizard({ logId, mode = 'full', onExit, onApplyComplete }: 
           transferFunctionMetrics,
         });
       }
+
+      // Auto-close wizard after apply completes — FC is already reconnected,
+      // session phase is updated, user returns to dashboard with Erase & Verify banner.
+      const timer = setTimeout(() => onExit(), 500);
+      return () => clearTimeout(timer);
     }
 
     if (wizard.applyState === 'idle' || wizard.applyState === 'error') {
@@ -123,6 +128,7 @@ export function TuningWizard({ logId, mode = 'full', onExit, onApplyComplete }: 
     wizard.tfResult,
     mode,
     onApplyComplete,
+    onExit,
   ]);
 
   const renderStep = () => {

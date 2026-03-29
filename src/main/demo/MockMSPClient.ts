@@ -273,10 +273,6 @@ export class MockMSPClient extends EventEmitter {
     return this._rebootPending;
   }
 
-  get internalReconnect(): boolean {
-    return false;
-  }
-
   get lastStorageType(): 'flash' | 'sdcard' | 'none' {
     return this._lastStorageType;
   }
@@ -738,15 +734,15 @@ export class MockMSPClient extends EventEmitter {
 
     // Simulate disconnect → delay → reconnect
     this._connected = false;
-    this.emit('disconnected');
     this.emit('connection-changed', { connected: false });
 
     await new Promise((r) => setTimeout(r, 2000));
 
-    // Reconnect — rebootPending stays true so connected handler in index.ts
-    // knows this is a reboot (clears it after processing)
+    // Reconnect silently — no 'connected' event so index.ts connected handler
+    // doesn't fire (apply handler now owns post-reboot snapshot creation).
+    // Only emit 'connection-changed' so UI updates connection status.
     this._connected = true;
-    this.emit('connected');
+    this._rebootPending = false;
     this.emit('connection-changed', {
       connected: true,
       portPath: '/dev/demo',
