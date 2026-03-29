@@ -14,6 +14,7 @@ import { TuningCompletionSummary } from './components/TuningHistory/TuningComple
 import { TuningHistoryPanel } from './components/TuningHistory/TuningHistoryPanel';
 import { VerificationSessionModal } from './components/TuningHistory/VerificationSessionModal';
 import { FixSettingsConfirmModal } from './components/FCInfo/FixSettingsConfirmModal';
+import { LogPickerModal } from './components/LogPickerModal';
 import { StartTuningModal } from './components/StartTuningModal';
 import { TelemetrySettingsModal } from './components/TelemetrySettings/TelemetrySettingsModal';
 import { LicenseSettingsModal } from './components/LicenseSettings/LicenseSettingsModal';
@@ -81,6 +82,7 @@ function AppContent() {
   const [storageType, setStorageType] = useState<BlackboxStorageType>('flash');
   const storageTypeRef = useRef<BlackboxStorageType>('flash');
   const [verificationPickerLogId, setVerificationPickerLogId] = useState<string | null>(null);
+  const [showLogPicker, setShowLogPicker] = useState(false);
   const [isReanalyze, setIsReanalyze] = useState(false);
   const [reanalyzeHistoryRecordId, setReanalyzeHistoryRecordId] = useState<string | null>(null);
   const [availableLogIds, setAvailableLogIds] = useState<Set<string>>(new Set());
@@ -263,7 +265,8 @@ function AppContent() {
             await tuning.updatePhase(TUNING_PHASE.FLASH_ANALYSIS, { quickLogId: imported.id });
           } else if (
             importPhase === TUNING_PHASE.FILTER_VERIFICATION_PENDING ||
-            importPhase === TUNING_PHASE.PID_VERIFICATION_PENDING
+            importPhase === TUNING_PHASE.PID_VERIFICATION_PENDING ||
+            importPhase === TUNING_PHASE.FLASH_VERIFICATION_PENDING
           ) {
             await tuning.updatePhase(importPhase, {
               verificationLogId: imported.id,
@@ -310,7 +313,8 @@ function AppContent() {
             });
           } else if (
             phase === TUNING_PHASE.FILTER_VERIFICATION_PENDING ||
-            phase === TUNING_PHASE.PID_VERIFICATION_PENDING
+            phase === TUNING_PHASE.PID_VERIFICATION_PENDING ||
+            phase === TUNING_PHASE.FLASH_VERIFICATION_PENDING
           ) {
             // Save verification log ID without changing phase
             await tuning.updatePhase(phase, {
@@ -421,6 +425,9 @@ function AppContent() {
         setVerificationPickerLogId(verLogId);
         break;
       }
+      case 'use_existing_log':
+        setShowLogPicker(true);
+        break;
       case 'dismiss':
         try {
           setErasedForPhase(null);
@@ -601,6 +608,29 @@ function AppContent() {
     }
   };
 
+  const handleLogPickerSelect = async (logId: string) => {
+    setShowLogPicker(false);
+    const phase = tuning.session?.phase;
+    if (!phase) return;
+
+    // For flight_pending phases: transition to analysis with the selected log
+    if (phase === TUNING_PHASE.FILTER_FLIGHT_PENDING) {
+      await tuning.updatePhase(TUNING_PHASE.FILTER_ANALYSIS, { filterLogId: logId });
+    } else if (phase === TUNING_PHASE.PID_FLIGHT_PENDING) {
+      await tuning.updatePhase(TUNING_PHASE.PID_ANALYSIS, { pidLogId: logId });
+    } else if (phase === TUNING_PHASE.FLASH_FLIGHT_PENDING) {
+      await tuning.updatePhase(TUNING_PHASE.FLASH_ANALYSIS, { quickLogId: logId });
+    } else if (
+      phase === TUNING_PHASE.FILTER_VERIFICATION_PENDING ||
+      phase === TUNING_PHASE.PID_VERIFICATION_PENDING ||
+      phase === TUNING_PHASE.FLASH_VERIFICATION_PENDING
+    ) {
+      // For verification: store log ID, then trigger session picker → analysis
+      await tuning.updatePhase(phase, { verificationLogId: logId });
+      setVerificationPickerLogId(logId);
+    }
+  };
+
   const bbStatus = computeBBSettingsStatus(bbSettings, fcVersion);
 
   const handleBannerFixSettings = async () => {
@@ -749,6 +779,7 @@ function AppContent() {
                   bbSettingsOk={bbStatus.allOk}
                   fixingSettings={fixingSettings}
                   isDemoMode={isDemoMode}
+                  hasDownloadedLogs={availableLogIds.size > 0}
                   onFixSettings={() => setShowBannerFixConfirm(true)}
                   onAction={handleTuningAction}
                   onViewGuide={(mode) => setShowFlightGuideMode(mode)}
@@ -853,6 +884,10 @@ function AppContent() {
           onConfirm={handleBannerFixSettings}
           onCancel={() => setShowBannerFixConfirm(false)}
         />
+      )}
+
+      {showLogPicker && (
+        <LogPickerModal onSelect={handleLogPickerSelect} onCancel={() => setShowLogPicker(false)} />
       )}
 
       {verificationPickerLogId && (

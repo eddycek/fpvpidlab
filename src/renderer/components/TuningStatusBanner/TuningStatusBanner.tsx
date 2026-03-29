@@ -22,6 +22,7 @@ export type TuningAction =
   | 'skip_erase_verification'
   | 'analyze_verification'
   | 'open_quick_wizard'
+  | 'use_existing_log'
   | 'dismiss';
 
 interface TuningStatusBannerProps {
@@ -36,6 +37,7 @@ interface TuningStatusBannerProps {
   bbSettingsOk?: boolean;
   fixingSettings?: boolean;
   isDemoMode?: boolean;
+  hasDownloadedLogs?: boolean;
   onAction: (action: TuningAction) => void;
   onViewGuide: (mode: FlightGuideMode) => void;
   onReset: () => void;
@@ -172,6 +174,7 @@ export function TuningStatusBanner({
   bbSettingsOk,
   fixingSettings,
   isDemoMode,
+  hasDownloadedLogs,
   onAction,
   onViewGuide,
   onReset,
@@ -271,6 +274,14 @@ export function TuningStatusBanner({
           <button className="wizard-btn wizard-btn-primary" onClick={() => onViewGuide(guideMode)}>
             View Flight Guide
           </button>
+          {hasDownloadedLogs && (
+            <button
+              className="wizard-btn wizard-btn-secondary"
+              onClick={() => onAction('use_existing_log')}
+            >
+              Use Existing Log
+            </button>
+          )}
         </>
       );
     }
@@ -352,6 +363,14 @@ export function TuningStatusBanner({
           >
             Import File
           </button>
+          {hasDownloadedLogs && !downloading && (
+            <button
+              className="wizard-btn wizard-btn-secondary"
+              onClick={() => onAction('use_existing_log')}
+            >
+              Use Existing Log
+            </button>
+          )}
         </>
       );
     }
@@ -394,6 +413,14 @@ export function TuningStatusBanner({
             onClick={() => onAction('skip_erase')}
           >
             Skip Erase
+          </button>
+        )}
+        {isEraseAction && !erasing && !downloading && hasDownloadedLogs && (
+          <button
+            className="wizard-btn wizard-btn-secondary"
+            onClick={() => onAction('use_existing_log')}
+          >
+            Use Existing Log
           </button>
         )}
         {ui!.guideTip && !erasing && !downloading && (
