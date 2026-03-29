@@ -482,10 +482,12 @@ export function TuningStatusBanner({
             </span>
           </div>
         )}
-        {session.applyVerified === false && session.applyMismatches && (
+        {session.applyVerified === false && (
           <div className="tuning-bb-warning">
             <span>
-              {session.applyMismatches.length} settings did not apply correctly.
+              {session.applyMismatches && session.applyMismatches.length > 0
+                ? `${session.applyMismatches.length} settings did not apply correctly.`
+                : 'Some settings could not be verified.'}
               {session.autoReportId
                 ? ' A diagnostic report was sent automatically.'
                 : ' Consider restoring from pre-tuning snapshot.'}

@@ -1,9 +1,15 @@
 /**
- * Full-config verification utility.
+ * Apply verification utility.
  *
  * Reads back PID and filter configuration from FC after apply,
- * compares ALL readable values (not just applied changes),
- * and runs sanity checks for dangerous states.
+ * compares applied changes against expected values, tracks settings
+ * that cannot be verified via MSP, and runs sanity checks for
+ * dangerous states (I=0, bypassed filter).
+ *
+ * Note: `expected` for non-applied keys equals the post-apply read-back
+ * (since we don't store a pre-apply snapshot). Only applied changes and
+ * sanity checks can trigger mismatches. The `expected`/`actual` maps are
+ * recorded for diagnostic bundles, not for full-state comparison.
  */
 
 import type { PIDConfiguration } from '@shared/types/pid.types';
@@ -148,13 +154,15 @@ function runSanityChecks(actual: Record<string, number>, tuningType: TuningType)
 }
 
 /**
- * Verify applied configuration by reading back MSP-readable settings
- * and comparing applied changes against expected values.
+ * Verify applied changes by reading back MSP-readable settings.
+ *
+ * Compares each applied change against the actual FC value. Settings
+ * that can't be read via MSP (CLI-only) are tracked as `unchecked`
+ * and force `verified=false`. Non-applied values are recorded in
+ * `expected`/`actual` for diagnostic context but not compared.
  *
  * For PID and Flash modes: reads all 9 PID values + filter settings.
  * For Filter mode: reads filter settings only.
- * Settings that can't be read via MSP (CLI-only) are tracked as unchecked.
- *
  * Includes PID retry on mismatch (1 attempt, PID/Flash modes only).
  * Runs sanity checks on all actual values (I=0, bypassed filter).
  */

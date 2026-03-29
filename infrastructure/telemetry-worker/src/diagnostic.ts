@@ -266,7 +266,7 @@ export async function handleDiagnosticPatch(request: Request, env: Env, reportId
 
   // Send notification email about user-added details
   if (patch.userEmail || patch.userNote) {
-    await sendPatchNotificationEmail(env, metadata, patch);
+    await sendPatchNotificationEmail(env, metadata);
   }
 
   return Response.json({ status: 'ok', reportId });
@@ -275,8 +275,7 @@ export async function handleDiagnosticPatch(request: Request, env: Env, reportId
 /** Send notification email when user adds details to auto-report */
 async function sendPatchNotificationEmail(
   env: Env,
-  meta: DiagnosticMetadata,
-  patch: { userEmail?: string; userNote?: string }
+  meta: DiagnosticMetadata
 ): Promise<void> {
   if (!env.RESEND_API_KEY || !env.REPORT_EMAIL || !env.REPORT_FROM_EMAIL) return;
 
@@ -284,8 +283,8 @@ async function sendPatchNotificationEmail(
   const text = `User Details Added to Auto-Report
 ${'═'.repeat(40)}
 Report ID:   ${meta.reportId}
-User Email:  ${patch.userEmail ?? '(not provided)'}
-User Note:   ${patch.userNote ?? '(none)'}
+User Email:  ${meta.userEmail ?? '(not provided)'}
+User Note:   ${meta.preview.userNote ?? '(none)'}
 
 Original Mode: ${meta.preview.mode}
 Drone:         ${meta.preview.droneSize ?? 'N/A'}

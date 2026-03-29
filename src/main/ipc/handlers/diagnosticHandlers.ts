@@ -1,7 +1,7 @@
 import { ipcMain } from 'electron';
 import { app, net } from 'electron';
 import fs from 'fs/promises';
-import { IPCChannel } from '@shared/types/ipc.types';
+import { IPCChannel, IPCResponse } from '@shared/types/ipc.types';
 import { DIAGNOSTIC } from '@shared/constants';
 import type {
   DiagnosticReportInput,
@@ -211,7 +211,7 @@ export function registerDiagnosticHandlers(deps: HandlerDependencies): void {
   // PATCH handler: merge user details into existing auto-report
   ipcMain.handle(
     IPCChannel.DIAGNOSTIC_PATCH_REPORT,
-    async (_event, input: DiagnosticPatchInput): Promise<any> => {
+    async (_event, input: DiagnosticPatchInput): Promise<IPCResponse<void>> => {
       try {
         const telemetrySettings = deps.telemetryManager?.getSettings?.() ?? null;
         const installationId = telemetrySettings?.installationId;
