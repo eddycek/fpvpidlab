@@ -24,16 +24,28 @@ import {
   MOTOR_HARMONIC_MIN_PEAKS,
 } from './constants';
 
+/** Sentinel value for bins with near-zero magnitude (20*log10(1e-12)) */
+export const DB_SENTINEL = -240;
+
+/** Minimum valid noise floor — anything below is treated as no-signal */
+export const DB_FLOOR_VALID = -100;
+
 /**
  * Estimate the noise floor of a magnitude spectrum.
  * Uses the lower percentile of magnitudes as the floor estimate.
+ * Filters out -240 dB sentinel bins (post-filter gyro data can have most
+ * high-frequency bins at the floor when aggressive filters are applied).
  */
 export function estimateNoiseFloor(magnitudes: Float64Array): number {
-  if (magnitudes.length === 0) return -240;
+  if (magnitudes.length === 0) return DB_SENTINEL;
 
-  const sorted = Array.from(magnitudes).sort((a, b) => a - b);
-  const idx = Math.floor(sorted.length * NOISE_FLOOR_PERCENTILE);
-  return sorted[Math.max(0, idx)];
+  // Exclude sentinel values — they represent no-signal bins, not real noise
+  const valid = Array.from(magnitudes).filter((v) => v > DB_SENTINEL);
+  if (valid.length === 0) return DB_SENTINEL;
+
+  valid.sort((a, b) => a - b);
+  const idx = Math.floor(valid.length * NOISE_FLOOR_PERCENTILE);
+  return valid[Math.max(0, idx)];
 }
 
 /**

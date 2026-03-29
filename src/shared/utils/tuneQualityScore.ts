@@ -41,6 +41,21 @@ interface ComponentDef {
   worst: number;
 }
 
+/** Noise floor values below this are sentinel/no-signal — treat as missing */
+const NOISE_FLOOR_VALID_MIN = -100;
+
+/** Average noise floor across axes, excluding sentinel values (-240 dB) */
+function avgNoiseFloor(m: {
+  roll: { noiseFloorDb: number };
+  pitch: { noiseFloorDb: number };
+  yaw: { noiseFloorDb: number };
+}): number | undefined {
+  const vals = [m.roll.noiseFloorDb, m.pitch.noiseFloorDb, m.yaw.noiseFloorDb];
+  const valid = vals.filter((v) => v > NOISE_FLOOR_VALID_MIN);
+  if (valid.length === 0) return undefined;
+  return valid.reduce((a, b) => a + b, 0) / valid.length;
+}
+
 const COMPONENTS: ComponentDef[] = [
   {
     label: 'Noise Floor',
@@ -48,7 +63,7 @@ const COMPONENTS: ComponentDef[] = [
       // Use verification noise floor (final state) when available
       const source = verification ?? filter;
       if (!source) return undefined;
-      return (source.roll.noiseFloorDb + source.pitch.noiseFloorDb + source.yaw.noiseFloorDb) / 3;
+      return avgNoiseFloor(source);
     },
     best: -60,
     worst: -20,
@@ -121,13 +136,9 @@ const COMPONENTS: ComponentDef[] = [
     getValue: (filter, _pid, verification) => {
       // Only available when both filter-flight and verification-flight data exist
       if (!filter || !verification) return undefined;
-      const filterAvg =
-        (filter.roll.noiseFloorDb + filter.pitch.noiseFloorDb + filter.yaw.noiseFloorDb) / 3;
-      const verificationAvg =
-        (verification.roll.noiseFloorDb +
-          verification.pitch.noiseFloorDb +
-          verification.yaw.noiseFloorDb) /
-        3;
+      const filterAvg = avgNoiseFloor(filter);
+      const verificationAvg = avgNoiseFloor(verification);
+      if (filterAvg === undefined || verificationAvg === undefined) return undefined;
       // Negative delta = improvement (verification cleaner), positive = regression
       return verificationAvg - filterAvg;
     },
