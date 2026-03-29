@@ -143,4 +143,67 @@ describe('ReportIssueButton', () => {
       includeFlightData: true,
     });
   });
+
+  describe('merge mode (autoReportId)', () => {
+    it('shows "Add Details to Report" button when autoReportId is set', async () => {
+      renderWithToast(<ReportIssueButton recordId="rec-1" autoReportId="auto-report-123" />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Add Details to Report')).toBeInTheDocument();
+      });
+      expect(screen.queryByText('Report Issue')).not.toBeInTheDocument();
+    });
+
+    it('opens merge mode modal with correct title', async () => {
+      const user = userEvent.setup();
+      renderWithToast(<ReportIssueButton recordId="rec-1" autoReportId="auto-report-123" />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Add Details to Report')).toBeInTheDocument();
+      });
+
+      await user.click(screen.getByText('Add Details to Report'));
+
+      expect(screen.getByText('Add Details to Auto-Report')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Add Details' })).toBeInTheDocument();
+    });
+
+    it('calls patchDiagnosticReport instead of sendDiagnosticReport', async () => {
+      vi.mocked(window.betaflight.sendDiagnosticReport).mockClear();
+      vi.mocked(window.betaflight.patchDiagnosticReport).mockClear();
+
+      const user = userEvent.setup();
+      renderWithToast(<ReportIssueButton recordId="rec-1" autoReportId="auto-report-123" />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Add Details to Report')).toBeInTheDocument();
+      });
+
+      await user.click(screen.getByText('Add Details to Report'));
+      await user.click(screen.getByRole('button', { name: 'Add Details' }));
+
+      expect(window.betaflight.patchDiagnosticReport).toHaveBeenCalledWith({
+        reportId: 'auto-report-123',
+        userEmail: undefined,
+        userNote: undefined,
+      });
+      expect(window.betaflight.sendDiagnosticReport).not.toHaveBeenCalled();
+    });
+
+    it('hides flight data checkbox and privacy note in merge mode', async () => {
+      const user = userEvent.setup();
+      renderWithToast(
+        <ReportIssueButton recordId="rec-1" autoReportId="auto-report-123" hasFlightData={true} />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('Add Details to Report')).toBeInTheDocument();
+      });
+
+      await user.click(screen.getByText('Add Details to Report'));
+
+      expect(screen.queryByText('Include flight data (BBL log)')).not.toBeInTheDocument();
+      expect(screen.queryByText(/What we'll send/)).not.toBeInTheDocument();
+    });
+  });
 });

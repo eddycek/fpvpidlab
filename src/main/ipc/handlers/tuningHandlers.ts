@@ -251,13 +251,15 @@ export function registerTuningHandlers(deps: HandlerDependencies): void {
                   .then(async (autoReportId) => {
                     if (autoReportId && profileId) {
                       try {
-                        await tuningSessionManager!.updatePhase(
-                          profileId,
-                          refreshedForReport.phase,
-                          {
-                            autoReportId,
-                          }
-                        );
+                        // Reload current session to avoid regressing phase with a stale value
+                        const latestSession = await tuningSessionManager!.getSession(profileId);
+                        if (!latestSession) {
+                          logger.warn('Auto-report ID not saved: tuning session no longer exists');
+                          return;
+                        }
+                        await tuningSessionManager!.updatePhase(profileId, latestSession.phase, {
+                          autoReportId,
+                        });
                         logger.info(`Auto-report ID saved to session: ${autoReportId}`);
                       } catch (saveErr) {
                         logger.warn('Failed to save autoReportId to session:', saveErr);

@@ -115,9 +115,34 @@ describe('verifyAppliedConfig', () => {
 
       expect(msp.getFilterConfiguration).not.toHaveBeenCalled();
     });
+
+    it('marks unverifiable settings as unchecked and verified=false', async () => {
+      const msp = createMockMSPClient(makePIDConfig(), makeFilterConfig());
+      const applied: AppliedChange[] = [
+        { setting: 'unknown_pid_setting', previousValue: 10, newValue: 20 },
+      ];
+
+      const result = await verifyAppliedConfig(msp, 'pid', applied);
+
+      expect(result.verified).toBe(false);
+      expect(result.unchecked).toContain('unknown_pid_setting');
+      expect(result.mismatches).toHaveLength(0);
+    });
   });
 
   describe('Filter mode', () => {
+    it('marks CLI-only filter settings as unchecked', async () => {
+      const msp = createMockMSPClient(makePIDConfig(), makeFilterConfig());
+      const applied: AppliedChange[] = [
+        { setting: 'rpm_filter_q', previousValue: 500, newValue: 600 },
+      ];
+
+      const result = await verifyAppliedConfig(msp, 'filter', undefined, applied);
+
+      expect(result.verified).toBe(false);
+      expect(result.unchecked).toContain('rpm_filter_q');
+    });
+
     it('returns verified=true when all filter values match', async () => {
       const filterConfig = makeFilterConfig({ gyro_lpf1_static_hz: 200 });
       const msp = createMockMSPClient(makePIDConfig(), filterConfig);

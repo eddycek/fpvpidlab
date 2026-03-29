@@ -21,6 +21,8 @@ interface VerifyMSPClient {
 export interface VerifyResult {
   verified: boolean;
   mismatches: string[];
+  /** Settings that could not be verified via MSP (CLI-only, unknown key) */
+  unchecked: string[];
   suspicious: boolean;
   expected: Record<string, number>;
   actual: Record<string, number>;
@@ -146,12 +148,15 @@ function runSanityChecks(actual: Record<string, number>, tuningType: TuningType)
 }
 
 /**
- * Verify applied configuration by reading back ALL MSP-readable settings.
+ * Verify applied configuration by reading back MSP-readable settings
+ * and comparing applied changes against expected values.
  *
  * For PID and Flash modes: reads all 9 PID values + filter settings.
  * For Filter mode: reads filter settings only.
+ * Settings that can't be read via MSP (CLI-only) are tracked as unchecked.
  *
  * Includes PID retry on mismatch (1 attempt, PID/Flash modes only).
+ * Runs sanity checks on all actual values (I=0, bypassed filter).
  */
 export async function verifyAppliedConfig(
   mspClient: VerifyMSPClient,
@@ -162,6 +167,7 @@ export async function verifyAppliedConfig(
   const expected: Record<string, number> = {};
   const actual: Record<string, number> = {};
   const mismatches: string[] = [];
+  const unchecked: string[] = [];
   let retried = false;
 
   const checksPID = tuningType === 'pid' || tuningType === 'flash';
@@ -188,7 +194,9 @@ export async function verifyAppliedConfig(
     if (appliedPIDChanges) {
       for (const change of appliedPIDChanges) {
         const act = actualPID[change.setting];
-        if (act !== undefined && act !== change.newValue) {
+        if (act === undefined) {
+          unchecked.push(change.setting);
+        } else if (act !== change.newValue) {
           mismatches.push(`${change.setting}: expected ${change.newValue}, got ${act}`);
         }
       }
@@ -217,7 +225,7 @@ export async function verifyAppliedConfig(
       // Update actual map
       Object.assign(actual, actualPID2);
 
-      // Clear and re-check mismatches
+      // Clear and re-check mismatches (unchecked list stays the same)
       mismatches.length = 0;
       if (appliedPIDChanges) {
         for (const change of appliedPIDChanges) {
@@ -245,7 +253,9 @@ export async function verifyAppliedConfig(
     if (appliedFilterChanges) {
       for (const change of appliedFilterChanges) {
         const act = actualFilter[change.setting];
-        if (act !== undefined && act !== change.newValue) {
+        if (act === undefined) {
+          unchecked.push(change.setting);
+        } else if (act !== change.newValue) {
           mismatches.push(`${change.setting}: expected ${change.newValue}, got ${act}`);
         }
       }
@@ -264,7 +274,8 @@ export async function verifyAppliedConfig(
   }
 
   return {
-    verified: mismatches.length === 0,
+    verified: mismatches.length === 0 && unchecked.length === 0,
+    unchecked,
     mismatches,
     suspicious,
     expected,

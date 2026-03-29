@@ -226,7 +226,7 @@ export function registerDiagnosticHandlers(deps: HandlerDependencies): void {
           hasEmail: !!input.userEmail,
         });
 
-        return createResponse({ success: true });
+        return createResponse(undefined);
       } catch (error) {
         logger.error('Failed to patch diagnostic report:', error);
         return createResponse(undefined, getErrorMessage(error));

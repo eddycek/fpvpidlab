@@ -224,20 +224,29 @@ export async function handleDiagnosticPatch(request: Request, env: Env, reportId
     return new Response('Forbidden', { status: 403 });
   }
 
-  // Parse patch body
+  // Parse patch body with size guard
+  const body = await request.text();
+  if (!checkPayloadSize(body)) {
+    return new Response('Payload too large', { status: 413 });
+  }
+
   let patch: { userEmail?: string; userNote?: string };
   try {
-    patch = await request.json();
+    patch = JSON.parse(body);
   } catch {
     return new Response('Invalid JSON', { status: 400 });
   }
 
+  // Enforce reasonable field lengths
+  const email = patch.userEmail?.substring(0, 320);
+  const note = patch.userNote?.substring(0, 2000);
+
   // Update metadata
-  if (patch.userEmail) {
-    metadata.userEmail = patch.userEmail;
+  if (email) {
+    metadata.userEmail = email;
   }
-  if (patch.userNote) {
-    metadata.preview.userNote = patch.userNote.substring(0, 200);
+  if (note) {
+    metadata.preview.userNote = note.substring(0, 200);
   }
 
   await env.TELEMETRY_BUCKET.put(`${prefix}/metadata.json`, JSON.stringify(metadata), {
@@ -248,8 +257,8 @@ export async function handleDiagnosticPatch(request: Request, env: Env, reportId
   const bundleObj = await env.TELEMETRY_BUCKET.get(`${prefix}/bundle.json`);
   if (bundleObj) {
     const bundle: Record<string, unknown> = await bundleObj.json();
-    if (patch.userEmail) bundle.userEmail = patch.userEmail;
-    if (patch.userNote) bundle.userNote = patch.userNote;
+    if (email) bundle.userEmail = email;
+    if (note) bundle.userNote = note;
     await env.TELEMETRY_BUCKET.put(`${prefix}/bundle.json`, JSON.stringify(bundle), {
       httpMetadata: { contentType: 'application/json' },
     });

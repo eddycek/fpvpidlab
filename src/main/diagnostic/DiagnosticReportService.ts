@@ -48,12 +48,17 @@ export async function sendAutoReport(
     logger.info('Auto-report skipped: demo mode');
     return null;
   }
-  if (deps.licenseManager && !deps.licenseManager.isPro()) {
+  if (!deps.licenseManager || !deps.licenseManager.isPro()) {
     logger.info('Auto-report skipped: no Pro license');
     return null;
   }
 
-  const installationId = deps.telemetrySettings?.installationId ?? 'unknown';
+  const installationId = deps.telemetrySettings?.installationId;
+  if (!installationId) {
+    logger.warn('Auto-report skipped: missing installationId (telemetry disabled or unavailable)');
+    return null;
+  }
+
   const reportId = randomUUID();
 
   // Profile context
@@ -121,7 +126,7 @@ export async function sendAutoReport(
     autoReported: true,
     autoReportReason: 'apply_mismatch',
     applyVerification: { expected, actual, mismatches, suspicious },
-    events: [],
+    events: deps.eventCollector?.getEvents() ?? [],
   };
 
   try {
