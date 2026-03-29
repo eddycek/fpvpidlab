@@ -121,7 +121,7 @@ test.describe.serial('Diagnostic Report flow', () => {
     const { page } = demo;
 
     // Fill in email and note
-    await page.getByLabel('Email (optional)').fill('e2e-test@pidlab.app');
+    await page.getByLabel('Email (optional)').fill('e2e-test@fpvpidlab.app');
     await page
       .getByLabel('What went wrong? (optional)')
       .fill('E2E integration test — this is an automated diagnostic report from Playwright');

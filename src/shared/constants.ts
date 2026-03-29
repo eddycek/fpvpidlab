@@ -108,9 +108,9 @@ export const TUNING_TYPE_LABELS: Record<string, string> = {
 
 export const LICENSE = {
   /** Production license API endpoint */
-  API_URL: 'https://license.pidlab.app',
-  /** Development license API endpoint (CF Workers subdomain — update after first deploy) */
-  API_URL_DEV: 'https://pidlab-license-dev.eddycek-ve.workers.dev',
+  API_URL: 'https://license.fpvpidlab.app',
+  /** Development license API endpoint */
+  API_URL_DEV: 'https://license.dev.fpvpidlab.app',
   /** Key format regex: FPVPIDLAB-XXXX-XXXX-XXXX (28-char alphabet) */
   KEY_FORMAT_REGEX: /^FPVPIDLAB-[A-HJKMNP-Z2-9]{4}-[A-HJKMNP-Z2-9]{4}-[A-HJKMNP-Z2-9]{4}$/,
   /** Ed25519 public key (base64 SPKI DER) for offline license verification.
@@ -126,9 +126,9 @@ export const LICENSE = {
 
 export const DIAGNOSTIC = {
   /** Production diagnostic endpoint */
-  UPLOAD_URL: 'https://telemetry.pidlab.app/v1/diagnostic',
+  UPLOAD_URL: 'https://telemetry.fpvpidlab.app/v1/diagnostic',
   /** Development diagnostic endpoint */
-  UPLOAD_URL_DEV: 'https://pidlab-telemetry-dev.eddycek-ve.workers.dev/v1/diagnostic',
+  UPLOAD_URL_DEV: 'https://telemetry.dev.fpvpidlab.app/v1/diagnostic',
   /** Maximum BBL file size for upload (50 MB) */
   BBL_MAX_SIZE_BYTES: 50 * 1024 * 1024,
   /** BBL upload timeout in ms (2 minutes) */
@@ -137,9 +137,9 @@ export const DIAGNOSTIC = {
 
 export const TELEMETRY = {
   /** Production telemetry endpoint */
-  UPLOAD_URL: 'https://telemetry.pidlab.app/v1/collect',
-  /** Development telemetry endpoint (CF Workers subdomain — update after first deploy) */
-  UPLOAD_URL_DEV: 'https://pidlab-telemetry-dev.eddycek-ve.workers.dev/v1/collect',
+  UPLOAD_URL: 'https://telemetry.fpvpidlab.app/v1/collect',
+  /** Development telemetry endpoint */
+  UPLOAD_URL_DEV: 'https://telemetry.dev.fpvpidlab.app/v1/collect',
   /** Retry delays in ms for failed uploads */
   RETRY_DELAYS: [1000, 2000, 4000] as readonly number[],
   /** Minimum interval between automatic uploads (24 hours) */

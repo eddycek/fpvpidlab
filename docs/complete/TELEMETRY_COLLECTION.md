@@ -33,7 +33,7 @@ Electron App (renderer)
     ↓ IPC
 Main Process (TelemetryManager)
     ↓ HTTPS POST (gzip)
-CF Worker (api.pidlab.app/telemetry/upload)
+CF Worker (telemetry.fpvpidlab.app/v1/collect)
     ↓
 R2 Bucket (pidlab-telemetry)
     └── {installationId}/latest.json

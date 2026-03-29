@@ -166,7 +166,7 @@ export function LicenseSettingsModal({ onClose }: LicenseSettingsModalProps) {
                 <div className="license-buy-row">
                   <a
                     className="wizard-btn wizard-btn-primary license-buy-btn"
-                    href="https://pidlab.app/pricing"
+                    href="https://fpvpidlab.app/pricing"
                     target="_blank"
                     rel="noopener noreferrer"
                   >

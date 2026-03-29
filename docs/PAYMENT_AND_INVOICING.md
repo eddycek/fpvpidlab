@@ -53,7 +53,7 @@ Customer → Stripe Checkout (hosted page)
 
 ### Stripe Checkout Flow
 
-1. Customer clicks "Buy Pro" on pidlab.app
+1. Customer clicks "Buy Pro" on fpvpidlab.app
 2. Redirect to Stripe Checkout (hosted page) — no PCI scope for us
 3. Customer pays (card, Google Pay, Apple Pay, SEPA, etc.)
 4. Stripe redirects to success page with `{session_id}` parameter
@@ -61,7 +61,7 @@ Customer → Stripe Checkout (hosted page)
 
 ### Stripe Webhook Processing
 
-**Endpoint**: `POST /stripe/webhook` (CF Worker at api.pidlab.app)
+**Endpoint**: `POST /stripe/webhook` (CF Worker at license.fpvpidlab.app)
 
 **Event**: `payment_intent.succeeded`
 
@@ -154,7 +154,7 @@ This ensures the customer always receives their key even if one channel fails.
 ### Task 1: Stripe Checkout Integration
 - [ ] Create Stripe account, configure products/prices
 - [ ] CF Worker endpoint: create Checkout session
-- [ ] Success page on pidlab.app displaying license key
+- [ ] Success page on fpvpidlab.app displaying license key
 - [ ] Cancel page redirect
 
 ### Task 2: Webhook Handler

@@ -82,7 +82,7 @@ FPVPIDlab uses an **open-core freemium model**: all tuning functionality is free
 | Item | Year 1 | Year 2+ | Notes |
 |------|--------|---------|-------|
 | Cloudflare Workers + R2 + D1 | $85 | $85 | Telemetry, license API, diagnostics |
-| Domain (pidlab.app) | $15 | $15 | Google Domains / Cloudflare |
+| Domain (fpvpidlab.app) | $15 | $15 | Google Domains / Cloudflare |
 | Apple Developer Program | $99 | $99 | macOS code signing + notarization |
 | Certum Open Source OV | $50 | $29 | Windows code signing (renewal cheaper) |
 | GitHub (public repo) | $0 | $0 | Free for public repos |
@@ -207,11 +207,11 @@ Stripe is the only cost that scales with revenue. At 2% blended rate:
 | 1.1 | Stripe account setup + product configuration | 1 day | — |
 | 1.2 | Stripe Checkout session endpoint (CF Worker) | 2 days | 1.1 |
 | 1.3 | Stripe webhook handler (payment → license key) | 2 days | 1.2 |
-| 1.4 | Success page on pidlab.app (display license key) | 1 day | 1.2 |
+| 1.4 | Success page on fpvpidlab.app (display license key) | 1 day | 1.2 |
 | 1.5 | Resend email integration (license delivery) | 1 day | 1.3 |
 | 1.6 | Trivi invoice generation (async from webhook) | 2 days | 1.3 |
 | 1.7 | Failed delivery retry cron (hourly) | 1 day | 1.5, 1.6 |
-| 1.8 | Pricing page on pidlab.app | 2 days | 1.2 |
+| 1.8 | Pricing page on fpvpidlab.app | 2 days | 1.2 |
 
 **Deliverable:** Users can buy FPVPIDlab Pro ($35 lifetime or $15/year) and receive key via email.
 
@@ -219,7 +219,7 @@ Stripe is the only cost that scales with revenue. At 2% blended rate:
 
 | # | Task | Effort | Dependency |
 |---|------|--------|------------|
-| 2.1 | Landing page optimization (pidlab.app) | 3 days | 1.8 |
+| 2.1 | Landing page optimization (fpvpidlab.app) | 3 days | 1.8 |
 | 2.2 | Demo video (3-min YouTube) showing full tuning cycle | 2 days | — |
 | 2.3 | Reddit announcement (r/fpv, r/Multicopter, r/betaflight) | 1 day | 2.1 |
 | 2.4 | RCGroups thread | 1 day | 2.1 |
@@ -381,7 +381,7 @@ Even the disaster scenario covers costs and provides meaningful side income.
 - [ ] Stripe webhook → license key generation
 - [ ] Trivi invoice generation
 - [ ] Resend license delivery email
-- [ ] Pricing page on pidlab.app
+- [ ] Pricing page on fpvpidlab.app
 - [ ] Landing page with demo video
 - [ ] Community announcement (Reddit, RCGroups)
 

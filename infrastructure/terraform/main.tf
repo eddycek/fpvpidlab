@@ -73,7 +73,7 @@ variable "report_from_email" {
 }
 
 variable "domain" {
-  description = "Custom domain for the worker (e.g. telemetry.pidlab.app). Leave empty to use *.workers.dev"
+  description = "Custom domain for the worker (e.g. telemetry.fpvpidlab.app). Leave empty to use *.workers.dev"
   type        = string
   default     = ""
 }
@@ -107,7 +107,7 @@ variable "license_ed25519_public_key" {
 }
 
 variable "license_domain" {
-  description = "Custom domain for the license worker (e.g. license.pidlab.app). Leave empty to use *.workers.dev"
+  description = "Custom domain for the license worker (e.g. license.fpvpidlab.app). Leave empty to use *.workers.dev"
   type        = string
   default     = ""
 }
@@ -200,6 +200,25 @@ resource "cloudflare_record" "telemetry" {
   type    = "AAAA"
   proxied = true
   comment = "Telemetry Worker (${var.environment})"
+}
+
+# ─── License Worker Custom Domain (optional) ──────────────────────
+
+resource "cloudflare_workers_route" "license" {
+  count       = var.license_domain != "" ? 1 : 0
+  zone_id     = var.zone_id
+  pattern     = "${var.license_domain}/*"
+  script_name = local.license_worker_name
+}
+
+resource "cloudflare_record" "license" {
+  count   = var.license_domain != "" ? 1 : 0
+  zone_id = var.zone_id
+  name    = var.license_domain
+  content = "100::"
+  type    = "AAAA"
+  proxied = true
+  comment = "License Worker (${var.environment})"
 }
 
 # ═══════════════════════════════════════════════════════════════════

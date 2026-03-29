@@ -198,13 +198,13 @@ if (license.type !== 'paid' && profileCount >= 1) {
 }
 ```
 
-**UI**: ProfileSelector shows "Upgrade to Pro" button when at profile limit. Clicking opens pidlab.app/pricing.
+**UI**: ProfileSelector shows "Upgrade to Pro" button when at profile limit. Clicking opens fpvpidlab.app/pricing.
 
 ## Machine Rotation
 
 Users may change machines (new PC, OS reinstall). Self-service reset:
 
-1. User visits pidlab.app/license/reset
+1. User visits fpvpidlab.app/license/reset
 2. Enters license key + email (must match)
 3. System clears `installation_id` in D1
 4. User activates on new machine
@@ -295,7 +295,7 @@ curl -s -X POST \
   -H "X-Admin-Key: $PIDLAB_ADMIN_KEY" \
   -H "Content-Type: application/json" \
   -d "{\"email\":\"$EMAIL\",\"type\":\"$TYPE\",\"note\":\"$NOTE\"}" \
-  https://api.pidlab.app/admin/keys/generate | jq .
+  https://license.fpvpidlab.app/admin/keys/generate | jq .
 ```
 
 ### list-keys.sh
@@ -312,7 +312,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 curl -s -H "X-Admin-Key: $PIDLAB_ADMIN_KEY" \
-  "https://api.pidlab.app/admin/keys?${PARAMS#&}" | jq .
+  "https://license.fpvpidlab.app/admin/keys?${PARAMS#&}" | jq .
 ```
 
 ### revoke-key.sh
@@ -321,7 +321,7 @@ curl -s -H "X-Admin-Key: $PIDLAB_ADMIN_KEY" \
 # Usage: ./revoke-key.sh <key-id>
 curl -s -X PUT \
   -H "X-Admin-Key: $PIDLAB_ADMIN_KEY" \
-  "https://api.pidlab.app/admin/keys/$1/revoke" | jq .
+  "https://license.fpvpidlab.app/admin/keys/$1/revoke" | jq .
 ```
 
 ### reset-key.sh
@@ -330,14 +330,14 @@ curl -s -X PUT \
 # Usage: ./reset-key.sh <key-id>
 curl -s -X PUT \
   -H "X-Admin-Key: $PIDLAB_ADMIN_KEY" \
-  "https://api.pidlab.app/admin/keys/$1/reset" | jq .
+  "https://license.fpvpidlab.app/admin/keys/$1/reset" | jq .
 ```
 
 ### key-stats.sh
 ```bash
 #!/bin/bash
 curl -s -H "X-Admin-Key: $PIDLAB_ADMIN_KEY" \
-  https://api.pidlab.app/admin/keys/stats | jq .
+  https://license.fpvpidlab.app/admin/keys/stats | jq .
 ```
 
 ## Stripe Webhook Integration
@@ -360,7 +360,7 @@ When `payment_intent.succeeded` fires (see PAYMENT_AND_INVOICING.md):
 ### Task 2: CF Worker — License Endpoints
 - [ ] `POST /license/activate` — activation with installation binding
 - [ ] `POST /license/validate` — periodic validation
-- [ ] Self-service reset page at pidlab.app/license/reset
+- [ ] Self-service reset page at fpvpidlab.app/license/reset
 
 ### Task 3: CF Worker — Admin API
 - [ ] `POST /admin/keys/generate`
