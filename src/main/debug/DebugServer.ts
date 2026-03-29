@@ -142,6 +142,26 @@ export function startDebugServer(port: number = DEFAULT_PORT): void {
         case '/blackbox-logs':
           return json(res, await getBlackboxLogs());
 
+        case '/scroll': {
+          const win = getMainWindow();
+          if (!win) return json(res, { error: 'No window' });
+          const y = parseInt(url.searchParams.get('y') || '500', 10);
+          const sel = url.searchParams.get('selector') || 'html';
+          await win.webContents.executeJavaScript(`
+            document.querySelector('${sel}')?.scrollBy(0, ${y})
+          `);
+          return json(res, { scrolled: y, selector: sel });
+        }
+
+        case '/buttons': {
+          const win = getMainWindow();
+          if (!win) return json(res, { error: 'No window' });
+          const buttons = await win.webContents.executeJavaScript(`
+            [...document.querySelectorAll('button')].map(b => b.textContent.trim()).filter(Boolean)
+          `);
+          return json(res, { buttons });
+        }
+
         case '/analyze': {
           const logId = url.searchParams.get('logId') || undefined;
           const sessionIdx = parseInt(url.searchParams.get('session') || '0', 10);
@@ -317,6 +337,13 @@ async function getAppState() {
 async function takeScreenshot() {
   const win = getMainWindow();
   if (!win) return { error: 'No window available' };
+
+  // Ensure window is visible and focused for accurate capture
+  if (win.isMinimized()) win.restore();
+  win.show();
+  win.focus();
+  // Small delay to let renderer paint after focus
+  await new Promise((r) => setTimeout(r, 200));
 
   const image = await win.webContents.capturePage();
   const pngBuffer = image.toPNG();
@@ -711,21 +738,26 @@ async function handlePost(
 }
 
 async function handleConnect(url: URL) {
+  const win = getMainWindow();
+  if (!win) return { error: 'No window' };
   const mspClient = deps?.mspClient;
   if (!mspClient) return { error: 'No MSP client' };
   if (mspClient.isConnected()) return { status: 'already_connected' };
   const ports = await mspClient.listPorts();
   if (ports.length === 0) return { error: 'No BF ports found' };
   const portPath = url.searchParams.get('port') || ports[0].path;
-  await mspClient.connect(portPath);
-  return { status: 'connected', port: portPath };
+  // Connect via renderer IPC so UI gets connection events
+  const result = await win.webContents.executeJavaScript(
+    `window.betaflight.connect('${portPath}')`
+  );
+  return { status: 'connected', port: portPath, result };
 }
 
 async function handleDisconnect() {
-  const mspClient = deps?.mspClient;
-  if (!mspClient) return { error: 'No MSP client' };
-  if (!mspClient.isConnected()) return { status: 'already_disconnected' };
-  await mspClient.disconnect();
+  const win = getMainWindow();
+  if (!win) return { error: 'No window' };
+  // Disconnect via renderer IPC so UI gets connection events
+  await win.webContents.executeJavaScript(`window.betaflight.disconnect()`);
   return { status: 'disconnected' };
 }
 
