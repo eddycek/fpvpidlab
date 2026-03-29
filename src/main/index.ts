@@ -177,6 +177,17 @@ async function initialize(): Promise<void> {
     // to avoid recursive baseline/snapshot creation → infinite reboot loop.
     if (mspClient.internalReconnect) {
       logger.info('Internal reconnect — skipping full connected handler');
+      // Re-send profile + session state so UI stays in sync after the
+      // transparent reconnect (connection-changed already fires from connect()).
+      const window = getMainWindow();
+      const currentProf = await profileManager.getCurrentProfile();
+      if (window && currentProf) {
+        sendProfileChanged(window, currentProf);
+        const session = await tuningSessionManager.getSession(currentProf.id);
+        if (session) {
+          sendTuningSessionChanged(session);
+        }
+      }
       return;
     }
 
