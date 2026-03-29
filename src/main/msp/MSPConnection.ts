@@ -130,6 +130,16 @@ export class MSPConnection extends EventEmitter {
     return this.cliMode;
   }
 
+  /**
+   * Clear the MSP receive buffer to discard any garbage data.
+   * Call after FC reboot to remove boot banner bytes that may have
+   * been routed to the MSP parser (e.g. on STM32F4xx where USB-CDC
+   * stays alive during soft reset).
+   */
+  resetProtocol(): void {
+    this.buffer = Buffer.alloc(0);
+  }
+
   /** Write a CLI command without waiting for prompt. Used for `save` which reboots the FC. */
   async writeCLIRaw(command: string): Promise<void> {
     if (!this.cliMode) {

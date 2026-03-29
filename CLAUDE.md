@@ -47,7 +47,7 @@ Boots the app with a mock flight controller that auto-connects on startup. Gener
 
 Both `npm run dev` and `npm run dev:demo` start with `DEBUG_SERVER=true`, which launches an HTTP debug server on `http://127.0.0.1:9300`. The server exposes app state for tooling integration (e.g., Claude Code).
 
-**Endpoints:**
+**Read-only endpoints (GET):**
 
 | Endpoint | Description |
 |----------|-------------|
@@ -61,6 +61,18 @@ Both `npm run dev` and `npm run dev:demo` start with `DEBUG_SERVER=true`, which 
 | `GET /tuning-session` | Active tuning session state |
 | `GET /snapshots` | Configuration snapshots for current profile |
 | `GET /blackbox-logs` | Downloaded blackbox logs for current profile |
+
+**Action endpoints (POST) — for autonomous testing without UI:**
+
+| Endpoint | Description |
+|----------|-------------|
+| `POST /connect?port=X` | Connect to FC (auto-selects first BF port if no param) |
+| `POST /disconnect` | Disconnect from FC |
+| `POST /start-tuning?mode=X` | Start tuning session (mode: filter, pid, flash) |
+| `POST /reset-session` | Delete active tuning session |
+| `POST /erase-flash` | Erase blackbox flash memory |
+
+Action endpoints invoke the same IPC handlers the renderer uses (via `executeJavaScript`). They enable Claude Code to run full integration tests against a real FC without needing browser automation or user clicks.
 
 **Configuration:**
 - Controlled by `DEBUG_SERVER=true` environment variable (not active in production builds)

@@ -77,6 +77,7 @@ function AppContent() {
   const [connectedFcInfo, setConnectedFcInfo] = useState<FCInfo | null>(null);
   const [analyzingVerification, setAnalyzingVerification] = useState(false);
   const [bbRefreshKey, setBbRefreshKey] = useState(0);
+  const [preparingSession, setPreparingSession] = useState(false);
   const [storageType, setStorageType] = useState<BlackboxStorageType>('flash');
   const storageTypeRef = useRef<BlackboxStorageType>('flash');
   const [verificationPickerLogId, setVerificationPickerLogId] = useState<string | null>(null);
@@ -807,6 +808,7 @@ function AppContent() {
         <StartTuningModal
           onStart={async (tuningType, bfPidProfileIndex) => {
             setShowStartTuningModal(false);
+            setPreparingSession(true);
             try {
               setErasedForPhase(null);
               await tuning.startSession(tuningType, bfPidProfileIndex);
@@ -816,6 +818,8 @@ function AppContent() {
               refreshBlackboxInfo();
             } catch (err) {
               toast.error(err instanceof Error ? err.message : 'Failed to start tuning session');
+            } finally {
+              setPreparingSession(false);
             }
           }}
           onCancel={() => setShowStartTuningModal(false)}
@@ -824,6 +828,16 @@ function AppContent() {
           pidProfileLabels={currentProfile?.bfPidProfileLabels}
           tuningHistory={tuningHistory.history}
         />
+      )}
+
+      {preparingSession && (
+        <div className="preparing-session-overlay">
+          <div className="preparing-session-modal">
+            <div className="preparing-session-spinner" />
+            <h3>Preparing tuning session</h3>
+            <p>Creating backup snapshot and rebooting FC. This takes a few seconds...</p>
+          </div>
+        </div>
       )}
 
       {showFlightGuideMode && (

@@ -44,7 +44,10 @@ export class MSPClient extends EventEmitter {
 
     this.connection.on('disconnected', () => {
       this.connectionStatus = { connected: false };
-      this.currentPort = null;
+      // Preserve currentPort during expected reboots so we can reconnect to it
+      if (!this._rebootPending) {
+        this.currentPort = null;
+      }
       this.emit('disconnected');
     });
 
@@ -221,6 +224,48 @@ export class MSPClient extends EventEmitter {
     await this.disconnect();
     await this.delay(1000);
     await this.connect(port);
+  }
+
+  /**
+   * Wait for the serial port to re-appear after FC reboot (USB re-enumeration),
+   * then reconnect and verify MSP communication.
+   *
+   * On boards where USB-CDC disconnects during soft reset (e.g. some STM32F405),
+   * the port disappears for 2-5 seconds then re-enumerates. This method polls
+   * for the port path and reconnects transparently.
+   *
+   * @returns true if reconnected successfully, false if port never reappeared
+   */
+  async reconnectAfterReboot(timeoutMs: number = 15000): Promise<boolean> {
+    const portPath = this.currentPort;
+    if (!portPath) {
+      logger.warn('reconnectAfterReboot: no port path to reconnect to');
+      return false;
+    }
+
+    const POLL_INTERVAL = 500;
+    const start = Date.now();
+    logger.info(`Waiting for port ${portPath} to re-appear (timeout ${timeoutMs}ms)...`);
+
+    while (Date.now() - start < timeoutMs) {
+      try {
+        const ports = await SerialPort.list();
+        const found = ports.some((p) => p.path === portPath);
+        if (found) {
+          logger.info(`Port ${portPath} re-appeared after ${Date.now() - start}ms`);
+          // Small settle delay — port may not be ready immediately after enumeration
+          await this.delay(500);
+          await this.connect(portPath);
+          return true;
+        }
+      } catch {
+        // SerialPort.list() can fail transiently during re-enumeration
+      }
+      await this.delay(POLL_INTERVAL);
+    }
+
+    logger.warn(`Port ${portPath} did not re-appear within ${timeoutMs}ms`);
+    return false;
   }
 
   /**
@@ -432,23 +477,80 @@ export class MSPClient extends EventEmitter {
       // breaks all subsequent MSP commands (erase, PID reads, etc.).
       // Callers that are already in CLI (e.g. apply flow) handle exit themselves via save.
       if (!wasInCLI) {
-        this.connection.clearFCRebootedFromCLI();
+        // IMPORTANT: Send `exit` BEFORE clearing cliMode. writeCLIRaw() requires
+        // cliMode=true. Keep cliMode=true during reboot so the boot banner goes
+        // into the CLI buffer (harmless) instead of the MSP parser (corrupts it).
         try {
           await this.connection.writeCLIRaw('exit');
         } catch {
           // Port closing during reboot is expected
         }
+
+        // FC is now rebooting (CLI `exit` calls systemReset()).
+        // Two scenarios:
+        //   A) USB-CDC stays alive (some STM32F4xx) → ping MSP after settle
+        //   B) USB re-enumerates → port closes → poll for port → reconnect
+        const BOOT_SETTLE_MS = 4000;
+        const PING_TIMEOUT_MS = 2000;
+        const PING_INTERVAL_MS = 1000;
+        const MAX_WAIT_MS = 15000;
+        logger.info('CLI exit sent — waiting for FC to reboot...');
+        await new Promise((resolve) => setTimeout(resolve, BOOT_SETTLE_MS));
+
+        if (this.connection.isOpen()) {
+          // Scenario A: port stayed open — clear parser, switch to MSP, ping
+          this.connection.resetProtocol();
+          await this.connection.forceExitCLI();
+          this.connection.clearFCRebootedFromCLI();
+
+          const pingStart = Date.now();
+          while (Date.now() - pingStart < MAX_WAIT_MS) {
+            if (!this.connection.isOpen()) {
+              // Port closed late — fall through to reconnect path below
+              break;
+            }
+            try {
+              await this.connection.sendCommand(
+                MSPCommand.MSP_API_VERSION,
+                Buffer.alloc(0),
+                PING_TIMEOUT_MS
+              );
+              logger.info('FC is MSP-responsive after reboot');
+              break;
+            } catch {
+              logger.debug('MSP ping after reboot — FC still booting...');
+              await new Promise((resolve) => setTimeout(resolve, PING_INTERVAL_MS));
+            }
+          }
+        }
+
+        if (!this.connection.isOpen()) {
+          // Scenario B: port closed (USB re-enumeration) — poll and reconnect
+          logger.info('Port closed during reboot — attempting auto-reconnect...');
+          await this.connection.forceExitCLI();
+          this.connection.clearFCRebootedFromCLI();
+          const reconnected = await this.reconnectAfterReboot(MAX_WAIT_MS);
+          if (!reconnected) {
+            logger.warn('Auto-reconnect failed — FC may need manual reconnection');
+            this.connectionStatus = { connected: false };
+            this.emit('connection-changed', this.connectionStatus);
+          }
+        }
       }
 
       return this.cleanCLIOutput(output);
     } catch (error) {
-      // Try to recover but don't fail if exit fails
+      // Try to recover — send exit to get FC out of CLI (triggers reboot)
       try {
         if (!wasInCLI) {
-          this.connection.clearFCRebootedFromCLI();
           try {
             await this.connection.writeCLIRaw('exit');
           } catch {}
+          // Wait for FC to reboot, then clean up
+          await new Promise((resolve) => setTimeout(resolve, 4000));
+          this.connection.resetProtocol();
+          await this.connection.forceExitCLI();
+          this.connection.clearFCRebootedFromCLI();
         }
       } catch {}
       throw error;
@@ -466,11 +568,51 @@ export class MSPClient extends EventEmitter {
 
       // Exit CLI if WE entered it — same rationale as exportCLIDiff()
       if (!wasInCLI) {
-        this.connection.clearFCRebootedFromCLI();
         try {
           await this.connection.writeCLIRaw('exit');
         } catch {
           // Port closing during reboot is expected
+        }
+        const BOOT_SETTLE_MS = 4000;
+        const PING_TIMEOUT_MS = 2000;
+        const PING_INTERVAL_MS = 1000;
+        const MAX_WAIT_MS = 15000;
+        logger.info('CLI exit sent (dump) — waiting for FC to reboot...');
+        await new Promise((resolve) => setTimeout(resolve, BOOT_SETTLE_MS));
+
+        if (this.connection.isOpen()) {
+          this.connection.resetProtocol();
+          await this.connection.forceExitCLI();
+          this.connection.clearFCRebootedFromCLI();
+
+          const pingStart = Date.now();
+          while (Date.now() - pingStart < MAX_WAIT_MS) {
+            if (!this.connection.isOpen()) break;
+            try {
+              await this.connection.sendCommand(
+                MSPCommand.MSP_API_VERSION,
+                Buffer.alloc(0),
+                PING_TIMEOUT_MS
+              );
+              logger.info('FC is MSP-responsive after reboot (dump)');
+              break;
+            } catch {
+              logger.debug('MSP ping after reboot — FC still booting...');
+              await new Promise((resolve) => setTimeout(resolve, PING_INTERVAL_MS));
+            }
+          }
+        }
+
+        if (!this.connection.isOpen()) {
+          logger.info('Port closed during reboot (dump) — attempting auto-reconnect...');
+          await this.connection.forceExitCLI();
+          this.connection.clearFCRebootedFromCLI();
+          const reconnected = await this.reconnectAfterReboot(MAX_WAIT_MS);
+          if (!reconnected) {
+            logger.warn('Auto-reconnect failed (dump) — FC may need manual reconnection');
+            this.connectionStatus = { connected: false };
+            this.emit('connection-changed', this.connectionStatus);
+          }
         }
       }
 
@@ -478,10 +620,13 @@ export class MSPClient extends EventEmitter {
     } catch (error) {
       try {
         if (!wasInCLI) {
-          this.connection.clearFCRebootedFromCLI();
           try {
             await this.connection.writeCLIRaw('exit');
           } catch {}
+          await new Promise((resolve) => setTimeout(resolve, 4000));
+          this.connection.resetProtocol();
+          await this.connection.forceExitCLI();
+          this.connection.clearFCRebootedFromCLI();
         }
       } catch {}
       throw error;
@@ -1379,13 +1524,19 @@ export class MSPClient extends EventEmitter {
 
       // Wait for FC to be MSP-responsive. After snapshot creation,
       // exportCLIDiff() sends CLI `exit` which reboots the FC (3-5s).
-      // The user may click Erase before reboot completes, so we retry.
-      const READY_TIMEOUT_MS = 10000;
-      const READY_PING_TIMEOUT_MS = 1500;
-      const READY_RETRY_DELAY_MS = 500;
+      // The user may click Erase before reboot completes, so we wait.
+      const READY_TIMEOUT_MS = 15000;
+      const READY_PING_TIMEOUT_MS = 2000;
+      const READY_RETRY_DELAY_MS = 1000;
       const readyStart = Date.now();
       let fcReady = false;
       while (Date.now() - readyStart < READY_TIMEOUT_MS) {
+        // If FC is not connected yet (reboot in progress), wait for reconnect
+        if (!this.isConnected()) {
+          logger.info('Erase: FC not connected, waiting for reconnect...');
+          await new Promise((resolve) => setTimeout(resolve, READY_RETRY_DELAY_MS));
+          continue;
+        }
         try {
           await this.connection.sendCommand(
             MSPCommand.MSP_API_VERSION,
@@ -1395,8 +1546,11 @@ export class MSPClient extends EventEmitter {
           fcReady = true;
           break;
         } catch (err) {
-          if (!this.connection.isOpen()) {
-            throw new ConnectionError('FC disconnected before erase');
+          if (!this.isConnected()) {
+            // FC disconnected during ping — keep waiting for reconnect
+            logger.info('Erase: FC disconnected during ping, waiting...');
+            await new Promise((resolve) => setTimeout(resolve, READY_RETRY_DELAY_MS));
+            continue;
           }
           if (err instanceof TimeoutError) {
             logger.debug('Waiting for FC to become MSP-responsive...');

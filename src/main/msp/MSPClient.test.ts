@@ -389,6 +389,7 @@ function createClientWithStub() {
     sendCLICommand: vi.fn().mockResolvedValue(''),
     writeCLIRaw: vi.fn().mockResolvedValue(undefined),
     clearFCRebootedFromCLI: vi.fn(),
+    resetProtocol: vi.fn(),
   };
   (client as any).connection = mockConn;
   return { client, sendCommand, mockConn };
@@ -1026,10 +1027,39 @@ describe('MSPClient.exportCLIDiff', () => {
     expect(mockConn.enterCLI).toHaveBeenCalled();
     expect(mockConn.sendCLICommand).toHaveBeenCalledWith('diff all', 10000);
     // Exits CLI after reading diff (triggers FC reboot)
-    expect(mockConn.clearFCRebootedFromCLI).toHaveBeenCalled();
     expect(mockConn.writeCLIRaw).toHaveBeenCalledWith('exit');
+    expect(mockConn.resetProtocol).toHaveBeenCalled();
+    expect(mockConn.clearFCRebootedFromCLI).toHaveBeenCalled();
     // cleanCLIOutput removes lines starting with # and empty lines
     expect(result).toBe('set gyro_lpf1_static_hz = 250\nset dterm_lpf1_static_hz = 150');
+  });
+
+  it('calls writeCLIRaw(exit) BEFORE resetProtocol and clearFCRebootedFromCLI', async () => {
+    const { client, mockConn } = createClientWithStub();
+    mockConn.sendCLICommand.mockResolvedValue('set foo = 1\n#');
+    const callOrder: string[] = [];
+    mockConn.writeCLIRaw.mockImplementation(async () => {
+      callOrder.push('writeCLIRaw');
+    });
+    mockConn.resetProtocol.mockImplementation(() => {
+      callOrder.push('resetProtocol');
+    });
+    mockConn.forceExitCLI.mockImplementation(async () => {
+      callOrder.push('forceExitCLI');
+    });
+    mockConn.clearFCRebootedFromCLI.mockImplementation(() => {
+      callOrder.push('clearFCRebootedFromCLI');
+    });
+
+    await client.exportCLIDiff();
+
+    // Critical ordering: exit sent while cliMode=true, then cleanup after reboot settle
+    expect(callOrder).toEqual([
+      'writeCLIRaw',
+      'resetProtocol',
+      'forceExitCLI',
+      'clearFCRebootedFromCLI',
+    ]);
   });
 
   it('skips enterCLI and exit if already in CLI mode', async () => {
@@ -1531,7 +1561,7 @@ describe('MSPClient.eraseBlackboxFlash — pre-erase MSP readiness check', () =>
     await expect(client.eraseBlackboxFlash()).rejects.toThrow(
       'FC not responding to MSP commands — it may still be rebooting'
     );
-  }, 15000);
+  }, 20000);
 });
 
 // ─── getStatusEx ─────────────────────────────────────────────────────

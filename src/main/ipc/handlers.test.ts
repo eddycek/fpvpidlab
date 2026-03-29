@@ -152,6 +152,8 @@ function createMockMSPClient(connected = true) {
     exportCLIDump: vi.fn().mockResolvedValue('dump output'),
     getPidProcessDenom: vi.fn().mockResolvedValue(1),
     saveAndReboot: vi.fn().mockResolvedValue(undefined),
+    setRebootPending: vi.fn(),
+    clearRebootPending: vi.fn(),
     connection: {
       enterCLI: vi.fn().mockResolvedValue(undefined),
       sendCLICommand: vi.fn().mockResolvedValue(''),
