@@ -1,8 +1,5 @@
 environment           = "prod"
 cloudflare_account_id = "718d9177347897a7e4a282cdf5c38568"
-report_email          = "eddycek.ve@gmail.com"
-report_from_email     = "telemetry@fpvpidlab.app"
-
 # Custom domains on fpvpidlab.app
 domain         = "telemetry.fpvpidlab.app"
 license_domain = "license.fpvpidlab.app"

@@ -13,22 +13,18 @@ bucket_name = "pidlab-telemetry-dev"
 
 # Plain-text config (not secrets — deployed with worker)
 [vars]
-REPORT_EMAIL = "eddycek.ve@gmail.com"
-REPORT_FROM_EMAIL = "telemetry@fpvpidlab.app"
 DIAGNOSTIC_RATE_LIMIT_MAX = "5"
 DIAGNOSTIC_RATE_LIMIT_WINDOW_MIN = "60"
 TELEMETRY_RATE_LIMIT_WINDOW_MIN = "60"
 BBL_MAX_SIZE_BYTES = "52428800"
 
-# Secrets set via `wrangler secret put` (or Terraform):
-# ADMIN_KEY, RESEND_API_KEY
+# Secrets set via Terraform (secret_text_binding):
+# ADMIN_KEY, RESEND_API_KEY, REPORT_EMAIL, REPORT_FROM_EMAIL
 
 [env.prod]
 name = "pidlab-telemetry"
 
 [env.prod.vars]
-REPORT_EMAIL = "eddycek.ve@gmail.com"
-REPORT_FROM_EMAIL = "telemetry@fpvpidlab.app"
 DIAGNOSTIC_RATE_LIMIT_MAX = "5"
 DIAGNOSTIC_RATE_LIMIT_WINDOW_MIN = "60"
 TELEMETRY_RATE_LIMIT_WINDOW_MIN = "60"
