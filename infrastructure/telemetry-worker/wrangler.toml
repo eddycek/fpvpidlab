@@ -14,7 +14,7 @@ bucket_name = "pidlab-telemetry-dev"
 # Plain-text config (not secrets — deployed with worker)
 [vars]
 REPORT_EMAIL = "eddycek.ve@gmail.com"
-REPORT_FROM_EMAIL = "onboarding@resend.dev"
+REPORT_FROM_EMAIL = "telemetry@fpvpidlab.app"
 DIAGNOSTIC_RATE_LIMIT_MAX = "5"
 DIAGNOSTIC_RATE_LIMIT_WINDOW_MIN = "60"
 TELEMETRY_RATE_LIMIT_WINDOW_MIN = "60"
@@ -28,7 +28,7 @@ name = "pidlab-telemetry"
 
 [env.prod.vars]
 REPORT_EMAIL = "eddycek.ve@gmail.com"
-REPORT_FROM_EMAIL = "onboarding@resend.dev"
+REPORT_FROM_EMAIL = "telemetry@fpvpidlab.app"
 DIAGNOSTIC_RATE_LIMIT_MAX = "5"
 DIAGNOSTIC_RATE_LIMIT_WINDOW_MIN = "60"
 TELEMETRY_RATE_LIMIT_WINDOW_MIN = "60"
