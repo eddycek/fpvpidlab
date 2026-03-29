@@ -20,6 +20,8 @@ import {
   GYRO_LPF1_MAX_HZ_RPM,
   DTERM_LPF1_MAX_HZ_RPM,
   DYN_NOTCH_COUNT_WITH_RPM,
+  DYN_NOTCH_COUNT_WITH_RPM_BY_SIZE,
+  DYN_NOTCH_COUNT_MAX_STEP,
   DYN_NOTCH_Q_WITH_RPM,
   NOISE_FLOOR_VERY_NOISY_DB,
   NOISE_FLOOR_VERY_CLEAN_DB,
@@ -49,7 +51,8 @@ export function isRpmFilterActive(settings: CurrentFilterSettings): boolean {
  */
 export function recommend(
   noise: NoiseProfile,
-  current: CurrentFilterSettings = DEFAULT_FILTER_SETTINGS
+  current: CurrentFilterSettings = DEFAULT_FILTER_SETTINGS,
+  droneSize?: DroneSize
 ): FilterRecommendation[] {
   const recommendations: FilterRecommendation[] = [];
   const rpmActive = isRpmFilterActive(current);
@@ -65,7 +68,7 @@ export function recommend(
 
   // 4. RPM-aware dynamic notch count/Q recommendations (conditional on resonance peaks)
   if (rpmActive) {
-    recommendDynamicNotchForRPM(noise, current, recommendations);
+    recommendDynamicNotchForRPM(noise, current, recommendations, droneSize);
   }
 
   // 5. LPF2 recommendations (disable when clean + RPM, enable when noisy)
@@ -429,7 +432,8 @@ function recommendDynamicNotchAdjustments(
 function recommendDynamicNotchForRPM(
   noise: NoiseProfile,
   current: CurrentFilterSettings,
-  out: FilterRecommendation[]
+  out: FilterRecommendation[],
+  droneSize?: DroneSize
 ): void {
   const currentCount = current.dyn_notch_count;
   const currentQ = current.dyn_notch_q;
@@ -441,15 +445,28 @@ function recommendDynamicNotchForRPM(
     )
   );
 
-  // Only recommend if we have the data and it differs from RPM-optimal values
-  if (currentCount !== undefined && currentCount > DYN_NOTCH_COUNT_WITH_RPM) {
+  // Size-aware target: sub-5" quads keep 2 notches (more complex vibration coupling),
+  // 5"+ use 1 (RPM filter handles motor noise, 1 notch catches frame resonance).
+  const targetCount = droneSize
+    ? DYN_NOTCH_COUNT_WITH_RPM_BY_SIZE[droneSize]
+    : DYN_NOTCH_COUNT_WITH_RPM;
+
+  // Conservative stepping: reduce by at most DYN_NOTCH_COUNT_MAX_STEP per iteration
+  // to avoid removing too many notches at once (5→1 can cause regression on axes
+  // where removed notches were tracking real noise peaks).
+  if (currentCount !== undefined && currentCount > targetCount) {
+    const stepped = Math.max(targetCount, currentCount - DYN_NOTCH_COUNT_MAX_STEP);
+    const sizeNote =
+      droneSize && targetCount > 1
+        ? ` Sub-5" quads benefit from ${targetCount} notches to cover frame vibration modes.`
+        : '';
     out.push({
       setting: 'dyn_notch_count',
       currentValue: currentCount,
-      recommendedValue: DYN_NOTCH_COUNT_WITH_RPM,
+      recommendedValue: stepped,
       reason:
         'With RPM filter active, motor harmonics are already removed. The dynamic notch filter only needs to ' +
-        'catch frame resonances, so fewer notches are needed. This reduces CPU load and filter delay.',
+        `catch frame resonances, so fewer notches are needed.${sizeNote} This reduces CPU load and filter delay.`,
       impact: 'latency',
       confidence: 'high',
       ruleId: 'F-DN-COUNT',

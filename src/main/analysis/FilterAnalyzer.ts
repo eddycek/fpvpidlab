@@ -155,7 +155,7 @@ export async function analyze(
   // Step 4: Generate recommendations
   onProgress?.({ step: 'recommending', percent: 85 });
   const rpmActive = isRpmFilterActive(currentSettings);
-  const rawRecommendations = recommend(noiseProfile, currentSettings);
+  const rawRecommendations = recommend(noiseProfile, currentSettings, options?.droneSize);
   const recommendations = adjustFilterConfidenceByQuality(
     rawRecommendations,
     qualityResult.score.tier
@@ -246,7 +246,7 @@ async function analyzeEntireFlight(
 
   onProgress?.({ step: 'recommending', percent: 85 });
   const rpmActive = isRpmFilterActive(currentSettings);
-  const rawRecommendations = recommend(noiseProfile, currentSettings);
+  const rawRecommendations = recommend(noiseProfile, currentSettings, options?.droneSize);
   const recommendations = dataQuality
     ? adjustFilterConfidenceByQuality(rawRecommendations, dataQuality.tier)
     : rawRecommendations;
