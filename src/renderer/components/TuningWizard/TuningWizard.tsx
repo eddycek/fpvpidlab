@@ -39,6 +39,9 @@ interface TuningWizardProps {
 export function TuningWizard({ logId, mode = 'full', onExit, onApplyComplete }: TuningWizardProps) {
   const wizard = useTuningWizard(logId, mode);
   const applyCalled = useRef(false);
+  // Stable ref for onExit — prevents re-renders from cancelling the auto-close timer
+  const onExitRef = useRef(onExit);
+  onExitRef.current = onExit;
 
   // Notify parent when apply completes, then auto-close wizard
   useEffect(() => {
@@ -114,7 +117,8 @@ export function TuningWizard({ logId, mode = 'full', onExit, onApplyComplete }: 
 
       // Auto-close wizard after apply completes — FC is already reconnected,
       // session phase is updated, user returns to dashboard with Erase & Verify banner.
-      const timer = setTimeout(() => onExit(), 500);
+      // Use ref to avoid timer being cancelled by re-renders from onApplyComplete.
+      const timer = setTimeout(() => onExitRef.current(), 500);
       return () => clearTimeout(timer);
     }
 
@@ -128,7 +132,6 @@ export function TuningWizard({ logId, mode = 'full', onExit, onApplyComplete }: 
     wizard.tfResult,
     mode,
     onApplyComplete,
-    onExit,
   ]);
 
   const renderStep = () => {
