@@ -1,6 +1,6 @@
 # Tuning Precision Improvements
 
-> **Status**: Active (PRs #119–#120, #137, #146–#152, #156–#160 — 15/15 implemented)
+> **Status**: Complete (PRs #119–#120, #137, #146–#152, #156–#160 — 14/14 implemented). Chirp Flight Analysis (#7) extracted to standalone design doc: [CHIRP_FLIGHT_ANALYSIS.md](../CHIRP_FLIGHT_ANALYSIS.md)
 
 Research-based analysis of techniques to improve tuning recommendation accuracy. Prioritized by impact and implementation effort.
 
@@ -165,22 +165,7 @@ Also consider flight style: aggressive/race needs higher propwash floor (~120 Hz
 
 ## Medium Priority
 
-### 7. Chirp Flight Analysis (BF 4.6+)
-
-**Problem**: Step response and even Wiener deconvolution work with whatever stick inputs happen during a flight. A purpose-built excitation signal would give much more precise system identification.
-
-**Solution**: BF 2025.12 added a built-in **chirp signal generator** — a swept-frequency oscillation injected into one axis at a time. This produces ideal data for frequency response estimation.
-
-**Implementation**:
-- Detect chirp mode from BBL headers or by identifying swept-sine pattern in setpoint
-- Extract chirp input/output signals
-- Compute transfer function via cross-spectral density: `H(f) = Sxy(f) / Sxx(f)`
-- Present Bode magnitude/phase plot with bandwidth, gain margin, phase margin
-- Compute optimal PID gains directly from measured plant dynamics
-
-**References**:
-- [BF Chirp - HackMD](https://hackmd.io/@nerdCopter/r1G2vsFQgl)
-- [pichim/bf_controller_tuning](https://github.com/pichim/bf_controller_tuning)
+### 7. Chirp Flight Analysis (BF 4.6+) — Extracted to [CHIRP_FLIGHT_ANALYSIS.md](../CHIRP_FLIGHT_ANALYSIS.md)
 
 ---
 
