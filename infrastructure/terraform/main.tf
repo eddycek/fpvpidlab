@@ -60,14 +60,14 @@ variable "resend_api_key" {
   default     = ""
 }
 
-variable "report_email" {
+variable "telemetry_report_email" {
   description = "Recipient email for reports and notifications"
   type        = string
   sensitive   = true
   default     = ""
 }
 
-variable "report_from_email" {
+variable "telemetry_report_from_email" {
   description = "Sender email address (must be verified in Resend)"
   type        = string
   sensitive   = true
@@ -162,12 +162,12 @@ resource "cloudflare_workers_script" "telemetry" {
 
   secret_text_binding {
     name = "REPORT_EMAIL"
-    text = var.report_email
+    text = var.telemetry_report_email
   }
 
   secret_text_binding {
     name = "REPORT_FROM_EMAIL"
-    text = var.report_from_email
+    text = var.telemetry_report_from_email
   }
 
   plain_text_binding {

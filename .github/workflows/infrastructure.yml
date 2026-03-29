@@ -81,8 +81,8 @@ jobs:
           TF_VAR_cloudflare_api_token: ${{ secrets.CLOUDFLARE_PROVISIONING }}
           TF_VAR_admin_key: ${{ secrets.TELEMETRY_ADMIN_KEY_PROD }}
           TF_VAR_resend_api_key: ${{ secrets.RESEND_API_KEY }}
-          TF_VAR_report_email: ${{ secrets.TELEMETRY_REPORT_EMAIL }}
-          TF_VAR_report_from_email: ${{ secrets.TELEMETRY_REPORT_FROM_EMAIL }}
+          TF_VAR_telemetry_report_email: ${{ secrets.TELEMETRY_REPORT_EMAIL }}
+          TF_VAR_telemetry_report_from_email: ${{ secrets.TELEMETRY_REPORT_FROM_EMAIL }}
           TF_VAR_license_admin_key: ${{ secrets.LICENSE_ADMIN_KEY_PROD }}
           TF_VAR_license_ed25519_private_key: ${{ secrets.LICENSE_ED25519_PRIVATE_KEY }}
           TF_VAR_license_ed25519_public_key: ${{ secrets.LICENSE_ED25519_PUBLIC_KEY }}
@@ -130,8 +130,8 @@ jobs:
           TF_VAR_cloudflare_api_token: ${{ secrets.CLOUDFLARE_PROVISIONING }}
           TF_VAR_admin_key: ${{ secrets.TELEMETRY_ADMIN_KEY_DEV }}
           TF_VAR_resend_api_key: ${{ secrets.RESEND_API_KEY }}
-          TF_VAR_report_email: ${{ secrets.TELEMETRY_REPORT_EMAIL }}
-          TF_VAR_report_from_email: ${{ secrets.TELEMETRY_REPORT_FROM_EMAIL }}
+          TF_VAR_telemetry_report_email: ${{ secrets.TELEMETRY_REPORT_EMAIL }}
+          TF_VAR_telemetry_report_from_email: ${{ secrets.TELEMETRY_REPORT_FROM_EMAIL }}
           TF_VAR_license_admin_key: ${{ secrets.LICENSE_ADMIN_KEY_DEV }}
           TF_VAR_license_ed25519_private_key: ${{ secrets.LICENSE_ED25519_PRIVATE_KEY }}
           TF_VAR_license_ed25519_public_key: ${{ secrets.LICENSE_ED25519_PUBLIC_KEY }}
@@ -194,8 +194,8 @@ jobs:
           TF_VAR_cloudflare_api_token: ${{ secrets.CLOUDFLARE_PROVISIONING }}
           TF_VAR_admin_key: ${{ secrets.TELEMETRY_ADMIN_KEY_PROD }}
           TF_VAR_resend_api_key: ${{ secrets.RESEND_API_KEY }}
-          TF_VAR_report_email: ${{ secrets.TELEMETRY_REPORT_EMAIL }}
-          TF_VAR_report_from_email: ${{ secrets.TELEMETRY_REPORT_FROM_EMAIL }}
+          TF_VAR_telemetry_report_email: ${{ secrets.TELEMETRY_REPORT_EMAIL }}
+          TF_VAR_telemetry_report_from_email: ${{ secrets.TELEMETRY_REPORT_FROM_EMAIL }}
           TF_VAR_license_admin_key: ${{ secrets.LICENSE_ADMIN_KEY_PROD }}
           TF_VAR_license_ed25519_private_key: ${{ secrets.LICENSE_ED25519_PRIVATE_KEY }}
           TF_VAR_license_ed25519_public_key: ${{ secrets.LICENSE_ED25519_PUBLIC_KEY }}
