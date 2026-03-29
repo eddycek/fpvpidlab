@@ -1,9 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { computeTuneQualityScore } from './tuneQualityScore';
+import { computeTuneQualityScore, spectrogramDelta } from './tuneQualityScore';
 import type {
   FilterMetricsSummary,
   PIDMetricsSummary,
   TransferFunctionMetricsSummary,
+  CompactThrottleSpectrogram,
 } from '../types/tuning-history.types';
 
 const perfectFilter: FilterMetricsSummary = {
@@ -789,6 +790,92 @@ describe('computeTuneQualityScore', () => {
       expect(withoutVerification).not.toBeNull();
       // Degraded verification → lower overall
       expect(withDegradedVerification!.overall).toBeLessThan(withoutVerification!.overall);
+    });
+  });
+
+  describe('spectrogram-based Noise Delta', () => {
+    const makeSpectrogram = (dbValue: number): CompactThrottleSpectrogram => ({
+      frequencies: [100, 200, 300],
+      bands: [
+        {
+          throttleMin: 0,
+          throttleMax: 0.5,
+          roll: [dbValue, dbValue, dbValue],
+          pitch: [dbValue, dbValue, dbValue],
+          yaw: [dbValue, dbValue, dbValue],
+        },
+        {
+          throttleMin: 0.5,
+          throttleMax: 1.0,
+          roll: [dbValue, dbValue, dbValue],
+          pitch: [dbValue, dbValue, dbValue],
+          yaw: [dbValue, dbValue, dbValue],
+        },
+      ],
+      bandsWithData: 2,
+    });
+
+    it('spectrogramDelta returns negative for improvement', () => {
+      const before = makeSpectrogram(-20);
+      const after = makeSpectrogram(-25); // 5 dB quieter
+      expect(spectrogramDelta(before, after)).toBeCloseTo(-5, 1);
+    });
+
+    it('spectrogramDelta returns positive for regression', () => {
+      const before = makeSpectrogram(-30);
+      const after = makeSpectrogram(-27); // 3 dB louder
+      expect(spectrogramDelta(before, after)).toBeCloseTo(3, 1);
+    });
+
+    it('spectrogramDelta excludes -240 sentinel values', () => {
+      const before = makeSpectrogram(-25);
+      const after: CompactThrottleSpectrogram = {
+        ...makeSpectrogram(-30),
+        bands: [
+          {
+            throttleMin: 0,
+            throttleMax: 0.5,
+            roll: [-30, -240, -30], // -240 sentinel in middle
+            pitch: [-30, -30, -30],
+            yaw: [-30, -30, -30],
+          },
+        ],
+      };
+      const beforeOneBand: CompactThrottleSpectrogram = {
+        ...before,
+        bands: [before.bands[0]],
+      };
+      const delta = spectrogramDelta(beforeOneBand, after);
+      // Only non-sentinel pairs counted: 8 cells × -5 dB = -5 avg
+      expect(delta).toBeCloseTo(-5, 1);
+    });
+
+    it('spectrogramDelta does not exclude legitimately quiet values (e.g. -110 dB)', () => {
+      const before = makeSpectrogram(-100);
+      const after = makeSpectrogram(-110); // very quiet but valid
+      expect(spectrogramDelta(before, after)).toBeCloseTo(-10, 1);
+    });
+
+    it('uses spectrogram delta for Noise Delta when both have spectrograms', () => {
+      const filterWithSpec: FilterMetricsSummary = {
+        ...perfectFilter,
+        throttleSpectrogram: makeSpectrogram(-20),
+      };
+      const verificationWithSpec: FilterMetricsSummary = {
+        ...perfectFilter,
+        throttleSpectrogram: makeSpectrogram(-25), // 5 dB improvement
+      };
+
+      const result = computeTuneQualityScore({
+        filterMetrics: filterWithSpec,
+        verificationMetrics: verificationWithSpec,
+      });
+      expect(result).not.toBeNull();
+      const deltaCmp = result!.components.find((c) => c.label === 'Noise Delta');
+      expect(deltaCmp).toBeDefined();
+      expect(deltaCmp!.rawValue).toBeCloseTo(-5, 1);
+      // -5 dB with best=-10, worst=5 → ((-5)-5)/((-10)-5) = 10/15 = 0.667
+      expect(deltaCmp!.score).toBeGreaterThan(0);
     });
   });
 });

@@ -105,8 +105,22 @@ export const GYRO_LPF1_MAX_HZ_RPM = 500;
 /** Maximum D-term LPF1 cutoff when RPM filter is active (Hz) */
 export const DTERM_LPF1_MAX_HZ_RPM = 300;
 
-/** Recommended dynamic notch count with RPM filter active (frame resonance only) */
+/** Recommended dynamic notch count with RPM filter active.
+ * Sub-5" quads keep 2 notches (frame resonance + residual motor harmonic) because
+ * smaller frames have more complex vibration coupling that RPM filter alone may not cover.
+ * 5"+ quads use 1 notch (frame resonance only — RPM handles motor noise). */
 export const DYN_NOTCH_COUNT_WITH_RPM = 1;
+export const DYN_NOTCH_COUNT_WITH_RPM_BY_SIZE: Record<DroneSize, number> = {
+  '1"': 2,
+  '2.5"': 2,
+  '3"': 2,
+  '4"': 2,
+  '5"': 1,
+  '6"': 1,
+  '7"': 1,
+};
+/** Max dyn_notch_count reduction per iteration (conservative stepping) */
+export const DYN_NOTCH_COUNT_MAX_STEP = 2;
 
 /** Recommended dynamic notch Q with RPM filter active */
 export const DYN_NOTCH_Q_WITH_RPM = 500;
@@ -557,8 +571,10 @@ export interface RpmFilterQRange {
 export const RPM_FILTER_Q_BY_SIZE: Record<DroneSize, RpmFilterQRange> = {
   '1"': { min: 700, max: 1000, midpoint: 850 },
   '2.5"': { min: 700, max: 1000, midpoint: 850 },
-  '3"': { min: 700, max: 1000, midpoint: 850 },
-  '4"': { min: 700, max: 1000, midpoint: 850 },
+  // 3-4" freestyle quads use oversized motors (1404-1507) with broader harmonic spread
+  // than true micros — wider notches (lower Q) provide better coverage
+  '3"': { min: 600, max: 900, midpoint: 750 },
+  '4"': { min: 600, max: 900, midpoint: 750 },
   '5"': { min: 700, max: 1000, midpoint: 850 },
   '6"': { min: 600, max: 800, midpoint: 700 },
   '7"': { min: 500, max: 700, midpoint: 600 },

@@ -925,6 +925,64 @@ describe('ruleId assignment', () => {
     expect(recs.find((r) => r.ruleId === 'F-DN-Q')).toBeDefined();
   });
 
+  it('F-DN-COUNT uses conservative stepping: 5→3 (not 5→1)', () => {
+    const noise = makeNoiseProfile({ level: 'medium' });
+    const current: CurrentFilterSettings = {
+      ...DEFAULT_FILTER_SETTINGS,
+      rpm_filter_harmonics: 3,
+      dyn_notch_count: 5,
+      dyn_notch_q: 300,
+    };
+    const recs = recommend(noise, current);
+    const dnCount = recs.find((r) => r.ruleId === 'F-DN-COUNT');
+    expect(dnCount).toBeDefined();
+    // Max step is 2, so 5→3 (not 5→1)
+    expect(dnCount!.recommendedValue).toBe(3);
+  });
+
+  it('F-DN-COUNT targets 2 for sub-5" quads', () => {
+    const noise = makeNoiseProfile({ level: 'medium' });
+    const current: CurrentFilterSettings = {
+      ...DEFAULT_FILTER_SETTINGS,
+      rpm_filter_harmonics: 3,
+      dyn_notch_count: 3,
+      dyn_notch_q: 300,
+    };
+    const recs = recommend(noise, current, '4"');
+    const dnCount = recs.find((r) => r.ruleId === 'F-DN-COUNT');
+    expect(dnCount).toBeDefined();
+    // 4" quad → target 2, from 3 → step to 2 (within max step of 2)
+    expect(dnCount!.recommendedValue).toBe(2);
+  });
+
+  it('F-DN-COUNT targets 1 for 5" quads', () => {
+    const noise = makeNoiseProfile({ level: 'medium' });
+    const current: CurrentFilterSettings = {
+      ...DEFAULT_FILTER_SETTINGS,
+      rpm_filter_harmonics: 3,
+      dyn_notch_count: 3,
+      dyn_notch_q: 300,
+    };
+    const recs = recommend(noise, current, '5"');
+    const dnCount = recs.find((r) => r.ruleId === 'F-DN-COUNT');
+    expect(dnCount).toBeDefined();
+    // 5" quad → target 1, from 3 → step to 1 (3-2=1, >= target)
+    expect(dnCount!.recommendedValue).toBe(1);
+  });
+
+  it('F-DN-COUNT does not fire when already at target', () => {
+    const noise = makeNoiseProfile({ level: 'medium' });
+    const current: CurrentFilterSettings = {
+      ...DEFAULT_FILTER_SETTINGS,
+      rpm_filter_harmonics: 3,
+      dyn_notch_count: 2,
+      dyn_notch_q: 500,
+    };
+    const recs = recommend(noise, current, '3"');
+    // 3" target is 2, current is 2 → no recommendation
+    expect(recs.find((r) => r.ruleId === 'F-DN-COUNT')).toBeUndefined();
+  });
+
   it('should assign F-LPF2-DIS-GYRO when disabling LPF2 with RPM + clean noise', () => {
     const noise = makeNoiseProfile({ level: 'low', rollFloor: -55, pitchFloor: -50 });
     const current: CurrentFilterSettings = {
