@@ -39,9 +39,11 @@ interface TuningWizardProps {
 export function TuningWizard({ logId, mode = 'full', onExit, onApplyComplete }: TuningWizardProps) {
   const wizard = useTuningWizard(logId, mode);
   const applyCalled = useRef(false);
-  // Stable ref for onExit — prevents re-renders from cancelling the auto-close timer
+  // Stable ref for onExit — prevents re-renders from invalidating the callback
   const onExitRef = useRef(onExit);
   onExitRef.current = onExit;
+  // Timer ref for auto-close — survives re-renders (useEffect cleanup would cancel it)
+  const autoCloseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Notify parent when apply completes, then auto-close wizard
   useEffect(() => {
@@ -117,9 +119,8 @@ export function TuningWizard({ logId, mode = 'full', onExit, onApplyComplete }: 
 
       // Auto-close wizard after apply completes — FC is already reconnected,
       // session phase is updated, user returns to dashboard with Erase & Verify banner.
-      // Use ref to avoid timer being cancelled by re-renders from onApplyComplete.
-      const timer = setTimeout(() => onExitRef.current(), 500);
-      return () => clearTimeout(timer);
+      // Use ref (not useEffect cleanup) so re-renders don't cancel the timer.
+      autoCloseTimer.current = setTimeout(() => onExitRef.current(), 500);
     }
 
     if (wizard.applyState === 'idle' || wizard.applyState === 'error') {
@@ -133,6 +134,13 @@ export function TuningWizard({ logId, mode = 'full', onExit, onApplyComplete }: 
     mode,
     onApplyComplete,
   ]);
+
+  // Cleanup auto-close timer on unmount only
+  useEffect(() => {
+    return () => {
+      if (autoCloseTimer.current) clearTimeout(autoCloseTimer.current);
+    };
+  }, []);
 
   const renderStep = () => {
     switch (wizard.step) {
