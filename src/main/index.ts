@@ -215,10 +215,13 @@ async function initialize(): Promise<void> {
           mspClient.clearMSCMode();
         }
 
-        // Clear reboot pending flag if it was set (FC reconnected after save reboot)
-        if (mspClient.rebootPending) {
-          logger.info('FC reconnected after save reboot — clearing rebootPending flag');
-          mspClient.clearRebootPending();
+        // Note: clearRebootPending() is deferred until AFTER post-tuning snapshot
+        // creation (which calls exportCLIDiff → exit → reboot). Clearing too early
+        // would cause the second reboot's disconnected handler to null out currentPort,
+        // breaking auto-reconnect. See reconnectAfterReboot() in MSPClient.
+        const hadRebootPending = mspClient.rebootPending;
+        if (hadRebootPending) {
+          logger.info('FC reconnected after save reboot — deferring clearRebootPending');
         }
 
         // Smart reconnect: check tuning session state
@@ -424,6 +427,13 @@ async function initialize(): Promise<void> {
           }
         } catch (err) {
           logger.warn('Smart reconnect check failed (non-fatal):', err);
+        }
+
+        // Now safe to clear reboot pending — post-tuning snapshot (which triggers
+        // another reboot via exportCLIDiff) has completed.
+        if (hadRebootPending) {
+          mspClient.clearRebootPending();
+          logger.info('clearRebootPending deferred — now cleared');
         }
       } else {
         // New drone - notify UI to show ProfileWizard modal
