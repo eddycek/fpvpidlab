@@ -43,10 +43,19 @@ export function useBlackboxInfo() {
     }
   };
 
-  // Auto-load on mount only
+  // Auto-load on mount
   useEffect(() => {
     loadBlackboxInfo();
-  }, []); // Empty deps - only run once on mount
+  }, []);
+
+  // Refresh when FC reconnects (e.g. after snapshot reboot)
+  useEffect(() => {
+    return window.betaflight.onConnectionChanged((status) => {
+      if (status.connected) {
+        loadBlackboxInfo();
+      }
+    });
+  }, []);
 
   return {
     info,

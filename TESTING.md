@@ -167,7 +167,7 @@ npm run test:ui           # Visual interface with DOM snapshots
 
 ## Test Inventory
 
-**Total: 2821 unit tests across 134 files + 37 Playwright E2E tests across 7 spec files** (last verified: March 29, 2026)
+**Total: 2822 unit tests across 134 files + 37 Playwright E2E tests across 7 spec files** (last verified: March 29, 2026)
 
 ### UI Components
 
@@ -273,7 +273,7 @@ npm run test:ui           # Visual interface with DOM snapshots
 |------|-------|-------------|
 | `msp/MSPProtocol.test.ts` | 40 | MSPv1 encode/decode, jumbo frames, round-trip, parseBuffer, checksum validation, garbage recovery |
 | `msp/MSPConnection.test.ts` | 51 | Connection lifecycle, sendCommand, sendCommandNoResponse, timeouts, error/partial responses, CLI mode (prompt debounce, chunk-boundary, trailing CR), event forwarding, port error fast-fail, CLI buffer limit |
-| `msp/MSPClient.test.ts` | 76 | FC info queries, PID/filter/FF config, board info, UID, blackbox info (flash+SD card), SD card summary, MSC reboot (fire-and-forget), set PID, CLI diff, save & reboot, connect/disconnect, version gate, listPorts, chunk ceiling, erase disconnect detection, BF PID profile selection (getStatusEx, selectPIDProfile) |
+| `msp/MSPClient.test.ts` | 77 | FC info queries, PID/filter/FF config, board info, UID, blackbox info (flash+SD card), SD card summary, MSC reboot (fire-and-forget), set PID, CLI diff, save & reboot, connect/disconnect, version gate, listPorts, chunk ceiling, erase disconnect detection, BF PID profile selection (getStatusEx, selectPIDProfile), exportCLIDiff auto-reconnect |
 | `msp/cliUtils.test.ts` | 19 | CLI command response validation, error pattern detection (incl. Allowed range), setting extraction |
 
 ### MSC (Mass Storage Class)

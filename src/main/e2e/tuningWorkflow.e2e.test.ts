@@ -162,6 +162,8 @@ function createMockMSPClient(connected = true) {
     downloadBlackboxLog: vi.fn(),
     eraseBlackboxFlash: vi.fn().mockResolvedValue(undefined),
     saveAndReboot: vi.fn().mockResolvedValue(undefined),
+    setRebootPending: vi.fn(),
+    clearRebootPending: vi.fn(),
     getPidProcessDenom: vi.fn().mockResolvedValue(1),
     testBlackboxRead: vi.fn().mockResolvedValue({ success: true, message: 'OK' }),
     connection: {

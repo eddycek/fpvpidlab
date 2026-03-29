@@ -16,7 +16,8 @@ import {
 } from '@shared/types/tuning-history.types';
 import { PIDConfiguration } from '@shared/types/pid.types';
 import { HandlerDependencies, createResponse } from './types';
-import { sendTuningSessionChanged } from './events';
+import { sendTuningSessionChanged, sendProfileChanged } from './events';
+import { getMainWindow } from '../../window';
 import { logger } from '../../utils/logger';
 import { getErrorMessage } from '../../utils/errors';
 import { validateCLIResponse } from '../../msp/cliUtils';
@@ -289,18 +290,23 @@ export function registerTuningHandlers(deps: HandlerDependencies): void {
         }
 
         // Create safety snapshot before starting tuning.
-        // exportCLIDiff() now exits CLI after reading diff (triggers FC reboot).
-        // FC will reconnect in MSP mode — erase works immediately after reconnect.
+        // exportCLIDiff() enters CLI → reads diff → sends `exit` → FC REBOOTS.
+        // On boards where USB re-enumerates, the disconnect handler fires.
+        // Setting rebootPending prevents it from clearing the profile/session.
+        // exportCLIDiff() handles the full reboot+reconnect cycle internally.
         let baselineSnapshotId: string | undefined;
         if (snapshotManager && mspClient?.isConnected()) {
           try {
-            // Compute session number from history (1-based)
             let sessionNumber = 1;
             if (tuningHistoryManager) {
               const history = await tuningHistoryManager.getHistory(profileId);
               sessionNumber = history.length + 1;
             }
             const label = `Pre-tuning #${sessionNumber} (${TUNING_TYPE_LABELS[resolvedType]})`;
+
+            // Protect against disconnect handler clearing state during FC reboot
+            mspClient.setRebootPending();
+
             const snapshot = await snapshotManager.createSnapshot(label, 'auto', {
               tuningSessionNumber: sessionNumber,
               tuningType: resolvedType,
@@ -308,7 +314,13 @@ export function registerTuningHandlers(deps: HandlerDependencies): void {
             });
             baselineSnapshotId = snapshot.id;
             logger.info(`Pre-tuning backup created: ${snapshot.id}`);
+
+            // exportCLIDiff() handles the full reboot cycle: waits for FC,
+            // reconnects if USB re-enumerated, pings MSP until responsive.
+            // Clear rebootPending after — FC is either reconnected or truly gone.
+            mspClient.clearRebootPending();
           } catch (e) {
+            mspClient.clearRebootPending();
             logger.warn('Could not create pre-tuning snapshot:', e);
           }
         }
@@ -343,6 +355,19 @@ export function registerTuningHandlers(deps: HandlerDependencies): void {
           emitEvent('workflow', 'tuning_started', { mode: resolvedType });
         }
         sendTuningSessionChanged(updated);
+
+        // Emit profileChanged so the renderer refreshes the snapshot list
+        // (pre-tuning snapshot was created above, UI needs to pick it up)
+        if (baselineSnapshotId) {
+          const win = getMainWindow();
+          if (win && profileManager) {
+            const profile = await profileManager.getCurrentProfile();
+            if (profile) {
+              sendProfileChanged(win, profile);
+            }
+          }
+        }
+
         return createResponse<TuningSession>(updated || session);
       } catch (error) {
         logger.error('Failed to start tuning session:', error);

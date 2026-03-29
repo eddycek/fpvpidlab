@@ -1,6 +1,6 @@
 # Architecture Overview
 
-**Last Updated:** March 29, 2026 | **Phase 4 Complete, Phase 6 Complete** | **2821 unit tests, 134 files + 37 Playwright E2E tests**
+**Last Updated:** March 29, 2026 | **Phase 4 Complete, Phase 6 Complete** | **2822 unit tests, 134 files + 37 Playwright E2E tests**
 
 ---
 
@@ -188,7 +188,7 @@ Jumbo: auto-upgraded when payload > 255 bytes (for flash reads)
 
 **PID profile selection:** `selectPIDProfile(index)` via `MSP_SELECT_SETTING` (210) switches the active BF PID profile (0-indexed). Used before tuning to target a specific profile slot.
 
-**Configuration:** `exportCLIDiff()` / `exportCLIDump()` — enter CLI, run `diff all` / `dump`, stay in CLI mode (caller decides when to exit)
+**Configuration:** `exportCLIDiff()` / `exportCLIDump()` — enter CLI, run `diff all` / `dump`, send `exit` (reboots FC), then auto-reconnect (handles both USB-CDC stay-alive and USB re-enumeration scenarios)
 
 **Blackbox download:** `downloadBlackboxLog(onProgress)` — adaptive chunking (starts 180B, max 240B per read), strips 6-7 byte dataflash header from each chunk. Returns `{ data, compressionDetected }` — Huffman compression is detected and flagged (analysis blocked for compressed logs)
 
@@ -842,7 +842,7 @@ Hardware error (FC timeout, USB disconnect)
 
 ## Testing Strategy
 
-**2821 unit tests across 134 files + 37 Playwright E2E tests**. See [TESTING.md](./TESTING.md) for complete inventory.
+**2822 unit tests across 134 files + 37 Playwright E2E tests**. See [TESTING.md](./TESTING.md) for complete inventory.
 
 | Area | Files | Tests |
 |------|-------|-------|
@@ -850,7 +850,7 @@ Hardware error (FC timeout, USB disconnect)
 | FFT Analysis (+ Data Quality + Spectrogram + Delay) | 8 | 237 |
 | Step Response + PID + TF + CrossAxis + PropWash + DTerm + Bayesian | 10 | 322 |
 | Header Validation + Constants | 2 | 31 |
-| MSP Protocol & Client | 4 | 186 |
+| MSP Protocol & Client | 4 | 187 |
 | MSC (Mass Storage) | 2 | 45 |
 | Storage Managers | 7 | 127 |
 | IPC Handlers | 3 | 127 |

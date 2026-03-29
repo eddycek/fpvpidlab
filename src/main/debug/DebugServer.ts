@@ -5,23 +5,31 @@
  * Only active when DEBUG_SERVER=true environment variable is set.
  *
  * Usage:
- *   npm run dev:debug          # real FC + debug server on port 9300
- *   npm run dev:demo:debug     # demo mode + debug server on port 9300
+ *   npm run dev           # real FC + debug server on port 9300
+ *   npm run dev:demo      # demo mode + debug server on port 9300
  *
- * Endpoints:
- *   GET /state          — connection, profile, tuning session, blackbox info
- *   GET /screenshot     — capture renderer screenshot (saves PNG, returns path)
- *   GET /logs           — last N lines from electron-log file
- *   GET /logs?n=100     — specify number of lines
- *   GET /console        — renderer console messages (captured via webContents)
- *   GET /msp            — MSP connection details, CLI mode, FC info
- *   GET /tuning-history — completed tuning session records for current profile
- *   GET /tuning-session — active tuning session state
- *   GET /snapshots      — configuration snapshots for current profile
- *   GET /blackbox-logs  — list downloaded blackbox logs for current profile
- *   GET /analyze?logId=X — run full analysis pipeline on a log (filter + PID + TF)
- *   GET /analyze         — run on latest log
- *   GET /health         — simple health check
+ * ── Read-only endpoints (GET) ────────────────────────────────────────
+ *   /health              — health check (PID, uptime)
+ *   /state               — connection, profile, tuning session, blackbox info
+ *   /screenshot          — capture renderer screenshot (saves PNG, returns path)
+ *   /logs?n=50           — last N lines from electron-log file
+ *   /console?level=all   — renderer console messages (filter: error, warn, info)
+ *   /msp                 — MSP connection details, CLI mode, FC info, PID/filter config
+ *   /tuning-history      — completed tuning session records for current profile
+ *   /tuning-session      — active tuning session state
+ *   /snapshots           — configuration snapshots for current profile
+ *   /blackbox-logs       — downloaded blackbox logs for current profile
+ *   /analyze?logId=X     — run full analysis pipeline (filter + PID + TF)
+ *
+ * ── Action endpoints (POST) ─────────────────────────────────────────
+ *   /connect?port=X      — connect to FC (auto-selects first BF port if no param)
+ *   /disconnect          — disconnect from FC
+ *   /start-tuning?mode=X — start tuning session (mode: filter|pid|flash)
+ *   /reset-session       — delete active tuning session
+ *   /erase-flash         — erase blackbox flash memory
+ *
+ * Action endpoints enable autonomous testing without UI interaction.
+ * They call the same IPC handlers the renderer uses, via executeJavaScript.
  */
 
 import http from 'http';
@@ -140,6 +148,25 @@ export function startDebugServer(port: number = DEFAULT_PORT): void {
           return json(res, await runFullAnalysis(logId, sessionIdx));
         }
 
+        // ─── Action endpoints (POST only) ──────────────────────────────
+        // These invoke the same IPC handlers the renderer uses, enabling
+        // autonomous testing without needing UI interaction or browser tools.
+
+        case '/connect':
+          return handlePost(req, res, () => handleConnect(url));
+
+        case '/disconnect':
+          return handlePost(req, res, () => handleDisconnect());
+
+        case '/start-tuning':
+          return handlePost(req, res, () => handleStartTuning(url));
+
+        case '/reset-session':
+          return handlePost(req, res, () => handleResetSession());
+
+        case '/erase-flash':
+          return handlePost(req, res, () => handleEraseFlash());
+
         default:
           res.statusCode = 404;
           return json(res, {
@@ -156,6 +183,11 @@ export function startDebugServer(port: number = DEFAULT_PORT): void {
               '/snapshots',
               '/blackbox-logs',
               '/analyze',
+              'POST /connect?port=X',
+              'POST /disconnect',
+              'POST /start-tuning?mode=filter|pid|flash',
+              'POST /reset-session',
+              'POST /erase-flash',
             ],
           });
       }
@@ -638,6 +670,68 @@ async function getBlackboxLogs() {
   } catch (err: any) {
     return { error: err.message, logs: [] };
   }
+}
+
+// ── Action endpoint handlers ────────────────────────────────────────
+
+async function handlePost(
+  req: http.IncomingMessage,
+  res: http.ServerResponse,
+  handler: () => Promise<any>
+): Promise<void> {
+  if (req.method !== 'POST') {
+    res.statusCode = 405;
+    return json(res, { error: 'POST only' });
+  }
+  return json(res, await handler());
+}
+
+async function handleConnect(url: URL) {
+  const mspClient = deps?.mspClient;
+  if (!mspClient) return { error: 'No MSP client' };
+  if (mspClient.isConnected()) return { status: 'already_connected' };
+  const ports = await mspClient.listPorts();
+  if (ports.length === 0) return { error: 'No BF ports found' };
+  const portPath = url.searchParams.get('port') || ports[0].path;
+  await mspClient.connect(portPath);
+  return { status: 'connected', port: portPath };
+}
+
+async function handleDisconnect() {
+  const mspClient = deps?.mspClient;
+  if (!mspClient) return { error: 'No MSP client' };
+  if (!mspClient.isConnected()) return { status: 'already_disconnected' };
+  await mspClient.disconnect();
+  return { status: 'disconnected' };
+}
+
+async function handleStartTuning(url: URL) {
+  const win = getMainWindow();
+  if (!win) return { error: 'No window' };
+  const mode = url.searchParams.get('mode') || 'filter';
+  const validModes = ['filter', 'pid', 'flash'];
+  if (!validModes.includes(mode)) {
+    return { error: `Invalid mode: ${mode}. Valid: ${validModes.join(', ')}` };
+  }
+  // Invoke via renderer IPC bridge — same path as UI button click
+  const result = await win.webContents.executeJavaScript(
+    `window.betaflight.startTuningSession('${mode}')`
+  );
+  return result;
+}
+
+async function handleResetSession() {
+  const win = getMainWindow();
+  if (!win) return { error: 'No window' };
+  const result = await win.webContents.executeJavaScript(`window.betaflight.resetTuningSession()`);
+  return result;
+}
+
+async function handleEraseFlash() {
+  const win = getMainWindow();
+  if (!win) return { error: 'No window' };
+  const result = await win.webContents.executeJavaScript(`window.betaflight.eraseBlackboxFlash()`);
+  return result;
 }
 
 // ── Helpers ─────────────────────────────────────────────────────────

@@ -124,7 +124,7 @@ Inspired by [Plasmatree PID-Analyzer](https://github.com/Plasmatree/PID-Analyzer
 ### Throttle Spectrogram Analysis
 - Per-throttle-bin FFT computation (10 bins across 0–100% throttle range)
 - Reveals how noise changes with motor speed (motor harmonics, frame resonance, electrical patterns)
-- Used by the dynamic lowpass recommender; dedicated UI visualization pending
+- Used by the dynamic lowpass recommender; visualized in FilterAnalysisStep, AnalysisOverview, TuningCompletionSummary, and TuningSessionDetail
 
 ### Flight Style Preferences
 - Smooth (cinematic), Balanced (freestyle), or Aggressive (racing)
@@ -292,7 +292,7 @@ npm run rebuild                      # Rebuild native modules (serialport)
 
 All UI changes must include tests. Tests automatically run before commits. Coverage thresholds enforced: 80% lines/functions/statements, 75% branches.
 
-**Unit tests:** 2821 tests across 134 files — MSP protocol, storage managers, IPC handlers, UI components, hooks, BBL parser fuzz, analysis pipeline validation, telemetry, diagnostic, license, auto-updater.
+**Unit tests:** 2822 tests across 134 files — MSP protocol, storage managers, IPC handlers, UI components, hooks, BBL parser fuzz, analysis pipeline validation, telemetry, diagnostic, license, auto-updater.
 
 **Playwright E2E:** 37 tests across 7 spec files — launches real Electron app in demo mode, walks through complete tuning cycles (Filter Tune, PID Tune, Flash Tune, diagnostic reports, and stress-test edge cases).
 
