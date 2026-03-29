@@ -34,8 +34,6 @@ export class MSPClient extends EventEmitter {
   /** Cached storage type from last getBlackboxInfo() call */
   private _lastStorageType: 'flash' | 'sdcard' | 'none' = 'none';
   private _eraseInProgress: boolean = false;
-  /** True during reconnectAfterReboot() — tells connected handler to skip heavy init */
-  private _internalReconnect: boolean = false;
 
   constructor() {
     super();
@@ -64,10 +62,6 @@ export class MSPClient extends EventEmitter {
 
   get rebootPending(): boolean {
     return this._rebootPending;
-  }
-
-  get internalReconnect(): boolean {
-    return this._internalReconnect;
   }
 
   get lastStorageType(): 'flash' | 'sdcard' | 'none' {
@@ -261,12 +255,7 @@ export class MSPClient extends EventEmitter {
           logger.info(`Port ${portPath} re-appeared after ${Date.now() - start}ms`);
           // Small settle delay — port may not be ready immediately after enumeration
           await this.delay(500);
-          this._internalReconnect = true;
-          try {
-            await this.connect(portPath);
-          } finally {
-            this._internalReconnect = false;
-          }
+          await this.connect(portPath);
           return true;
         }
       } catch {
@@ -662,10 +651,61 @@ export class MSPClient extends EventEmitter {
       this.connectionStatus = { connected: false };
       this.emit('connection-changed', this.connectionStatus);
 
-      // Auto-reconnect after reboot (fire-and-forget — caller doesn't need to wait)
-      this.reconnectAfterReboot().catch((err) => {
-        logger.warn('Auto-reconnect after save failed (non-fatal):', err);
-      });
+      // Wait for FC to reboot and reconnect (same pattern as exportCLIDiff).
+      // This makes saveAndReboot() blocking — caller gets a reconnected FC.
+      const BOOT_SETTLE_MS = 4000;
+      const PING_TIMEOUT_MS = 2000;
+      const PING_INTERVAL_MS = 1000;
+      const MAX_WAIT_MS = 15000;
+      logger.info('save sent — waiting for FC to reboot...');
+      await new Promise((resolve) => setTimeout(resolve, BOOT_SETTLE_MS));
+
+      if (this.connection.isOpen()) {
+        // Scenario A: port stayed open (some STM32F4xx) — clear parser, ping
+        this.connection.resetProtocol();
+        await this.connection.forceExitCLI();
+
+        const pingStart = Date.now();
+        let pingOk = false;
+        while (Date.now() - pingStart < MAX_WAIT_MS) {
+          if (!this.connection.isOpen()) break;
+          try {
+            await this.connection.sendCommand(
+              MSPCommand.MSP_API_VERSION,
+              Buffer.alloc(0),
+              PING_TIMEOUT_MS
+            );
+            logger.info('FC is MSP-responsive after save reboot');
+            pingOk = true;
+            break;
+          } catch {
+            logger.debug('MSP ping after save reboot — FC still booting...');
+            await new Promise((resolve) => setTimeout(resolve, PING_INTERVAL_MS));
+          }
+        }
+
+        // Restore connected status so renderer reflects the reconnected state
+        if (pingOk && this.connection.isOpen()) {
+          this.connectionStatus = {
+            connected: true,
+            portPath: this.currentPort ?? undefined,
+          };
+          this.emit('connection-changed', this.connectionStatus);
+        }
+      }
+
+      if (!this.connection.isOpen()) {
+        // Scenario B: port closed (USB re-enumeration) — poll and reconnect
+        logger.info('Port closed during save reboot — attempting auto-reconnect...');
+        await this.connection.forceExitCLI();
+        const reconnected = await this.reconnectAfterReboot(MAX_WAIT_MS);
+        if (!reconnected) {
+          logger.warn('Auto-reconnect after save failed — FC may need manual reconnection');
+        }
+      }
+
+      // Clear reboot pending — FC is either reconnected or truly gone
+      this._rebootPending = false;
     } catch (error) {
       this._rebootPending = false;
       logger.error('Failed to save and reboot:', error);

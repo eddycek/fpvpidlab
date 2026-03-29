@@ -172,25 +172,6 @@ async function initialize(): Promise<void> {
 
   // Auto-detect profile and create baseline on connection
   mspClient.on('connected', async () => {
-    // Internal reconnect from exportCLIDiff() — MSP is back up but we're
-    // mid-operation (e.g. creating post-tuning snapshot). Skip full init
-    // to avoid recursive baseline/snapshot creation → infinite reboot loop.
-    if (mspClient.internalReconnect) {
-      logger.info('Internal reconnect — skipping full connected handler');
-      // Re-send profile + session state so UI stays in sync after the
-      // transparent reconnect (connection-changed already fires from connect()).
-      const window = getMainWindow();
-      const currentProf = await profileManager.getCurrentProfile();
-      if (window && currentProf) {
-        sendProfileChanged(window, currentProf);
-        const session = await tuningSessionManager.getSession(currentProf.id);
-        if (session) {
-          sendTuningSessionChanged(session);
-        }
-      }
-      return;
-    }
-
     try {
       // Get FC serial number
       const fcSerial = await mspClient.getFCSerialNumber();
@@ -234,13 +215,13 @@ async function initialize(): Promise<void> {
           mspClient.clearMSCMode();
         }
 
-        // Note: clearRebootPending() is deferred until AFTER post-tuning snapshot
-        // creation (which calls exportCLIDiff → exit → reboot). Clearing too early
-        // would cause the second reboot's disconnected handler to null out currentPort,
-        // breaking auto-reconnect. See reconnectAfterReboot() in MSPClient.
-        const hadRebootPending = mspClient.rebootPending;
-        if (hadRebootPending) {
-          logger.info('FC reconnected after save reboot — deferring clearRebootPending');
+        // When rebootPending is set, this is a reconnect after saveAndReboot()
+        // (e.g. apply tuning). saveAndReboot() now handles reconnect internally,
+        // and the apply IPC handler handles verify+snapshot. Skip those here.
+        const isRebootReconnect = mspClient.rebootPending;
+        if (isRebootReconnect) {
+          logger.info('FC reconnected after save reboot — apply handler owns verify+snapshot');
+          mspClient.clearRebootPending();
         }
 
         // Smart reconnect: check tuning session state
@@ -335,124 +316,122 @@ async function initialize(): Promise<void> {
               }
             }
 
-            // Post-apply read-back verification: check PID/filter values match what was applied
-            const isAppliedOrVerification =
-              session.phase === TUNING_PHASE.FILTER_APPLIED ||
-              session.phase === TUNING_PHASE.PID_APPLIED ||
-              session.phase === TUNING_PHASE.FLASH_APPLIED ||
-              session.phase === TUNING_PHASE.FILTER_VERIFICATION_PENDING ||
-              session.phase === TUNING_PHASE.PID_VERIFICATION_PENDING ||
-              session.phase === TUNING_PHASE.FLASH_VERIFICATION_PENDING;
-            if (isAppliedOrVerification && session.applyVerified === undefined) {
-              try {
-                const mismatches: string[] = [];
+            // Post-apply verification + snapshot: skip if this is a reboot reconnect
+            // (apply handler handles these inline after saveAndReboot returns).
+            // Only run here as fallback for manual reconnects (e.g. user unplugged/replugged).
+            if (!isRebootReconnect) {
+              // Post-apply read-back verification
+              const isAppliedOrVerification =
+                session.phase === TUNING_PHASE.FILTER_APPLIED ||
+                session.phase === TUNING_PHASE.PID_APPLIED ||
+                session.phase === TUNING_PHASE.FLASH_APPLIED ||
+                session.phase === TUNING_PHASE.FILTER_VERIFICATION_PENDING ||
+                session.phase === TUNING_PHASE.PID_VERIFICATION_PENDING ||
+                session.phase === TUNING_PHASE.FLASH_VERIFICATION_PENDING;
+              if (isAppliedOrVerification && session.applyVerified === undefined) {
+                try {
+                  const mismatches: string[] = [];
 
-                let allChecked = true;
+                  let allChecked = true;
 
-                // Verify PID changes (readable via MSP)
-                if (session.appliedPIDChanges && session.appliedPIDChanges.length > 0) {
-                  const pidConfig = await mspClient.getPIDConfiguration();
-                  const pidMap: Record<string, number> = {
-                    pid_roll_p: pidConfig.roll.P,
-                    pid_roll_i: pidConfig.roll.I,
-                    pid_roll_d: pidConfig.roll.D,
-                    pid_pitch_p: pidConfig.pitch.P,
-                    pid_pitch_i: pidConfig.pitch.I,
-                    pid_pitch_d: pidConfig.pitch.D,
-                    pid_yaw_p: pidConfig.yaw.P,
-                    pid_yaw_i: pidConfig.yaw.I,
-                    pid_yaw_d: pidConfig.yaw.D,
-                  };
-                  for (const change of session.appliedPIDChanges) {
-                    const actual = pidMap[change.setting];
-                    if (actual === undefined) {
-                      allChecked = false; // Can't verify this setting via MSP
-                    } else if (actual !== change.newValue) {
-                      mismatches.push(
-                        `${change.setting}: expected ${change.newValue}, got ${actual}`
-                      );
+                  // Verify PID changes (readable via MSP)
+                  if (session.appliedPIDChanges && session.appliedPIDChanges.length > 0) {
+                    const pidConfig = await mspClient.getPIDConfiguration();
+                    const pidMap: Record<string, number> = {
+                      pid_roll_p: pidConfig.roll.P,
+                      pid_roll_i: pidConfig.roll.I,
+                      pid_roll_d: pidConfig.roll.D,
+                      pid_pitch_p: pidConfig.pitch.P,
+                      pid_pitch_i: pidConfig.pitch.I,
+                      pid_pitch_d: pidConfig.pitch.D,
+                      pid_yaw_p: pidConfig.yaw.P,
+                      pid_yaw_i: pidConfig.yaw.I,
+                      pid_yaw_d: pidConfig.yaw.D,
+                    };
+                    for (const change of session.appliedPIDChanges) {
+                      const actual = pidMap[change.setting];
+                      if (actual === undefined) {
+                        allChecked = false; // Can't verify this setting via MSP
+                      } else if (actual !== change.newValue) {
+                        mismatches.push(
+                          `${change.setting}: expected ${change.newValue}, got ${actual}`
+                        );
+                      }
                     }
                   }
-                }
 
-                // Verify filter changes (readable via MSP_FILTER_CONFIG)
-                if (session.appliedFilterChanges && session.appliedFilterChanges.length > 0) {
-                  const filterConfig = await mspClient.getFilterConfiguration();
-                  const filterMap: Record<string, number | undefined> = {
-                    gyro_lpf1_static_hz: filterConfig.gyro_lpf1_static_hz,
-                    gyro_lpf2_static_hz: filterConfig.gyro_lpf2_static_hz,
-                    dterm_lpf1_static_hz: filterConfig.dterm_lpf1_static_hz,
-                    dterm_lpf2_static_hz: filterConfig.dterm_lpf2_static_hz,
-                    dyn_notch_min_hz: filterConfig.dyn_notch_min_hz,
-                    dyn_notch_max_hz: filterConfig.dyn_notch_max_hz,
-                    dyn_notch_q: filterConfig.dyn_notch_q,
-                    dyn_notch_count: filterConfig.dyn_notch_count,
-                  };
-                  for (const change of session.appliedFilterChanges) {
-                    const actual = filterMap[change.setting];
-                    if (actual === undefined) {
-                      allChecked = false; // CLI-only setting, can't verify via MSP
-                    } else if (actual !== change.newValue) {
-                      mismatches.push(
-                        `${change.setting}: expected ${change.newValue}, got ${actual}`
-                      );
+                  // Verify filter changes (readable via MSP_FILTER_CONFIG)
+                  if (session.appliedFilterChanges && session.appliedFilterChanges.length > 0) {
+                    const filterConfig = await mspClient.getFilterConfiguration();
+                    const filterMap: Record<string, number | undefined> = {
+                      gyro_lpf1_static_hz: filterConfig.gyro_lpf1_static_hz,
+                      gyro_lpf2_static_hz: filterConfig.gyro_lpf2_static_hz,
+                      dterm_lpf1_static_hz: filterConfig.dterm_lpf1_static_hz,
+                      dterm_lpf2_static_hz: filterConfig.dterm_lpf2_static_hz,
+                      dyn_notch_min_hz: filterConfig.dyn_notch_min_hz,
+                      dyn_notch_max_hz: filterConfig.dyn_notch_max_hz,
+                      dyn_notch_q: filterConfig.dyn_notch_q,
+                      dyn_notch_count: filterConfig.dyn_notch_count,
+                    };
+                    for (const change of session.appliedFilterChanges) {
+                      const actual = filterMap[change.setting];
+                      if (actual === undefined) {
+                        allChecked = false; // CLI-only setting, can't verify via MSP
+                      } else if (actual !== change.newValue) {
+                        mismatches.push(
+                          `${change.setting}: expected ${change.newValue}, got ${actual}`
+                        );
+                      }
                     }
                   }
-                }
 
-                // Only mark verified=true if all changes were actually checked
-                const verified = mismatches.length === 0 && allChecked;
-                await tuningSessionManager.updatePhase(existingProfile.id, session.phase, {
-                  applyVerified: verified,
-                  applyMismatches: mismatches.length > 0 ? mismatches : undefined,
-                });
-                if (verified) {
-                  logger.info('Post-apply verification: all settings match FC');
-                } else {
+                  // Only mark verified=true if all changes were actually checked
+                  const verified = mismatches.length === 0 && allChecked;
+                  await tuningSessionManager.updatePhase(existingProfile.id, session.phase, {
+                    applyVerified: verified,
+                    applyMismatches: mismatches.length > 0 ? mismatches : undefined,
+                  });
+                  if (verified) {
+                    logger.info('Post-apply verification: all settings match FC');
+                  } else {
+                    logger.warn(
+                      `Post-apply verification: ${mismatches.length} mismatches`,
+                      mismatches
+                    );
+                  }
+                } catch (verifyErr) {
+                  logger.warn('Post-apply verification failed (non-fatal):', verifyErr);
+                }
+              }
+
+              // Create post-tuning snapshot on reconnect (fallback for manual reconnects)
+              if (!session.postTuningSnapshotId && isAppliedOrVerification) {
+                try {
+                  let sessionNumber = 1;
+                  const history = await tuningHistoryManager.getHistory(existingProfile.id);
+                  sessionNumber = history.length + 1;
+                  const tuningType = session.tuningType as keyof typeof TUNING_TYPE_LABELS;
+                  const label = `Post-tuning #${sessionNumber} (${TUNING_TYPE_LABELS[tuningType]})`;
+                  const snapshot = await snapshotManager.createSnapshot(label, 'auto', {
+                    tuningSessionNumber: sessionNumber,
+                    tuningType,
+                    snapshotRole: 'post-tuning',
+                  });
+                  await tuningSessionManager.updatePhase(existingProfile.id, session.phase, {
+                    postTuningSnapshotId: snapshot.id,
+                  });
+                  logger.info(`Post-tuning snapshot created on reconnect: ${snapshot.id}`);
+                } catch (snapErr) {
                   logger.warn(
-                    `Post-apply verification: ${mismatches.length} mismatches`,
-                    mismatches
+                    'Could not create post-tuning snapshot on reconnect (non-fatal):',
+                    snapErr
                   );
                 }
-              } catch (verifyErr) {
-                logger.warn('Post-apply verification failed (non-fatal):', verifyErr);
-              }
-            }
-
-            // Create post-tuning snapshot on reconnect (after reboot, MSP is available)
-            if (!session.postTuningSnapshotId && isAppliedOrVerification) {
-              try {
-                let sessionNumber = 1;
-                const history = await tuningHistoryManager.getHistory(existingProfile.id);
-                sessionNumber = history.length + 1;
-                const tuningType = session.tuningType as keyof typeof TUNING_TYPE_LABELS;
-                const label = `Post-tuning #${sessionNumber} (${TUNING_TYPE_LABELS[tuningType]})`;
-                const snapshot = await snapshotManager.createSnapshot(label, 'auto', {
-                  tuningSessionNumber: sessionNumber,
-                  tuningType,
-                  snapshotRole: 'post-tuning',
-                });
-                await tuningSessionManager.updatePhase(existingProfile.id, session.phase, {
-                  postTuningSnapshotId: snapshot.id,
-                });
-                logger.info(`Post-tuning snapshot created on reconnect: ${snapshot.id}`);
-              } catch (snapErr) {
-                logger.warn(
-                  'Could not create post-tuning snapshot on reconnect (non-fatal):',
-                  snapErr
-                );
               }
             }
           }
         } catch (err) {
           logger.warn('Smart reconnect check failed (non-fatal):', err);
-        }
-
-        // Now safe to clear reboot pending — post-tuning snapshot (which triggers
-        // another reboot via exportCLIDiff) has completed.
-        if (hadRebootPending) {
-          mspClient.clearRebootPending();
-          logger.info('clearRebootPending deferred — now cleared');
         }
       } else {
         // New drone - notify UI to show ProfileWizard modal

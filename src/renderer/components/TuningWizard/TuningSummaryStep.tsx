@@ -252,21 +252,6 @@ export function TuningSummaryStep({
         </div>
       )}
 
-      {applyState === 'applying' && applyProgress && (
-        <div className="analysis-progress">
-          <div className="analysis-progress-label">
-            <span>{applyProgress.message}</span>
-            <span>{applyProgress.percent}%</span>
-          </div>
-          <div className="analysis-progress-bar">
-            <div
-              className="analysis-progress-fill"
-              style={{ width: `${applyProgress.percent}%` }}
-            />
-          </div>
-        </div>
-      )}
-
       {applyState === 'done' && applyResult && (
         <div className="apply-success">{getSuccessMessage(mode, applyResult)}</div>
       )}
@@ -298,6 +283,32 @@ export function TuningSummaryStep({
           {applyState === 'done' ? 'Close Wizard' : 'Exit Wizard'}
         </button>
       </div>
+
+      {applyState === 'applying' && (
+        <div className="applying-overlay">
+          <div
+            className="applying-overlay-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="applying-overlay-title"
+          >
+            <div className="applying-overlay-spinner" />
+            <h3 id="applying-overlay-title">Applying changes</h3>
+            <p>{applyProgress?.message ?? 'Preparing...'}</p>
+            {applyProgress && (
+              <div className="applying-overlay-progress">
+                <div className="analysis-progress-bar">
+                  <div
+                    className="analysis-progress-fill"
+                    style={{ width: `${applyProgress.percent}%` }}
+                  />
+                </div>
+                <span className="applying-overlay-percent">{applyProgress.percent}%</span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

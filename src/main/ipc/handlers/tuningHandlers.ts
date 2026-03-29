@@ -185,14 +185,143 @@ export function registerTuningHandlers(deps: HandlerDependencies): void {
           percent: 85,
         });
 
-        // Post-tuning snapshot is created on reconnect (after reboot) in index.ts
-        // Creating it here would fail because FC is in CLI mode → MSP commands timeout.
-
-        // Stage 5: Save and reboot
-        sendProgress({ stage: 'save', message: 'Saving and rebooting FC...', percent: 90 });
+        // Stage 5: Save and reboot — saveAndReboot() now blocks until FC reconnects
+        sendProgress({ stage: 'save', message: 'Saving and rebooting FC...', percent: 85 });
         await mspClient.saveAndReboot();
 
-        sendProgress({ stage: 'save', message: 'FC is rebooting', percent: 100 });
+        // FC is now reconnected (or failed to reconnect). Continue with verify+snapshot.
+        sendProgress({ stage: 'reboot', message: 'FC reconnected', percent: 88 });
+
+        // Stage 6: Post-apply verification — read back settings and compare
+        const profileId = profileManager?.getCurrentProfileId();
+        const currentSession = profileId ? await tuningSessionManager?.getSession(profileId) : null;
+
+        if (mspClient.isConnected() && profileId && currentSession) {
+          sendProgress({
+            stage: 'verify',
+            message: 'Verifying applied settings...',
+            percent: 90,
+          });
+          try {
+            const mismatches: string[] = [];
+            let allChecked = true;
+
+            if (currentSession.appliedPIDChanges && currentSession.appliedPIDChanges.length > 0) {
+              const pidConfig = await mspClient.getPIDConfiguration();
+              const pidMap: Record<string, number> = {
+                pid_roll_p: pidConfig.roll.P,
+                pid_roll_i: pidConfig.roll.I,
+                pid_roll_d: pidConfig.roll.D,
+                pid_pitch_p: pidConfig.pitch.P,
+                pid_pitch_i: pidConfig.pitch.I,
+                pid_pitch_d: pidConfig.pitch.D,
+                pid_yaw_p: pidConfig.yaw.P,
+                pid_yaw_i: pidConfig.yaw.I,
+                pid_yaw_d: pidConfig.yaw.D,
+              };
+              for (const change of currentSession.appliedPIDChanges) {
+                const actual = pidMap[change.setting];
+                if (actual === undefined) {
+                  allChecked = false;
+                } else if (actual !== change.newValue) {
+                  mismatches.push(`${change.setting}: expected ${change.newValue}, got ${actual}`);
+                }
+              }
+            }
+
+            if (
+              currentSession.appliedFilterChanges &&
+              currentSession.appliedFilterChanges.length > 0
+            ) {
+              const filterConfig = await mspClient.getFilterConfiguration();
+              const filterMap: Record<string, number | undefined> = {
+                gyro_lpf1_static_hz: filterConfig.gyro_lpf1_static_hz,
+                gyro_lpf2_static_hz: filterConfig.gyro_lpf2_static_hz,
+                dterm_lpf1_static_hz: filterConfig.dterm_lpf1_static_hz,
+                dterm_lpf2_static_hz: filterConfig.dterm_lpf2_static_hz,
+                dyn_notch_min_hz: filterConfig.dyn_notch_min_hz,
+                dyn_notch_max_hz: filterConfig.dyn_notch_max_hz,
+                dyn_notch_q: filterConfig.dyn_notch_q,
+                dyn_notch_count: filterConfig.dyn_notch_count,
+              };
+              for (const change of currentSession.appliedFilterChanges) {
+                const actual = filterMap[change.setting];
+                if (actual === undefined) {
+                  allChecked = false;
+                } else if (actual !== change.newValue) {
+                  mismatches.push(`${change.setting}: expected ${change.newValue}, got ${actual}`);
+                }
+              }
+            }
+
+            const verified = mismatches.length === 0 && allChecked;
+            await tuningSessionManager!.updatePhase(profileId, currentSession.phase, {
+              applyVerified: verified,
+              applyMismatches: mismatches.length > 0 ? mismatches : undefined,
+            });
+            if (verified) {
+              logger.info('Apply verify: all settings match FC');
+            } else {
+              logger.warn(`Apply verify: ${mismatches.length} mismatches`, mismatches);
+            }
+          } catch (verifyErr) {
+            logger.warn('Apply verification failed (non-fatal):', verifyErr);
+          }
+
+          // Stage 7: Create post-tuning snapshot
+          sendProgress({
+            stage: 'snapshot',
+            message: 'Creating post-tuning snapshot...',
+            percent: 95,
+          });
+          try {
+            let sessionNumber = 1;
+            if (tuningHistoryManager) {
+              const history = await tuningHistoryManager.getHistory(profileId);
+              sessionNumber = history.length + 1;
+            }
+            const refreshedSession = await tuningSessionManager!.getSession(profileId);
+            const tuningType = (refreshedSession?.tuningType ??
+              currentSession.tuningType) as keyof typeof TUNING_TYPE_LABELS;
+            const label = `Post-tuning #${sessionNumber} (${TUNING_TYPE_LABELS[tuningType]})`;
+            // createSnapshot → exportCLIDiff → exit → FC reboots.
+            // Guard with rebootPending so connected handler skips fallback work.
+            mspClient.setRebootPending();
+            let snapshot;
+            try {
+              snapshot = await snapshotManager!.createSnapshot(label, 'auto', {
+                tuningSessionNumber: sessionNumber,
+                tuningType,
+                snapshotRole: 'post-tuning',
+              });
+            } finally {
+              mspClient.clearRebootPending();
+            }
+            await tuningSessionManager!.updatePhase(profileId, currentSession.phase, {
+              postTuningSnapshotId: snapshot.id,
+            });
+            logger.info(`Post-tuning snapshot created in apply handler: ${snapshot.id}`);
+
+            // Emit profileChanged so renderer refreshes snapshot list
+            const win = getMainWindow();
+            if (win && profileManager) {
+              const profile = await profileManager.getCurrentProfile();
+              if (profile) {
+                sendProfileChanged(win, profile);
+              }
+            }
+          } catch (snapErr) {
+            logger.warn('Could not create post-tuning snapshot (non-fatal):', snapErr);
+          }
+
+          // Re-emit session so UI picks up verify+snapshot changes
+          const finalSession = await tuningSessionManager!.getSession(profileId);
+          if (finalSession) {
+            sendTuningSessionChanged(finalSession);
+          }
+        }
+
+        sendProgress({ stage: 'done', message: 'Apply complete', percent: 100 });
 
         const result: ApplyRecommendationsResult = {
           success: true,
