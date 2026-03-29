@@ -172,6 +172,14 @@ async function initialize(): Promise<void> {
 
   // Auto-detect profile and create baseline on connection
   mspClient.on('connected', async () => {
+    // Internal reconnect from exportCLIDiff() — MSP is back up but we're
+    // mid-operation (e.g. creating post-tuning snapshot). Skip full init
+    // to avoid recursive baseline/snapshot creation → infinite reboot loop.
+    if (mspClient.internalReconnect) {
+      logger.info('Internal reconnect — skipping full connected handler');
+      return;
+    }
+
     try {
       // Get FC serial number
       const fcSerial = await mspClient.getFCSerialNumber();

@@ -34,6 +34,8 @@ export class MSPClient extends EventEmitter {
   /** Cached storage type from last getBlackboxInfo() call */
   private _lastStorageType: 'flash' | 'sdcard' | 'none' = 'none';
   private _eraseInProgress: boolean = false;
+  /** True during reconnectAfterReboot() — tells connected handler to skip heavy init */
+  private _internalReconnect: boolean = false;
 
   constructor() {
     super();
@@ -62,6 +64,10 @@ export class MSPClient extends EventEmitter {
 
   get rebootPending(): boolean {
     return this._rebootPending;
+  }
+
+  get internalReconnect(): boolean {
+    return this._internalReconnect;
   }
 
   get lastStorageType(): 'flash' | 'sdcard' | 'none' {
@@ -255,7 +261,12 @@ export class MSPClient extends EventEmitter {
           logger.info(`Port ${portPath} re-appeared after ${Date.now() - start}ms`);
           // Small settle delay — port may not be ready immediately after enumeration
           await this.delay(500);
-          await this.connect(portPath);
+          this._internalReconnect = true;
+          try {
+            await this.connect(portPath);
+          } finally {
+            this._internalReconnect = false;
+          }
           return true;
         }
       } catch {
