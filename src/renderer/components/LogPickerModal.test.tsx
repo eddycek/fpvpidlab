@@ -30,12 +30,12 @@ const mockLogs: BlackboxLogMetadata[] = [
 ] as BlackboxLogMetadata[];
 
 describe('LogPickerModal', () => {
-  let onSelect: ReturnType<typeof vi.fn>;
-  let onCancel: ReturnType<typeof vi.fn>;
+  let onSelect: ReturnType<typeof vi.fn<(logId: string) => void>>;
+  let onCancel: ReturnType<typeof vi.fn<() => void>>;
 
   beforeEach(() => {
-    onSelect = vi.fn();
-    onCancel = vi.fn();
+    onSelect = vi.fn<(logId: string) => void>();
+    onCancel = vi.fn<() => void>();
     vi.mocked(window.betaflight.listBlackboxLogs).mockResolvedValue(mockLogs);
   });
 
