@@ -236,13 +236,14 @@ export function TuningStatusBanner({
   }
 
   const flashHasData = flashUsedSize != null && flashUsedSize > 0;
-  // Only show erased state when an explicit erase action was taken.
-  // Do NOT use flashUsedSize===0 as a fallback — it can be stale/wrong
-  // due to race condition (getBlackboxInfo() during CLI mode returns 0).
+  // Show erased/post-erase state only when flash is actually empty.
+  // Flash storage: flashHasData reliably means data exists → offer download.
+  // SD card: can't rely on usedSize (FAT overhead makes it always > 0) → use eraseCompleted flag.
   const showErasedState =
-    ((isFlightPending || isVerification) && !flashHasData && flashErased) ||
-    (isFlightPending && !!session.eraseSkipped) ||
-    ((isFlightPending || isVerification) && !!session.eraseCompleted);
+    (isSDCard || !flashHasData) &&
+    (((isFlightPending || isVerification) && flashErased) ||
+      (isFlightPending && !!session.eraseSkipped) ||
+      ((isFlightPending || isVerification) && !!session.eraseCompleted));
 
   const flightType =
     session.phase === TUNING_PHASE.FLASH_FLIGHT_PENDING

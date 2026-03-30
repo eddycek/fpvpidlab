@@ -129,6 +129,10 @@ function AppContent() {
         setFlashUsedSize(info.usedSize);
         setStorageType(info.storageType);
         storageTypeRef.current = info.storageType;
+        // Clear erased state when flash has new data (post-flight reconnect)
+        if (info.storageType === 'flash' && info.usedSize > 0) {
+          setErasedForPhase(null);
+        }
       })
       .catch(() => setFlashUsedSize(null));
   };

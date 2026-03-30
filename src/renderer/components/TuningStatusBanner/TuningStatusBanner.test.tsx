@@ -239,17 +239,25 @@ describe('TuningStatusBanner', () => {
     expect(onAction).toHaveBeenCalledWith('prepare_verification');
   });
 
-  it('shows erased state when session.eraseSkipped is true even with flash data', () => {
+  it('shows normal actions (not erased state) when eraseSkipped but flash has data', () => {
     renderBanner({ ...baseSession, eraseSkipped: true }, false, { flashUsedSize: 26000000 });
+
+    // Flash has data → show erase/skip buttons, not "Flash erased!" guide
+    expect(screen.queryByText(/Flash erased!/)).not.toBeInTheDocument();
+    expect(screen.getByText('Erase Flash')).toBeInTheDocument();
+    expect(screen.getByText('Skip Erase')).toBeInTheDocument();
+  });
+
+  it('shows erased state when eraseSkipped and flash is empty', () => {
+    renderBanner({ ...baseSession, eraseSkipped: true }, false, { flashUsedSize: 0 });
 
     expect(
       screen.getByText(/Flash erased! Disconnect your drone and fly the filter test flight/)
     ).toBeInTheDocument();
-    expect(screen.queryByText('Erase Flash')).not.toBeInTheDocument();
     expect(screen.getByText('View Flight Guide')).toBeInTheDocument();
   });
 
-  it('shows erased state for pid_flight_pending with eraseSkipped', () => {
+  it('shows normal actions for pid_flight_pending with eraseSkipped when flash has data', () => {
     renderBanner(
       {
         ...baseSession,
@@ -263,10 +271,9 @@ describe('TuningStatusBanner', () => {
       }
     );
 
-    expect(
-      screen.getByText(/Flash erased! Disconnect your drone and fly the PID test flight/)
-    ).toBeInTheDocument();
-    expect(screen.queryByText('Erase Flash')).not.toBeInTheDocument();
+    // Flash has data → offer erase/skip, not "go fly" guide
+    expect(screen.queryByText(/Flash erased!/)).not.toBeInTheDocument();
+    expect(screen.getByText('Erase Flash')).toBeInTheDocument();
   });
 
   it('does not show erased state for eraseSkipped in non-flight-pending phase', () => {
@@ -806,10 +813,11 @@ describe('TuningStatusBanner', () => {
     expect(screen.queryByText(/Flash memory contains old data/)).not.toBeInTheDocument();
   });
 
-  it('does not show flash-full warning when eraseSkipped (showErasedState=true)', () => {
+  it('shows flash-full warning when eraseSkipped and flash has data (showErasedState=false)', () => {
     renderBanner({ ...baseSession, eraseSkipped: true }, false, { flashUsedSize: 5000 });
 
-    expect(screen.queryByText(/Flash memory contains old data/)).not.toBeInTheDocument();
+    // Flash has data + eraseSkipped → not in erased state → flash-full warning shows
+    expect(screen.getByText(/Flash memory contains old data/)).toBeInTheDocument();
   });
 
   it('passes pid_verification guide mode for PID Tune verification', async () => {
