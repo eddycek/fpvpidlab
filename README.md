@@ -793,6 +793,14 @@ All recommendations are anchored to the PID values from the Blackbox log header 
 | **Prop wash (severe + D rec)** | Severe prop wash (≥ 5×) on axis with existing D ↑ | Upgrade confidence → High | Prop wash confirms D increase will help |
 | **Prop wash (severe, no D rec)** | Severe prop wash (≥ 5×) on worst axis, no D rec | D ↑ +5 on worst axis | Medium | Prop wash oscillation during descents needs more dampening |
 | **FF energy ratio** | P decrease rec + meanFFEnergyRatio > 0.6 | Downgrade confidence → Low | Overshoot is feedforward-dominated, not P-caused |
+| **PW-DMIN-GAIN** | Propwash severe + d_min active + gain < 35 | Increase d_min_gain to size-appropriate value (30-35 freestyle) | Medium | Higher gain ramps D faster during propwash events |
+| **PW-DMIN-GAP** | d_min active + (d_max - d_min)/d_max < 20% | Lower d_min to d_max × 0.7 | Low | Wider gap gives D more room to ramp during propwash |
+| **PW-DMIN-ENABLE** | Propwash severe + d_min disabled | Enable d_min at d_max × 0.7 | Low | d_min reduces noise at rest while allowing high D during propwash |
+| **PW-IRELAX-CUTOFF** | Propwash severe + iterm_relax_cutoff > 15 | Lower cutoff by 5 (min 15) | Medium | Reduces I-term bounce-back during throttle transitions |
+| **PW-IRELAX-ENABLE** | Propwash detected + iterm_relax OFF | Enable iterm_relax | Medium | I-term windup worsens propwash bounce-back |
+| **PW-TPA-MODE** | Propwash severe + TPA mode = PD | Switch to D-only mode | Medium | PD mode reduces P during climb, losing authority |
+| **PW-TPA-BREAKPOINT** | Propwash severe + breakpoint < 1300 | Raise to 1350 | Medium | Low breakpoint attenuates D too early during climb |
+| **PW-TPA-RATE** | Propwash severe + rate > 65 | Lower to 65 | Medium | Excessive TPA rate reduces effective D during propwash recovery |
 
 **Transfer Function Rules (Wiener deconvolution — primary source for Flash Tune, supplementary for PID Tune when TF data available):**
 

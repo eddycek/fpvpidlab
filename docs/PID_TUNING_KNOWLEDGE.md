@@ -402,6 +402,49 @@ Sources: BF PID Tuning Guide, Oscar Liang, Bardwell, PIDtoolbox
 - Severity varies: mild (barely noticeable) to severe (visible jello in video, audible oscillation)
 - Community consensus: "D is the primary tool against prop wash, but too much D amplifies noise"
 
+### Propwash Tuning Strategy (Community Consensus)
+
+Propwash oscillation occurs during throttle transitions (descent → climb) when disturbed airflow causes 20-90 Hz gyro oscillation. The three key anti-propwash parameters:
+
+**d_min (BF 4.0+)**
+- Provides low D at rest (less noise amplification) and high D during propwash/flips
+- `d_min` = minimum D value. `D` in PID config = maximum (d_max)
+- `d_min_gain` controls how fast D ramps up (20 = default/racing, 30-35 = freestyle)
+- During propwash, D typically climbs about halfway to d_max
+- BF defaults: d_min_roll=23, d_min_pitch=25, d_min_yaw=0, gain=20, advance=20
+- Freestyle recommendation: d_min close to D, d_max 20-40% higher, gain=30-35
+
+**iterm_relax (BF 3.4+)**
+- Suppresses I accumulation during fast maneuvers, preventing bounce-back
+- Lower cutoff = more suppression = less bounce-back
+- Racing: cutoff 30-40, Freestyle: 10-15, Heavy/7" quads: 5-7
+- BF default: mode=RP, type=SETPOINT, cutoff=15
+- If bounce-back after flips: reduce cutoff from 15 → 10 → 7 → 5
+
+**TPA and propwash interaction**
+- High TPA rate + low breakpoint reduces effective D during climb after descent
+- For propwash: prefer D-only mode (not PD), rate ≤ 65, breakpoint ≥ 1350
+- Karate Race: rate=70, breakpoint=1250 (more aggressive, racing focus)
+- BF defaults: rate=65, breakpoint=1350, mode=D
+
+**Preset comparison:**
+
+| Preset | d_min R/P | d_min gain | iterm_relax_cutoff | tpa_rate | tpa_breakpoint |
+|--------|-----------|------------|-------------------|----------|---------------|
+| BF defaults | 30/34 | 20 | 15 | 65 | 1350 |
+| Karate Race | 22/22 | 20 | 20 | 70 | 1250 |
+| Karate Race Spicy | 26/26 | 20 | 20 | 70 | 1250 |
+
+**FPVPIDlab propwash rules:**
+- PW-DMIN-GAIN: increase d_min_gain when propwash severe + gain < 35
+- PW-DMIN-GAP: widen d_min/d_max gap when < 20% of d_max
+- PW-DMIN-ENABLE: enable d_min when propwash severe + currently disabled
+- PW-IRELAX-CUTOFF: lower cutoff by 5 when propwash severe + cutoff > 15
+- PW-IRELAX-ENABLE: enable iterm_relax when disabled + propwash detected
+- PW-TPA-MODE: prefer D-only when propwash severe
+- PW-TPA-BREAKPOINT: raise breakpoint to 1350 when < 1300
+- PW-TPA-RATE: cap rate at 65 when propwash severe
+
 ---
 
 ## 5. Transfer Function Analysis (Wiener Deconvolution)

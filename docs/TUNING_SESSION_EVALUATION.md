@@ -75,6 +75,16 @@ Classification uses strict `>` comparisons: exactly on the boundary = the lower 
 
 **Convergence signal**: Both filter and PID changes below respective deadzones.
 
+## Propwash Evaluation
+
+Propwash is evaluated via PropWashDetector during PID Tune and Flash Tune analysis:
+
+- **Detection**: Throttle-down events with post-event FFT in 20-90 Hz band
+- **Metrics**: Mean severity ratio, worst axis, dominant frequency
+- **Severity scale**: minimal (< 2.0), moderate (2.0-5.0), severe (≥ 5.0)
+- **Impact on recommendations**: Triggers d_min gain adjustment, iterm_relax cutoff reduction, TPA mode/breakpoint changes
+- **Success criteria**: Severity ratio decreasing across sessions, dominant frequency shifting higher (away from propwash band)
+
 ## Quality Score Components
 
 The flight quality score (0-100) uses type-aware components:
