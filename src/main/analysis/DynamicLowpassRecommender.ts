@@ -8,6 +8,7 @@
  * Uses existing ThrottleSpectrogramResult data to detect throttle-dependent noise.
  */
 import type { ThrottleSpectrogramResult, FilterRecommendation } from '@shared/types/analysis.types';
+import { DYNAMIC_LOWPASS_RATIO } from './constants';
 
 // ---- Constants ----
 
@@ -150,7 +151,7 @@ export function recommendDynamicLowpass(
         {
           setting: 'gyro_lpf1_dyn_max_hz',
           currentValue: 0,
-          recommendedValue: settings.gyro_lpf1_static_hz * 2,
+          recommendedValue: settings.gyro_lpf1_static_hz * DYNAMIC_LOWPASS_RATIO,
           reason:
             'Sets the upper limit of the dynamic lowpass range. At low throttle the filter operates near this value, ' +
             'giving minimal latency when noise is naturally lower.',
@@ -179,7 +180,7 @@ export function recommendDynamicLowpass(
         {
           setting: 'dterm_lpf1_dyn_max_hz',
           currentValue: 0,
-          recommendedValue: settings.dterm_lpf1_static_hz * 2,
+          recommendedValue: settings.dterm_lpf1_static_hz * DYNAMIC_LOWPASS_RATIO,
           reason:
             'Upper limit of the D-term dynamic lowpass range. At low throttle the filter uses this higher cutoff ' +
             'for minimal latency in the D-term path.',

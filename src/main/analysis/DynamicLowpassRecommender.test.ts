@@ -5,7 +5,14 @@ import {
   DYNAMIC_LOWPASS_NOISE_INCREASE_DB,
   DYNAMIC_LOWPASS_MIN_CORRELATION,
 } from './DynamicLowpassRecommender';
+import {
+  DYNAMIC_LOWPASS_BY_SIZE,
+  BF_GYRO_LPF1_DYN_BASE_HZ,
+  BF_DTERM_LPF1_DYN_BASE_HZ,
+  DYNAMIC_LOWPASS_RATIO,
+} from './constants';
 import type { ThrottleSpectrogramResult, ThrottleBand } from '@shared/types/analysis.types';
+import type { DroneSize } from '@shared/types/profile.types';
 
 function makeBand(
   throttleMin: number,
@@ -325,8 +332,29 @@ describe('community preset validation', () => {
       if (recs.length >= 2) {
         const min = recs[0].recommendedValue;
         const max = recs[1].recommendedValue;
-        expect(max / min).toBe(2);
+        expect(max / min).toBe(DYNAMIC_LOWPASS_RATIO);
       }
+    }
+  });
+
+  it('per-size multipliers produce valid ranges from BF base frequencies', () => {
+    const sizes: DroneSize[] = ['3"', '4"', '5"', '7"'];
+    for (const size of sizes) {
+      const profile = DYNAMIC_LOWPASS_BY_SIZE[size];
+      const gyroMin = Math.round((BF_GYRO_LPF1_DYN_BASE_HZ * profile.gyroMultiplier) / 100);
+      const gyroMax = gyroMin * DYNAMIC_LOWPASS_RATIO;
+      const dtermMin = Math.round((BF_DTERM_LPF1_DYN_BASE_HZ * profile.dtermMultiplier) / 100);
+      const dtermMax = dtermMin * DYNAMIC_LOWPASS_RATIO;
+
+      // Gyro dyn_min should be reasonable (50-500 Hz)
+      expect(gyroMin).toBeGreaterThanOrEqual(50);
+      expect(gyroMin).toBeLessThanOrEqual(500);
+      // DTerm dyn_min should be reasonable (50-200 Hz)
+      expect(dtermMin).toBeGreaterThanOrEqual(50);
+      expect(dtermMax).toBeLessThanOrEqual(500);
+      // 2:1 ratio always holds
+      expect(gyroMax / gyroMin).toBe(DYNAMIC_LOWPASS_RATIO);
+      expect(dtermMax / dtermMin).toBe(DYNAMIC_LOWPASS_RATIO);
     }
   });
 });

@@ -208,7 +208,7 @@ BF simplified tuning uses a consistent formula:
 - `gyro_lpf1_static_hz = dyn_min` (BF convention: static = dyn_min when dynamic enabled)
 - D-term uses same pattern with base 75/150 Hz
 
-The **2:1 ratio** (max = 2 × min) is universal across all BF presets and simplified tuning modes.
+When dynamic lowpass is enabled (dyn_min > 0), the **2:1 ratio** (max = 2 × min) is universal across all BF presets and simplified tuning modes.
 
 #### Preset Multiplier Comparison
 

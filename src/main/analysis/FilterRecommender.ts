@@ -173,7 +173,7 @@ function recommendNoiseFloorAdjustments(
     if (gyroDynActive) {
       // Dynamic mode: tune dyn_min_hz, use BF 2:1 ratio for dyn_max_hz
       const currentMin = current.gyro_lpf1_dyn_min_hz!;
-      const currentMax = current.gyro_lpf1_dyn_max_hz ?? currentMin * 2;
+      const currentMax = current.gyro_lpf1_dyn_max_hz ?? currentMin * DYNAMIC_LOWPASS_RATIO;
       const newMax = Math.round(clamp(target * DYNAMIC_LOWPASS_RATIO, target, gyroMaxHz));
       if (Math.abs(target - currentMin) > NOISE_TARGET_DEADZONE_HZ) {
         out.push({
@@ -189,7 +189,7 @@ function recommendNoiseFloorAdjustments(
           setting: 'gyro_lpf1_dyn_max_hz',
           currentValue: currentMax,
           recommendedValue: newMax,
-          reason: 'Proportionally adjusted to maintain the dynamic range ratio.',
+          reason: 'Set to BF 2:1 ratio (dyn_max = 2 × dyn_min), capped by safety bounds.',
           impact: 'latency',
           confidence,
           ruleId,
@@ -233,7 +233,7 @@ function recommendNoiseFloorAdjustments(
   ) => {
     if (dtermDynActive) {
       const currentMin = current.dterm_lpf1_dyn_min_hz!;
-      const currentMax = current.dterm_lpf1_dyn_max_hz ?? currentMin * 2;
+      const currentMax = current.dterm_lpf1_dyn_max_hz ?? currentMin * DYNAMIC_LOWPASS_RATIO;
       const newMax = Math.round(clamp(target * DYNAMIC_LOWPASS_RATIO, target, dtermMaxHz));
       if (Math.abs(target - currentMin) > NOISE_TARGET_DEADZONE_HZ) {
         out.push({
@@ -249,7 +249,7 @@ function recommendNoiseFloorAdjustments(
           setting: 'dterm_lpf1_dyn_max_hz',
           currentValue: currentMax,
           recommendedValue: newMax,
-          reason: 'Proportionally adjusted to maintain the dynamic range ratio.',
+          reason: 'Set to BF 2:1 ratio (dyn_max = 2 × dyn_min), capped by safety bounds.',
           impact: 'latency',
           confidence,
           ruleId,

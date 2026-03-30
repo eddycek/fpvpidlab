@@ -81,7 +81,7 @@ Connecting with BF 4.2 or earlier will show an error and auto-disconnect. See [B
 - Medium noise handling: 20 Hz deadzone with low-confidence recommendations (avoids churn in the -50 to -30 dB range)
 - Notch-aware resonance filtering: peaks within dyn_notch range are excluded from LPF recommendations (notch already handles them)
 - RPM filter awareness: widens safety bounds (gyro LPF1 up to 500 Hz), optimizes dynamic notch count and Q
-- Dynamic lowpass awareness: when `dyn_min_hz > 0`, tunes `dyn_min`/`dyn_max` instead of static cutoff; maintains BF 2:1 ratio (dyn_max = 2 × dyn_min); enforces BF constraint `static_hz <= dyn_min_hz`
+- Dynamic lowpass awareness: when `dyn_min_hz > 0`, tunes `dyn_min`/`dyn_max` instead of static cutoff; targets BF 2:1 ratio (dyn_max ≈ 2 × dyn_min), capped by safety bounds; enforces BF constraint `static_hz <= dyn_min_hz`
 - Conditional dynamic notch Q: Q=300 (wide) when strong frame resonance detected, Q=500 (narrow) otherwise
 - LPF2 recommendations: disable when RPM active + clean signal (< -45 dB), enable when noisy (≥ -30 dB) without RPM
 - Propwash floor protection (never pushes gyro LPF1 below 100 Hz)
