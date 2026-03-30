@@ -7,7 +7,9 @@ import {
   extractDMinContext,
   extractTPAContext,
   extractItermRelaxCutoff,
+  extractItermRelaxType,
   recommendItermRelaxCutoff,
+  recommendPropWashDMin,
   extractDynIdleMinRpm,
   extractRpmFilterActive,
   recommendDynIdleMinRpm,
@@ -26,6 +28,7 @@ import type { PIDConfiguration } from '@shared/types/pid.types';
 import type {
   AxisStepProfile,
   FeedforwardContext,
+  PropWashAnalysis,
   StepResponse,
   StepEvent,
 } from '@shared/types/analysis.types';
@@ -2832,5 +2835,304 @@ describe('recommendTPA', () => {
     expect(recs.length).toBe(4);
     expect(recs.every((r) => r.ruleId === 'P-TPA')).toBe(true);
     expect(recs.every((r) => r.confidence === 'low')).toBe(true);
+  });
+});
+
+// ---- Propwash-Aware Tuning (Tasks 3-5) ----
+
+function makePropWash(overrides: Partial<PropWashAnalysis> = {}): PropWashAnalysis {
+  return {
+    events: [
+      {
+        timestampMs: 1000,
+        throttleDropRate: -500,
+        durationMs: 200,
+        peakFrequencyHz: 45,
+        severityRatio: 6.0,
+        axisEnergy: { roll: 100, pitch: 80, yaw: 20 },
+      },
+      {
+        timestampMs: 3000,
+        throttleDropRate: -400,
+        durationMs: 180,
+        peakFrequencyHz: 50,
+        severityRatio: 5.5,
+        axisEnergy: { roll: 90, pitch: 70, yaw: 15 },
+      },
+      {
+        timestampMs: 5000,
+        throttleDropRate: -450,
+        durationMs: 220,
+        peakFrequencyHz: 48,
+        severityRatio: 6.2,
+        axisEnergy: { roll: 95, pitch: 75, yaw: 18 },
+      },
+    ],
+    meanSeverity: 5.9,
+    worstAxis: 'roll',
+    dominantFrequencyHz: 48,
+    recommendation: 'Severe prop wash detected',
+    ...overrides,
+  };
+}
+
+describe('recommendPropWashDMin (Task 3)', () => {
+  const severePropWash = makePropWash({ meanSeverity: 6.0 });
+  const mildPropWash = makePropWash({ meanSeverity: 3.0 });
+
+  it('PW-DMIN-GAIN: should recommend increasing gain when propwash severe + d_min active + low gain', () => {
+    const dMin: DMinContext = { active: true, roll: 20, pitch: 22, gain: 15 };
+    const flightPIDs: PIDConfiguration = {
+      roll: { P: 45, I: 80, D: 30 },
+      pitch: { P: 47, I: 84, D: 32 },
+      yaw: { P: 45, I: 80, D: 0 },
+    };
+    const recs = recommendPropWashDMin(severePropWash, dMin, flightPIDs, '5"');
+    const gainRec = recs.find((r) => r.ruleId === 'PW-DMIN-GAIN');
+    expect(gainRec).toBeDefined();
+    expect(gainRec!.setting).toBe('d_min_gain');
+    expect(gainRec!.currentValue).toBe(15);
+    expect(gainRec!.recommendedValue).toBe(30); // DMIN_BY_SIZE['5"'].gain
+    expect(gainRec!.confidence).toBe('medium');
+    expect(gainRec!.reason).toContain('prop wash');
+  });
+
+  it('PW-DMIN-GAIN: should not fire when gain is already at freestyle level', () => {
+    const dMin: DMinContext = { active: true, roll: 20, pitch: 22, gain: 40 };
+    const recs = recommendPropWashDMin(severePropWash, dMin, DEFAULT_PIDS);
+    const gainRec = recs.find((r) => r.ruleId === 'PW-DMIN-GAIN');
+    expect(gainRec).toBeUndefined();
+  });
+
+  it('PW-DMIN-GAIN: should not fire when propwash is mild', () => {
+    const dMin: DMinContext = { active: true, roll: 20, pitch: 22, gain: 15 };
+    const recs = recommendPropWashDMin(mildPropWash, dMin, DEFAULT_PIDS);
+    const gainRec = recs.find((r) => r.ruleId === 'PW-DMIN-GAIN');
+    expect(gainRec).toBeUndefined();
+  });
+
+  it('PW-DMIN-GAP: should recommend wider gap when d_min too close to d_max', () => {
+    // d_min_roll=28, d_max=30 → gap = 2/30 = 0.067 < 0.2
+    const dMin: DMinContext = { active: true, roll: 28, pitch: 30 };
+    const flightPIDs: PIDConfiguration = {
+      roll: { P: 45, I: 80, D: 30 },
+      pitch: { P: 47, I: 84, D: 32 },
+      yaw: { P: 45, I: 80, D: 0 },
+    };
+    const recs = recommendPropWashDMin(undefined, dMin, flightPIDs);
+    const gapRecs = recs.filter((r) => r.ruleId === 'PW-DMIN-GAP');
+    expect(gapRecs.length).toBeGreaterThanOrEqual(1);
+    // Roll: d_max=30, target = round(30*0.7) = 21
+    const rollGap = gapRecs.find((r) => r.setting === 'd_min_roll');
+    expect(rollGap).toBeDefined();
+    expect(rollGap!.currentValue).toBe(28);
+    expect(rollGap!.recommendedValue).toBe(21);
+    expect(rollGap!.confidence).toBe('low');
+    expect(rollGap!.reason).toContain('headroom');
+  });
+
+  it('PW-DMIN-GAP: should not fire when gap is sufficient', () => {
+    // d_min_roll=20, d_max=30 → gap = 10/30 = 0.33 > 0.2
+    const dMin: DMinContext = { active: true, roll: 20, pitch: 22 };
+    const flightPIDs: PIDConfiguration = {
+      roll: { P: 45, I: 80, D: 30 },
+      pitch: { P: 47, I: 84, D: 32 },
+      yaw: { P: 45, I: 80, D: 0 },
+    };
+    const recs = recommendPropWashDMin(undefined, dMin, flightPIDs);
+    const gapRecs = recs.filter((r) => r.ruleId === 'PW-DMIN-GAP');
+    expect(gapRecs.length).toBe(0);
+  });
+
+  it('PW-DMIN-ENABLE: should recommend enabling d_min when propwash severe + d_min disabled', () => {
+    const dMin: DMinContext = { active: false, roll: 0, pitch: 0 };
+    const flightPIDs: PIDConfiguration = {
+      roll: { P: 45, I: 80, D: 30 },
+      pitch: { P: 47, I: 84, D: 32 },
+      yaw: { P: 45, I: 80, D: 0 },
+    };
+    const recs = recommendPropWashDMin(severePropWash, dMin, flightPIDs);
+    const enableRecs = recs.filter((r) => r.ruleId === 'PW-DMIN-ENABLE');
+    expect(enableRecs.length).toBe(2); // roll + pitch
+    const rollEnable = enableRecs.find((r) => r.setting === 'd_min_roll');
+    expect(rollEnable).toBeDefined();
+    expect(rollEnable!.currentValue).toBe(0);
+    expect(rollEnable!.recommendedValue).toBe(21); // round(30*0.7)
+    expect(rollEnable!.confidence).toBe('low');
+    expect(rollEnable!.reason).toContain('d_min is disabled');
+  });
+
+  it('PW-DMIN-ENABLE: should not fire when propwash is mild', () => {
+    const dMin: DMinContext = { active: false, roll: 0, pitch: 0 };
+    const recs = recommendPropWashDMin(mildPropWash, dMin, DEFAULT_PIDS);
+    const enableRecs = recs.filter((r) => r.ruleId === 'PW-DMIN-ENABLE');
+    expect(enableRecs.length).toBe(0);
+  });
+
+  it('should return empty array when propWash and dMinContext are undefined', () => {
+    expect(recommendPropWashDMin(undefined, undefined, DEFAULT_PIDS)).toEqual([]);
+  });
+});
+
+describe('recommendItermRelaxCutoff propwash-aware (Task 4)', () => {
+  const severePropWash = makePropWash({ meanSeverity: 6.0 });
+  const mildPropWash = makePropWash({ meanSeverity: 3.0 });
+
+  it('PW-IRELAX-CUTOFF: should recommend lower cutoff when propwash severe + cutoff too high', () => {
+    // currentCutoff=25, severe propwash → target = max(15, 25-5) = 20
+    const rec = recommendItermRelaxCutoff(25, 'balanced', severePropWash);
+    expect(rec).toBeDefined();
+    expect(rec!.setting).toBe('iterm_relax_cutoff');
+    expect(rec!.currentValue).toBe(25);
+    expect(rec!.recommendedValue).toBe(20);
+    expect(rec!.ruleId).toBe('PW-IRELAX-CUTOFF');
+    expect(rec!.confidence).toBe('medium');
+    expect(rec!.reason).toContain('prop wash');
+  });
+
+  it('PW-IRELAX-CUTOFF: should cap at PROPWASH_IRELAX_CUTOFF_MAX', () => {
+    // currentCutoff=18, severe propwash → target = max(15, 18-5) = 15
+    const rec = recommendItermRelaxCutoff(18, 'balanced', severePropWash);
+    expect(rec).toBeDefined();
+    expect(rec!.recommendedValue).toBe(15);
+    expect(rec!.ruleId).toBe('PW-IRELAX-CUTOFF');
+  });
+
+  it('PW-IRELAX-CUTOFF: should not fire when cutoff is already <= max', () => {
+    const rec = recommendItermRelaxCutoff(15, 'balanced', severePropWash);
+    // cutoff=15 is not > PROPWASH_IRELAX_CUTOFF_MAX(15), so propwash rule skips
+    // Fall through to style-based check — 15 vs typical 12: deviation = 3/12 = 0.25 < 0.5
+    expect(rec).toBeUndefined();
+  });
+
+  it('PW-IRELAX-CUTOFF: should not fire when propwash is mild', () => {
+    // Mild propwash (3.0 < 5.0 severe threshold) → fall through to style check
+    const rec = recommendItermRelaxCutoff(25, 'balanced', mildPropWash);
+    // Style check: 25 vs typical 12, deviation = 13/12 = 1.08 > 0.5 → style rec fires
+    expect(rec).toBeDefined();
+    expect(rec!.ruleId).toBe('P-IRELAX'); // style-based, not propwash
+  });
+
+  it('PW-IRELAX-ENABLE: should recommend enabling iterm_relax when disabled + propwash detected', () => {
+    const rec = recommendItermRelaxCutoff(undefined, 'balanced', mildPropWash, 0);
+    expect(rec).toBeDefined();
+    expect(rec!.setting).toBe('iterm_relax');
+    expect(rec!.currentValue).toBe(0);
+    expect(rec!.recommendedValue).toBe(1);
+    expect(rec!.ruleId).toBe('PW-IRELAX-ENABLE');
+    expect(rec!.reason).toContain('iterm_relax is disabled');
+  });
+
+  it('PW-IRELAX-ENABLE: should not fire when iterm_relax is already enabled', () => {
+    const rec = recommendItermRelaxCutoff(undefined, 'balanced', mildPropWash, 1);
+    // iterm_relax=1 (enabled), cutoff undefined → returns undefined
+    expect(rec).toBeUndefined();
+  });
+
+  it('should preserve existing style-based behavior when no propwash', () => {
+    // No propwash passed — original behavior
+    const rec = recommendItermRelaxCutoff(30, 'balanced');
+    expect(rec).toBeDefined();
+    expect(rec!.ruleId).toBe('P-IRELAX');
+    expect(rec!.recommendedValue).toBe(12);
+  });
+});
+
+describe('extractItermRelaxType', () => {
+  it('should extract iterm_relax type from BBL headers', () => {
+    const headers = new Map([['iterm_relax', '1']]);
+    expect(extractItermRelaxType(headers)).toBe(1);
+  });
+
+  it('should return undefined when header is missing', () => {
+    const headers = new Map<string, string>();
+    expect(extractItermRelaxType(headers)).toBeUndefined();
+  });
+});
+
+describe('recommendTPA propwash-aware (Task 5)', () => {
+  const severePropWash = makePropWash({ meanSeverity: 6.0 });
+
+  it('PW-TPA-MODE: should recommend D-only when propwash severe + PD mode', () => {
+    const ctx: TPAContext = { active: true, rate: 65, breakpoint: 1350, mode: 1 };
+    const recs = recommendTPA(ctx, '5"', undefined, severePropWash);
+    const modeRec = recs.find((r) => r.ruleId === 'PW-TPA-MODE');
+    expect(modeRec).toBeDefined();
+    expect(modeRec!.setting).toBe('tpa_mode');
+    expect(modeRec!.currentValue).toBe(1);
+    expect(modeRec!.recommendedValue).toBe(0);
+    expect(modeRec!.confidence).toBe('medium');
+    expect(modeRec!.reason).toContain('D-only');
+  });
+
+  it('PW-TPA-MODE: should not fire when mode is already D-only', () => {
+    const ctx: TPAContext = { active: true, rate: 65, breakpoint: 1350, mode: 0 };
+    const recs = recommendTPA(ctx, '5"', undefined, severePropWash);
+    const modeRec = recs.find((r) => r.ruleId === 'PW-TPA-MODE');
+    expect(modeRec).toBeUndefined();
+  });
+
+  it('PW-TPA-BREAKPOINT: should recommend raising breakpoint when propwash severe + low breakpoint', () => {
+    const ctx: TPAContext = { active: true, rate: 65, breakpoint: 1100, mode: 0 };
+    const recs = recommendTPA(ctx, '5"', undefined, severePropWash);
+    const bpRec = recs.find((r) => r.ruleId === 'PW-TPA-BREAKPOINT');
+    expect(bpRec).toBeDefined();
+    expect(bpRec!.setting).toBe('tpa_breakpoint');
+    expect(bpRec!.currentValue).toBe(1100);
+    expect(bpRec!.recommendedValue).toBe(1350);
+    expect(bpRec!.confidence).toBe('medium');
+    expect(bpRec!.reason).toContain('D attenuation');
+  });
+
+  it('PW-TPA-BREAKPOINT: should not fire when breakpoint is already above minimum', () => {
+    const ctx: TPAContext = { active: true, rate: 65, breakpoint: 1400, mode: 0 };
+    const recs = recommendTPA(ctx, '5"', undefined, severePropWash);
+    const bpRec = recs.find((r) => r.ruleId === 'PW-TPA-BREAKPOINT');
+    expect(bpRec).toBeUndefined();
+  });
+
+  it('PW-TPA-RATE: should recommend capping rate when propwash severe + high rate', () => {
+    const ctx: TPAContext = { active: true, rate: 90, breakpoint: 1350, mode: 0 };
+    const recs = recommendTPA(ctx, '5"', undefined, severePropWash);
+    const rateRec = recs.find((r) => r.ruleId === 'PW-TPA-RATE');
+    expect(rateRec).toBeDefined();
+    expect(rateRec!.setting).toBe('tpa_rate');
+    expect(rateRec!.currentValue).toBe(90);
+    expect(rateRec!.recommendedValue).toBe(65);
+    expect(rateRec!.confidence).toBe('medium');
+  });
+
+  it('PW-TPA-RATE: should not fire when rate is within limit', () => {
+    const ctx: TPAContext = { active: true, rate: 60, breakpoint: 1350, mode: 0 };
+    const recs = recommendTPA(ctx, '5"', undefined, severePropWash);
+    const rateRec = recs.find((r) => r.ruleId === 'PW-TPA-RATE');
+    expect(rateRec).toBeUndefined();
+  });
+
+  it('propwash TPA rate should take precedence over size-based rate when both fire', () => {
+    // Rate 90 is high for 5" (size says 65) AND propwash says cap at 65
+    // Should get PW-TPA-RATE, not a duplicate P-TPA for rate
+    const ctx: TPAContext = { active: true, rate: 90, breakpoint: 1350, mode: 0 };
+    const recs = recommendTPA(ctx, '5"', undefined, severePropWash);
+    const rateRecs = recs.filter((r) => r.setting === 'tpa_rate');
+    expect(rateRecs.length).toBe(1);
+    expect(rateRecs[0].ruleId).toBe('PW-TPA-RATE');
+  });
+
+  it('propwash TPA breakpoint should take precedence over size-based breakpoint when both fire', () => {
+    // Breakpoint 1100 is off for 5" (size says 1350) AND propwash says raise to 1350
+    const ctx: TPAContext = { active: true, rate: 65, breakpoint: 1100, mode: 0 };
+    const recs = recommendTPA(ctx, '5"', undefined, severePropWash);
+    const bpRecs = recs.filter((r) => r.setting === 'tpa_breakpoint');
+    expect(bpRecs.length).toBe(1);
+    expect(bpRecs[0].ruleId).toBe('PW-TPA-BREAKPOINT');
+  });
+
+  it('should preserve existing TPA behavior when no propwash', () => {
+    const ctx: TPAContext = { active: true, rate: 30, breakpoint: 1350, mode: 0 };
+    const recs = recommendTPA(ctx, '5"');
+    const rateRec = recs.find((r) => r.setting === 'tpa_rate');
+    expect(rateRec).toBeDefined();
+    expect(rateRec!.ruleId).toBe('P-TPA');
   });
 });

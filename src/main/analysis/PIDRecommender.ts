@@ -47,6 +47,15 @@ import {
   TPA_SEVERE_NOISE_INCREASE_DB,
   TPA_MODE_D_ONLY,
   TPA_MODE_PD,
+  DMIN_BY_SIZE,
+  DMIN_GAIN_FREESTYLE,
+  DMIN_GAP_MIN_FRACTION,
+  PROPWASH_IRELAX_CUTOFF_REDUCTION,
+  PROPWASH_IRELAX_CUTOFF_MAX,
+  PROPWASH_TPA_BREAKPOINT_MIN,
+  PROPWASH_TPA_RATE_MAX,
+  PROPWASH_SEVERITY_SEVERE,
+  PROPWASH_SEVERITY_MINIMAL,
   type QuadSizeBounds,
 } from './constants';
 
@@ -331,6 +340,12 @@ export function recommendPID(
     applyPropWashContext(recommendations, propWash, currentPIDs, flightPIDs, bounds);
   }
 
+  // Post-process: propwash-aware d_min recommendations
+  if (propWash || dMinContext) {
+    const dMinRecs = recommendPropWashDMin(propWash, dMinContext, flightPIDs, droneSize);
+    recommendations.push(...dMinRecs);
+  }
+
   // Post-process: D-min/D-max advisory notes (includes D-max gain recommendation)
   if (dMinContext?.active) {
     applyDMinAdvisory(recommendations, dMinContext, droneSize);
@@ -590,6 +605,101 @@ function applyPropWashContext(
 }
 
 /**
+ * Propwash-aware d_min recommendations.
+ *
+ * When propwash is severe, d_min settings can be optimized to allow
+ * faster D ramp-up during propwash events (descents, power loops).
+ *
+ * Three rules:
+ * - PW-DMIN-GAIN: Increase d_min_gain for faster D boost during propwash
+ * - PW-DMIN-GAP: Widen d_min/d_max gap for more propwash headroom
+ * - PW-DMIN-ENABLE: Enable d_min when it's disabled and propwash is severe
+ */
+export function recommendPropWashDMin(
+  propWash: PropWashAnalysis | undefined,
+  dMinContext: DMinContext | undefined,
+  flightPIDs: PIDConfiguration | undefined,
+  droneSize?: DroneSize
+): PIDRecommendation[] {
+  const recs: PIDRecommendation[] = [];
+  if (!dMinContext) return recs;
+
+  const isSevere = propWash ? propWash.meanSeverity >= PROPWASH_SEVERITY_SEVERE : false;
+
+  // Rule PW-DMIN-GAIN: If propwash severe AND d_min active AND gain is low → increase
+  if (isSevere && propWash && dMinContext.active && dMinContext.gain !== undefined) {
+    const sizeProfile = droneSize ? DMIN_BY_SIZE[droneSize] : undefined;
+    const targetGain = sizeProfile?.gain ?? DMIN_GAIN_FREESTYLE;
+    if (dMinContext.gain < DMIN_GAIN_FREESTYLE) {
+      recs.push({
+        setting: 'd_min_gain',
+        currentValue: dMinContext.gain,
+        recommendedValue: targetGain,
+        reason:
+          `Severe prop wash detected (${propWash.meanSeverity.toFixed(1)}× baseline). ` +
+          `D-min gain is ${dMinContext.gain} — increasing to ${targetGain} allows faster D ramp-up during propwash events, ` +
+          'helping the quad recover more quickly from descents and power loops.',
+        impact: 'stability',
+        confidence: 'medium',
+        ruleId: 'PW-DMIN-GAIN',
+      });
+    }
+  }
+
+  // Rule PW-DMIN-GAP: If d_min active AND gap too narrow → recommend widening
+  if (dMinContext.active && flightPIDs) {
+    for (const axis of ['roll', 'pitch'] as const) {
+      const dMinValue = dMinContext[axis];
+      const dMax = flightPIDs[axis].D;
+      if (dMinValue === undefined || dMax <= 0) continue;
+
+      const gap = (dMax - dMinValue) / dMax;
+      if (gap < DMIN_GAP_MIN_FRACTION) {
+        const targetDMin = clamp(Math.round(dMax * 0.7), 0, dMax);
+        if (targetDMin !== dMinValue) {
+          recs.push({
+            setting: `d_min_${axis}`,
+            currentValue: dMinValue,
+            recommendedValue: targetDMin,
+            reason:
+              `D-min on ${axis} is ${dMinValue} with D-max ${dMax} (gap ${Math.round(gap * 100)}%). ` +
+              `This leaves little headroom for propwash D boost. Lowering d_min to ${targetDMin} ` +
+              '(30% below D-max) gives more room for the D-term to ramp up during propwash events.',
+            impact: 'stability',
+            confidence: 'low',
+            ruleId: 'PW-DMIN-GAP',
+          });
+        }
+      }
+    }
+  }
+
+  // Rule PW-DMIN-ENABLE: If propwash severe AND d_min is disabled → recommend enabling
+  if (isSevere && propWash && !dMinContext.active && flightPIDs) {
+    for (const axis of ['roll', 'pitch'] as const) {
+      const dMax = flightPIDs[axis].D;
+      if (dMax <= 0) continue;
+
+      const targetDMin = clamp(Math.round(dMax * 0.7), 0, dMax);
+      recs.push({
+        setting: `d_min_${axis}`,
+        currentValue: 0,
+        recommendedValue: targetDMin,
+        reason:
+          `Severe prop wash detected (${propWash.meanSeverity.toFixed(1)}× baseline) but d_min is disabled. ` +
+          `Enabling d_min on ${axis} at ${targetDMin} (70% of D-max ${dMax}) allows the D-term to run lower ` +
+          'during normal flight while ramping up during propwash events for better oscillation control.',
+        impact: 'stability',
+        confidence: 'low',
+        ruleId: 'PW-DMIN-ENABLE',
+      });
+    }
+  }
+
+  return recs;
+}
+
+/**
  * Generate a beginner-friendly summary of the PID analysis.
  */
 const STYLE_CONTEXT: Record<FlightStyle, string> = {
@@ -712,12 +822,15 @@ export interface DMinContext {
   roll?: number;
   pitch?: number;
   yaw?: number;
+  /** d_min_boost_gain — how fast D ramps up during propwash/stick input (BF default 20) */
+  gain?: number;
 }
 
 export function extractDMinContext(rawHeaders: Map<string, string>): DMinContext {
   const dMinRoll = parseIntOr(rawHeaders.get('d_min_roll'));
   const dMinPitch = parseIntOr(rawHeaders.get('d_min_pitch'));
   const dMinYaw = parseIntOr(rawHeaders.get('d_min_yaw'));
+  const dMinGain = parseIntOr(rawHeaders.get('d_min_gain'));
   const active = (dMinRoll ?? 0) > 0 || (dMinPitch ?? 0) > 0;
 
   return {
@@ -725,6 +838,7 @@ export function extractDMinContext(rawHeaders: Map<string, string>): DMinContext
     ...(dMinRoll !== undefined ? { roll: dMinRoll } : {}),
     ...(dMinPitch !== undefined ? { pitch: dMinPitch } : {}),
     ...(dMinYaw !== undefined ? { yaw: dMinYaw } : {}),
+    ...(dMinGain !== undefined ? { gain: dMinGain } : {}),
   };
 }
 
@@ -1011,18 +1125,80 @@ export function extractItermRelaxCutoff(rawHeaders: Map<string, string>): number
 }
 
 /**
- * Recommend iterm_relax_cutoff based on flight style and current value.
+ * Extract iterm_relax type from BBL raw headers.
+ * Returns undefined if the header is not present.
+ * Values: 0=OFF, 1=RP, 2=RPY, 3=SETPOINT
+ */
+export function extractItermRelaxType(rawHeaders: Map<string, string>): number | undefined {
+  return parseIntOr(rawHeaders.get('iterm_relax'));
+}
+
+/**
+ * Recommend iterm_relax_cutoff based on flight style, current value, and propwash data.
  *
  * Returns an informational recommendation when the current cutoff is >50%
  * away from the style-appropriate typical value. The recommendation is
  * advisory — the user decides whether to apply.
+ *
+ * When propwash is severe, propwash-specific cutoff reduction takes precedence
+ * over style-based recommendations.
+ *
+ * When propwash is detected and iterm_relax is disabled, recommends enabling it.
  */
 export function recommendItermRelaxCutoff(
   currentCutoff: number | undefined,
-  flightStyle: FlightStyle
+  flightStyle: FlightStyle,
+  propWash?: PropWashAnalysis,
+  itermRelaxType?: number
 ): PIDRecommendation | undefined {
+  // Rule PW-IRELAX-ENABLE: propwash detected + iterm_relax disabled → enable
+  if (
+    itermRelaxType !== undefined &&
+    itermRelaxType === 0 &&
+    propWash &&
+    propWash.meanSeverity >= PROPWASH_SEVERITY_MINIMAL
+  ) {
+    return {
+      setting: 'iterm_relax',
+      currentValue: 0,
+      recommendedValue: 1,
+      reason:
+        `Prop wash detected (${propWash.meanSeverity.toFixed(1)}× baseline) but iterm_relax is disabled. ` +
+        'Enabling iterm_relax suppresses I-term windup during quick maneuvers, ' +
+        'which is essential for controlling prop wash oscillation during descents.',
+      impact: 'stability',
+      confidence: 'medium',
+      ruleId: 'PW-IRELAX-ENABLE',
+    };
+  }
+
   if (currentCutoff === undefined) return undefined;
 
+  // Rule PW-IRELAX-CUTOFF: propwash severe + cutoff too high → lower cutoff
+  if (
+    propWash &&
+    propWash.meanSeverity >= PROPWASH_SEVERITY_SEVERE &&
+    currentCutoff > PROPWASH_IRELAX_CUTOFF_MAX
+  ) {
+    const targetCutoff = Math.max(
+      PROPWASH_IRELAX_CUTOFF_MAX,
+      currentCutoff - PROPWASH_IRELAX_CUTOFF_REDUCTION
+    );
+    return {
+      setting: 'iterm_relax_cutoff',
+      currentValue: currentCutoff,
+      recommendedValue: targetCutoff,
+      reason:
+        `Severe prop wash detected (${propWash.meanSeverity.toFixed(1)}× baseline) and iterm_relax_cutoff is ${currentCutoff}. ` +
+        `Lowering to ${targetCutoff} increases I-term suppression during prop wash events, ` +
+        'reducing the oscillation that occurs during descents and power loops.',
+      impact: 'stability',
+      confidence: 'medium',
+      ruleId: 'PW-IRELAX-CUTOFF',
+    };
+  }
+
+  // Original style-based recommendation
   const range = ITERM_RELAX_CUTOFF_BY_STYLE[flightStyle];
   const deviation = Math.abs(currentCutoff - range.typical) / range.typical;
 
@@ -1298,7 +1474,8 @@ export function recommendThrustLinear(
 export function recommendTPA(
   tpaContext: TPAContext | undefined,
   droneSize: DroneSize | undefined,
-  throttleNoiseIncreaseDeltaDb?: number
+  throttleNoiseIncreaseDeltaDb?: number,
+  propWash?: PropWashAnalysis
 ): PIDRecommendation[] {
   const recs: PIDRecommendation[] = [];
   if (!tpaContext) return recs;
@@ -1306,9 +1483,69 @@ export function recommendTPA(
   const sizeCategory = droneSize ? TPA_SIZE_CATEGORY[droneSize] : 'standard';
   const sizeProfile = TPA_BY_SIZE[sizeCategory];
   const sizeLabel = sizeCategory === 'small' ? '1-4"' : sizeCategory === 'large' ? '6-7"' : '5"';
+  const pwSevere = propWash && propWash.meanSeverity >= PROPWASH_SEVERITY_SEVERE;
+
+  // ── Propwash-aware TPA rules (take precedence over size-based when severe) ──
+
+  // Rule PW-TPA-MODE: Propwash severe + PD mode → recommend D-only
+  // During propwash, we need full D authority. PD mode attenuates both P and D.
+  if (pwSevere && tpaContext.mode !== undefined && tpaContext.mode === TPA_MODE_PD) {
+    recs.push({
+      setting: 'tpa_mode',
+      currentValue: tpaContext.mode,
+      recommendedValue: TPA_MODE_D_ONLY,
+      reason:
+        `Severe prop wash detected (${propWash.meanSeverity.toFixed(1)}× baseline). ` +
+        'TPA mode is PD (attenuates both P and D at high throttle). ' +
+        'Switching to D-only mode preserves full P authority during climb-out after descents, ' +
+        'helping the quad recover from prop wash more effectively.',
+      impact: 'stability',
+      confidence: 'medium',
+      ruleId: 'PW-TPA-MODE',
+    });
+  }
+
+  // Rule PW-TPA-BREAKPOINT: Propwash severe + breakpoint too low → raise
+  if (
+    pwSevere &&
+    tpaContext.breakpoint !== undefined &&
+    tpaContext.breakpoint < PROPWASH_TPA_BREAKPOINT_MIN
+  ) {
+    recs.push({
+      setting: 'tpa_breakpoint',
+      currentValue: tpaContext.breakpoint,
+      recommendedValue: 1350,
+      reason:
+        `Severe prop wash detected (${propWash.meanSeverity.toFixed(1)}× baseline) and TPA breakpoint is ${tpaContext.breakpoint}. ` +
+        `A low breakpoint starts D attenuation too early, reducing damping authority during prop wash recovery. ` +
+        'Raising to 1350 preserves full D-term through more of the throttle range.',
+      impact: 'stability',
+      confidence: 'medium',
+      ruleId: 'PW-TPA-BREAKPOINT',
+    });
+  }
+
+  // Rule PW-TPA-RATE: Propwash severe + rate too high → cap at max
+  if (pwSevere && tpaContext.rate !== undefined && tpaContext.rate > PROPWASH_TPA_RATE_MAX) {
+    recs.push({
+      setting: 'tpa_rate',
+      currentValue: tpaContext.rate,
+      recommendedValue: PROPWASH_TPA_RATE_MAX,
+      reason:
+        `Severe prop wash detected (${propWash.meanSeverity.toFixed(1)}× baseline) and TPA rate is ${tpaContext.rate}. ` +
+        `High TPA rate reduces D authority at high throttle, weakening prop wash damping. ` +
+        `Lowering to ${PROPWASH_TPA_RATE_MAX} preserves enough D-term for effective prop wash control.`,
+      impact: 'stability',
+      confidence: 'medium',
+      ruleId: 'PW-TPA-RATE',
+    });
+  }
+
+  // ── Size-based TPA rules (skip if propwash already covered the same setting) ──
 
   // Rule P-TPA-RATE: TPA rate advisory based on drone size
-  if (tpaContext.rate !== undefined) {
+  // Skip if propwash already generated a rate recommendation
+  if (tpaContext.rate !== undefined && !recs.find((r) => r.setting === 'tpa_rate')) {
     const deviation = Math.abs(tpaContext.rate - sizeProfile.rate) / sizeProfile.rate;
     if (deviation > TPA_RATE_DEVIATION_THRESHOLD) {
       const direction = tpaContext.rate > sizeProfile.rate ? 'high' : 'low';
@@ -1329,7 +1566,8 @@ export function recommendTPA(
   }
 
   // Rule P-TPA-BP: TPA breakpoint advisory based on drone size
-  if (tpaContext.breakpoint !== undefined) {
+  // Skip if propwash already generated a breakpoint recommendation
+  if (tpaContext.breakpoint !== undefined && !recs.find((r) => r.setting === 'tpa_breakpoint')) {
     const bpDeviation =
       Math.abs(tpaContext.breakpoint - sizeProfile.breakpoint) / sizeProfile.breakpoint;
     if (bpDeviation > TPA_RATE_DEVIATION_THRESHOLD) {
@@ -1351,7 +1589,9 @@ export function recommendTPA(
 
   // Rule P-TPA-MODE: If throttle-dependent noise is severe AND mode is D-only,
   // suggest PD mode (SupaflyFPV pattern for 5" only — 6-7" stays D-only per KB Section 10)
+  // Skip if propwash already generated a mode recommendation
   if (
+    !recs.find((r) => r.setting === 'tpa_mode') &&
     throttleNoiseIncreaseDeltaDb !== undefined &&
     throttleNoiseIncreaseDeltaDb >= TPA_SEVERE_NOISE_INCREASE_DB &&
     tpaContext.mode !== undefined &&

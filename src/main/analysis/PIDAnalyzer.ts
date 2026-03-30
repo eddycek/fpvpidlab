@@ -38,6 +38,7 @@ import {
   extractDMinContext,
   extractTPAContext,
   extractItermRelaxCutoff,
+  extractItermRelaxType,
   recommendItermRelaxCutoff,
   extractDynIdleMinRpm,
   extractRpmFilterActive,
@@ -382,9 +383,15 @@ async function analyzePIDCore(params: CoreParams): Promise<PIDAnalysisResult> {
   const ffRecommendations = mergeFFRecommendations(rcLinkBaselineRecs, stepFFRecs);
   rawRecommendations.push(...ffRecommendations);
 
-  // I-term relax cutoff recommendation (flight-style-aware advisory)
+  // I-term relax cutoff recommendation (flight-style + propwash-aware advisory)
   const itermRelaxCutoff = rawHeaders ? extractItermRelaxCutoff(rawHeaders) : undefined;
-  const itermRelaxRec = recommendItermRelaxCutoff(itermRelaxCutoff, flightStyle);
+  const itermRelaxType = rawHeaders ? extractItermRelaxType(rawHeaders) : undefined;
+  const itermRelaxRec = recommendItermRelaxCutoff(
+    itermRelaxCutoff,
+    flightStyle,
+    propWash,
+    itermRelaxType
+  );
   if (itermRelaxRec) {
     rawRecommendations.push(itermRelaxRec);
   }
@@ -430,8 +437,8 @@ async function analyzePIDCore(params: CoreParams): Promise<PIDAnalysisResult> {
     rawRecommendations.push(thrustLinearRec);
   }
 
-  // TPA tuning advisory (size + noise-based)
-  const tpaRecs = recommendTPA(tpaContext, droneSize, throttleNoiseIncreaseDeltaDb);
+  // TPA tuning advisory (size + noise + propwash-based)
+  const tpaRecs = recommendTPA(tpaContext, droneSize, throttleNoiseIncreaseDeltaDb, propWash);
   rawRecommendations.push(...tpaRecs);
 
   // Quality-adjusted confidence — no blanket cap, gating handles it
