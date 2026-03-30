@@ -28,6 +28,7 @@
   font-weight: 600;
   padding: 2px 8px;
   border-radius: 10px;
+  white-space: nowrap;
 }
 
 .completion-summary-title .quality-score-excellent {

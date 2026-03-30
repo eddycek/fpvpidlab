@@ -107,6 +107,7 @@ export function BodePlot({ bode }: BodePlotProps) {
                 }}
               />
               <YAxis
+                tickFormatter={(v: number) => (Number.isFinite(v) ? v.toFixed(0) : '')}
                 tick={{ fontSize: 11, fill: '#aaa' }}
                 label={{
                   value: 'dB',
@@ -166,6 +167,7 @@ export function BodePlot({ bode }: BodePlotProps) {
                 }}
               />
               <YAxis
+                tickFormatter={(v: number) => (Number.isFinite(v) ? v.toFixed(0) : '')}
                 tick={{ fontSize: 11, fill: '#aaa' }}
                 label={{
                   value: 'deg',

@@ -138,6 +138,7 @@ export function SpectrumChart({ noise }: SpectrumChartProps) {
             <YAxis
               domain={yDomain}
               allowDataOverflow={true}
+              tickFormatter={(v: number) => (Number.isFinite(v) ? v.toFixed(0) : '')}
               tick={{ fontSize: 11, fill: '#aaa' }}
               label={{
                 value: 'Noise (dB)',

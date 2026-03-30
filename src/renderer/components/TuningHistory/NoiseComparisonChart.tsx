@@ -177,6 +177,7 @@ export function NoiseComparisonChart({ before, after }: NoiseComparisonChartProp
             <YAxis
               domain={yDomain}
               allowDataOverflow
+              tickFormatter={(v: number) => (Number.isFinite(v) ? v.toFixed(0) : '')}
               tick={{ fontSize: 11, fill: '#aaa' }}
               label={{
                 value: 'Noise (dB)',
