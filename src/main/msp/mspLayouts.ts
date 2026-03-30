@@ -148,7 +148,8 @@ export const PID_ADVANCED = {
   TPA_MODE: u8(57, 'tpa_mode'), // API >= 1.45
   TPA_RATE: u8(58, 'tpa_rate'),
   TPA_BREAKPOINT: u16(59, 'tpa_breakpoint'),
-  MIN_RESPONSE_LENGTH: 45,
+  /** Minimum length needed to read feedforward fields (up to offset 54) */
+  MIN_RESPONSE_LENGTH: 55,
 } as const;
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

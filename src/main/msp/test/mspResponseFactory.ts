@@ -194,9 +194,9 @@ export function buildPIDData(config: PIDConfiguration): Buffer {
   return buf;
 }
 
-/** MSP_FILTER_CONFIG (92) — 47+ bytes */
+/** MSP_FILTER_CONFIG (92) — 49 bytes (full BF 4.3+ response) */
 export function buildFilterConfigData(settings: Partial<CurrentFilterSettings> = {}): Buffer {
-  const buf = Buffer.alloc(48, 0);
+  const buf = Buffer.alloc(FILTER_CONFIG.FULL_RESPONSE_LENGTH, 0);
   if (settings.dterm_lpf1_static_hz !== undefined)
     writeField(buf, FILTER_CONFIG.DTERM_LPF1_HZ, settings.dterm_lpf1_static_hz);
   if (settings.gyro_lpf1_static_hz !== undefined)
@@ -222,12 +222,12 @@ export function buildFilterConfigData(settings: Partial<CurrentFilterSettings> =
 
 /** MSP_DATAFLASH_SUMMARY (70) — 13 bytes */
 export function buildDataflashSummaryData(
-  info: Partial<BlackboxInfo> & { ready?: number; flags?: number } = {}
+  info: Partial<BlackboxInfo> & { ready?: number; sectors?: number } = {}
 ): Buffer {
   const buf = Buffer.alloc(13, 0);
   const ready = info.ready ?? (info.supported !== false ? 0x03 : 0x01);
   writeField(buf, DATAFLASH_SUMMARY.FLAGS, ready);
-  writeField(buf, DATAFLASH_SUMMARY.SECTORS, info.flags ?? 0);
+  writeField(buf, DATAFLASH_SUMMARY.SECTORS, info.sectors ?? 0);
   writeField(buf, DATAFLASH_SUMMARY.TOTAL_SIZE, info.totalSize ?? 0);
   writeField(buf, DATAFLASH_SUMMARY.USED_SIZE, info.usedSize ?? 0);
   return buf;
