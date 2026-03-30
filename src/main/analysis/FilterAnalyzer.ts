@@ -173,11 +173,7 @@ export async function analyze(
 
   // Step 8: Dynamic lowpass analysis
   const dynamicLowpass = analyzeDynamicLowpass(throttleSpectrogram);
-  const dynLowpassRecs = recommendDynamicLowpass(
-    dynamicLowpass,
-    currentSettings.gyro_lpf1_static_hz,
-    currentSettings.dterm_lpf1_static_hz
-  );
+  const dynLowpassRecs = recommendDynamicLowpass(dynamicLowpass, currentSettings);
   if (dynLowpassRecs.length > 0) {
     recommendations.push(...dynLowpassRecs);
   }
@@ -264,11 +260,7 @@ async function analyzeEntireFlight(
 
   // Dynamic lowpass analysis
   const dynamicLowpass = analyzeDynamicLowpass(throttleSpectrogram);
-  const dynLowpassRecs = recommendDynamicLowpass(
-    dynamicLowpass,
-    currentSettings.gyro_lpf1_static_hz,
-    currentSettings.dterm_lpf1_static_hz
-  );
+  const dynLowpassRecs = recommendDynamicLowpass(dynamicLowpass, currentSettings);
   if (dynLowpassRecs.length > 0) {
     recommendations.push(...dynLowpassRecs);
   }

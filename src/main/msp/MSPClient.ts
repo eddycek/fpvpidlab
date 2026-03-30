@@ -802,6 +802,16 @@ export class MSPClient extends EventEmitter {
       dyn_notch_q: response.data.readUInt16LE(39),
       rpm_filter_harmonics: response.data.readUInt8(43),
       rpm_filter_min_hz: response.data.readUInt8(44),
+      // Filter types (0=PT1, 1=BIQUAD, 2=PT2, 3=PT3)
+      dterm_lpf1_type: response.data.readUInt8(17),
+      gyro_lpf1_type: response.data.readUInt8(24),
+      gyro_lpf2_type: response.data.readUInt8(25),
+      dterm_lpf2_type: response.data.readUInt8(28),
+      // Dynamic lowpass min/max (0 = dynamic mode off, uses static cutoff)
+      gyro_lpf1_dyn_min_hz: response.data.readUInt16LE(29),
+      gyro_lpf1_dyn_max_hz: response.data.readUInt16LE(31),
+      dterm_lpf1_dyn_min_hz: response.data.readUInt16LE(33),
+      dterm_lpf1_dyn_max_hz: response.data.readUInt16LE(35),
     };
 
     // dyn_notch_count is at byte 47 in BF 4.3+ extended response

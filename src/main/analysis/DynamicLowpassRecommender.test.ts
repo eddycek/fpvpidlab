@@ -29,6 +29,51 @@ function makeSpectrogram(bands: ThrottleBand[]): ThrottleSpectrogramResult {
   };
 }
 
+const recommendedAnalysis = {
+  recommended: true,
+  noiseIncreaseDeltaDb: 10,
+  throttleNoiseCorrelation: 0.9,
+  bandsAnalyzed: 5,
+  summary: 'Dynamic lowpass recommended.',
+};
+
+const notRecommendedAnalysis = {
+  recommended: false,
+  noiseIncreaseDeltaDb: 3,
+  throttleNoiseCorrelation: 0.3,
+  bandsAnalyzed: 5,
+  summary: 'Static lowpass is appropriate.',
+};
+
+/** Helper: create settings with static-only config (dynamic off) */
+function staticSettings(gyro: number, dterm: number = 0) {
+  return {
+    gyro_lpf1_static_hz: gyro,
+    gyro_lpf1_dyn_min_hz: 0,
+    gyro_lpf1_dyn_max_hz: 0,
+    dterm_lpf1_static_hz: dterm,
+    dterm_lpf1_dyn_min_hz: 0,
+    dterm_lpf1_dyn_max_hz: 0,
+  };
+}
+
+/** Helper: create settings with dynamic already active */
+function dynamicSettings(
+  gyroMin: number,
+  gyroMax: number,
+  dtermMin: number = 0,
+  dtermMax: number = 0
+) {
+  return {
+    gyro_lpf1_static_hz: Math.min(gyroMin, 250),
+    gyro_lpf1_dyn_min_hz: gyroMin,
+    gyro_lpf1_dyn_max_hz: gyroMax,
+    dterm_lpf1_static_hz: dtermMin > 0 ? Math.min(dtermMin, 150) : 150,
+    dterm_lpf1_dyn_min_hz: dtermMin,
+    dterm_lpf1_dyn_max_hz: dtermMax,
+  };
+}
+
 describe('analyzeDynamicLowpass', () => {
   it('should return undefined for undefined spectrogram', () => {
     expect(analyzeDynamicLowpass(undefined)).toBeUndefined();
@@ -90,7 +135,6 @@ describe('analyzeDynamicLowpass', () => {
   });
 
   it('should use average of roll and pitch, excluding yaw', () => {
-    // Yaw is very noisy but roll/pitch are flat
     const spec = makeSpectrogram([
       makeBand(0.0, 0.2, [-40, -40, -10]),
       makeBand(0.2, 0.4, [-40, -40, -15]),
@@ -133,79 +177,43 @@ describe('analyzeDynamicLowpass', () => {
 
 describe('recommendDynamicLowpass', () => {
   it('should return empty array when analysis is undefined', () => {
-    expect(recommendDynamicLowpass(undefined, 250)).toEqual([]);
+    expect(recommendDynamicLowpass(undefined, staticSettings(250))).toEqual([]);
   });
 
-  it('should return empty array when not recommended', () => {
-    const analysis = {
-      recommended: false,
-      noiseIncreaseDeltaDb: 3,
-      throttleNoiseCorrelation: 0.3,
-      bandsAnalyzed: 5,
-      summary: 'Static lowpass is appropriate.',
-    };
-    expect(recommendDynamicLowpass(analysis, 250)).toEqual([]);
+  it('should return empty array when not recommended and dynamic is off', () => {
+    expect(recommendDynamicLowpass(notRecommendedAnalysis, staticSettings(250))).toEqual([]);
   });
 
   it('should return empty array when gyro LPF1 is disabled', () => {
-    const analysis = {
-      recommended: true,
-      noiseIncreaseDeltaDb: 10,
-      throttleNoiseCorrelation: 0.9,
-      bandsAnalyzed: 5,
-      summary: 'Dynamic lowpass recommended.',
-    };
-    expect(recommendDynamicLowpass(analysis, 0)).toEqual([]);
+    expect(recommendDynamicLowpass(recommendedAnalysis, staticSettings(0))).toEqual([]);
   });
 
-  it('should generate min and max recommendations when appropriate', () => {
-    const analysis = {
-      recommended: true,
-      noiseIncreaseDeltaDb: 10,
-      throttleNoiseCorrelation: 0.9,
-      bandsAnalyzed: 5,
-      summary: 'Dynamic lowpass recommended.',
-    };
-    const recs = recommendDynamicLowpass(analysis, 250);
+  it('should generate min and max recommendations when dynamic is off', () => {
+    const recs = recommendDynamicLowpass(recommendedAnalysis, staticSettings(250));
 
     expect(recs).toHaveLength(2);
     expect(recs[0].setting).toBe('gyro_lpf1_dyn_min_hz');
+    expect(recs[0].currentValue).toBe(0);
     expect(recs[0].recommendedValue).toBe(150); // 250 * 0.6
     expect(recs[1].setting).toBe('gyro_lpf1_dyn_max_hz');
     expect(recs[1].recommendedValue).toBe(350); // 250 * 1.4
   });
 
-  it('should scale recommendations based on current LPF1 value', () => {
-    const analysis = {
-      recommended: true,
-      noiseIncreaseDeltaDb: 12,
-      throttleNoiseCorrelation: 0.95,
-      bandsAnalyzed: 5,
-      summary: 'Dynamic lowpass recommended.',
-    };
-    const recs = recommendDynamicLowpass(analysis, 200);
+  it('should scale recommendations based on current static LPF1 value', () => {
+    const recs = recommendDynamicLowpass(recommendedAnalysis, staticSettings(200));
 
     expect(recs[0].recommendedValue).toBe(120); // 200 * 0.6
     expect(recs[1].recommendedValue).toBe(280); // 200 * 1.4
   });
 
   it('should include D-term dynamic lowpass when dterm LPF1 is provided', () => {
-    const analysis = {
-      recommended: true,
-      noiseIncreaseDeltaDb: 10,
-      throttleNoiseCorrelation: 0.9,
-      bandsAnalyzed: 5,
-      summary: 'Dynamic lowpass recommended.',
-    };
-    const recs = recommendDynamicLowpass(analysis, 250, 150);
+    const recs = recommendDynamicLowpass(recommendedAnalysis, staticSettings(250, 150));
 
     expect(recs).toHaveLength(4);
-    // Gyro recs
     expect(recs[0].setting).toBe('gyro_lpf1_dyn_min_hz');
     expect(recs[0].recommendedValue).toBe(150); // 250 * 0.6
     expect(recs[1].setting).toBe('gyro_lpf1_dyn_max_hz');
     expect(recs[1].recommendedValue).toBe(350); // 250 * 1.4
-    // D-term recs
     expect(recs[2].setting).toBe('dterm_lpf1_dyn_min_hz');
     expect(recs[2].recommendedValue).toBe(90); // 150 * 0.6
     expect(recs[3].setting).toBe('dterm_lpf1_dyn_max_hz');
@@ -213,60 +221,68 @@ describe('recommendDynamicLowpass', () => {
   });
 
   it('should skip D-term dynamic lowpass when dterm LPF1 is 0', () => {
-    const analysis = {
-      recommended: true,
-      noiseIncreaseDeltaDb: 10,
-      throttleNoiseCorrelation: 0.9,
-      bandsAnalyzed: 5,
-      summary: 'Dynamic lowpass recommended.',
-    };
-    const recs = recommendDynamicLowpass(analysis, 250, 0);
+    const recs = recommendDynamicLowpass(recommendedAnalysis, staticSettings(250, 0));
 
     expect(recs).toHaveLength(2);
     expect(recs.every((r) => r.setting.startsWith('gyro_'))).toBe(true);
   });
 
-  it('should only generate D-term recs when gyro LPF1 is disabled', () => {
-    const analysis = {
-      recommended: true,
-      noiseIncreaseDeltaDb: 10,
-      throttleNoiseCorrelation: 0.9,
-      bandsAnalyzed: 5,
-      summary: 'Dynamic lowpass recommended.',
-    };
-    const recs = recommendDynamicLowpass(analysis, 0, 150);
+  it('should skip when both gyro and dterm dynamic are already active', () => {
+    const recs = recommendDynamicLowpass(recommendedAnalysis, dynamicSettings(200, 500, 100, 250));
 
+    // Both already active → FilterRecommender handles tuning
+    expect(recs).toHaveLength(0);
+  });
+
+  it('should recommend enabling dterm dynamic when only gyro is active', () => {
+    const settings = {
+      gyro_lpf1_static_hz: 200,
+      gyro_lpf1_dyn_min_hz: 200,
+      gyro_lpf1_dyn_max_hz: 500,
+      dterm_lpf1_static_hz: 150,
+      dterm_lpf1_dyn_min_hz: 0,
+      dterm_lpf1_dyn_max_hz: 0,
+    };
+    const recs = recommendDynamicLowpass(recommendedAnalysis, settings);
+
+    // Only dterm recs (gyro already dynamic)
     expect(recs).toHaveLength(2);
     expect(recs[0].setting).toBe('dterm_lpf1_dyn_min_hz');
     expect(recs[1].setting).toBe('dterm_lpf1_dyn_max_hz');
+  });
+
+  it('should recommend disabling dynamic when no throttle-dependent noise', () => {
+    const recs = recommendDynamicLowpass(
+      notRecommendedAnalysis,
+      dynamicSettings(200, 500, 100, 250)
+    );
+
+    // Both active but no throttle noise → recommend disabling
+    expect(recs).toHaveLength(2);
+    expect(recs[0].setting).toBe('gyro_lpf1_dyn_min_hz');
+    expect(recs[0].recommendedValue).toBe(0);
+    expect(recs[1].setting).toBe('dterm_lpf1_dyn_min_hz');
+    expect(recs[1].recommendedValue).toBe(0);
   });
 });
 
 describe('ruleId assignment', () => {
   it('should assign F-DLPF-GYRO to gyro dynamic lowpass recommendations', () => {
-    const analysis = {
-      recommended: true,
-      noiseIncreaseDeltaDb: 10,
-      throttleNoiseCorrelation: 0.9,
-      bandsAnalyzed: 5,
-      summary: 'Dynamic lowpass recommended.',
-    };
-    const recs = recommendDynamicLowpass(analysis, 200);
+    const recs = recommendDynamicLowpass(recommendedAnalysis, staticSettings(200));
     expect(recs).toHaveLength(2);
     expect(recs[0].ruleId).toBe('F-DLPF-GYRO');
     expect(recs[1].ruleId).toBe('F-DLPF-GYRO');
   });
 
   it('should assign F-DLPF-DTERM to D-term dynamic lowpass recommendations', () => {
-    const analysis = {
-      recommended: true,
-      noiseIncreaseDeltaDb: 10,
-      throttleNoiseCorrelation: 0.9,
-      bandsAnalyzed: 5,
-      summary: 'Dynamic lowpass recommended.',
-    };
-    const recs = recommendDynamicLowpass(analysis, 200, 150);
+    const recs = recommendDynamicLowpass(recommendedAnalysis, staticSettings(200, 150));
     const dtermRecs = recs.filter((r) => r.ruleId === 'F-DLPF-DTERM');
     expect(dtermRecs).toHaveLength(2);
+  });
+
+  it('should assign F-DLPF-GYRO-OFF when recommending disable', () => {
+    const recs = recommendDynamicLowpass(notRecommendedAnalysis, dynamicSettings(200, 500));
+    expect(recs.length).toBeGreaterThan(0);
+    expect(recs[0].ruleId).toBe('F-DLPF-GYRO-OFF');
   });
 });

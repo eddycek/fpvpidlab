@@ -237,10 +237,26 @@ export interface CurrentFilterSettings {
   dyn_notch_q?: number;
   /** RPM filter Q (notch bandwidth). Undefined if not read. */
   rpm_filter_q?: number;
-  /** D-term LPF1 dynamic expo (0-10, controls how aggressively dynamic LPF tracks throttle) */
-  dterm_lpf1_dyn_expo?: number;
+
+  /** Gyro LPF1 dynamic minimum Hz (>0 means dynamic gyro LPF is active) */
+  gyro_lpf1_dyn_min_hz?: number;
+  /** Gyro LPF1 dynamic maximum Hz */
+  gyro_lpf1_dyn_max_hz?: number;
   /** D-term LPF1 dynamic minimum Hz (>0 means dynamic D-term LPF is active) */
   dterm_lpf1_dyn_min_hz?: number;
+  /** D-term LPF1 dynamic maximum Hz */
+  dterm_lpf1_dyn_max_hz?: number;
+  /** D-term LPF1 dynamic expo (0-10, controls how aggressively dynamic LPF tracks throttle) */
+  dterm_lpf1_dyn_expo?: number;
+
+  /** Gyro LPF1 filter type: 0=PT1, 1=BIQUAD, 2=PT2, 3=PT3 */
+  gyro_lpf1_type?: number;
+  /** D-term LPF1 filter type: 0=PT1, 1=BIQUAD, 2=PT2, 3=PT3 */
+  dterm_lpf1_type?: number;
+  /** Gyro LPF2 filter type */
+  gyro_lpf2_type?: number;
+  /** D-term LPF2 filter type */
+  dterm_lpf2_type?: number;
 }
 
 /** Default filter settings (Betaflight 4.4+ defaults) */
@@ -251,6 +267,10 @@ export const DEFAULT_FILTER_SETTINGS: CurrentFilterSettings = {
   dterm_lpf2_static_hz: 150,
   dyn_notch_min_hz: 100,
   dyn_notch_max_hz: 600,
+  gyro_lpf1_dyn_min_hz: 0,
+  gyro_lpf1_dyn_max_hz: 0,
+  dterm_lpf1_dyn_min_hz: 0,
+  dterm_lpf1_dyn_max_hz: 0,
 };
 
 /** Feedforward state detected from BBL headers */

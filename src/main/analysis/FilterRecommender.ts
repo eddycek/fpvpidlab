@@ -42,6 +42,16 @@ export function isRpmFilterActive(settings: CurrentFilterSettings): boolean {
   return (settings.rpm_filter_harmonics ?? 0) > 0;
 }
 
+/** Detect whether gyro LPF1 dynamic lowpass is active (dyn_min > 0) */
+export function isGyroDynamicActive(settings: CurrentFilterSettings): boolean {
+  return (settings.gyro_lpf1_dyn_min_hz ?? 0) > 0;
+}
+
+/** Detect whether D-term LPF1 dynamic lowpass is active (dyn_min > 0) */
+export function isDtermDynamicActive(settings: CurrentFilterSettings): boolean {
+  return (settings.dterm_lpf1_dyn_min_hz ?? 0) > 0;
+}
+
 /**
  * Generate filter recommendations based on noise analysis.
  *
@@ -138,112 +148,219 @@ function recommendNoiseFloorAdjustments(
     ? ' With RPM filter active, motor noise is already handled, allowing higher filter cutoffs for better response.'
     : '';
 
+  // Dynamic lowpass detection: when active, tune dyn_min/max instead of static
+  const gyroDynActive = isGyroDynamicActive(current);
+  const dtermDynActive = isDtermDynamicActive(current);
+
+  // For dynamic mode: the effective "current cutoff" is dyn_min (tightest point at low throttle)
+  const effectiveGyroCutoff = gyroDynActive
+    ? (current.gyro_lpf1_dyn_min_hz ?? current.gyro_lpf1_static_hz)
+    : current.gyro_lpf1_static_hz;
+  const effectiveDtermCutoff = dtermDynActive
+    ? (current.dterm_lpf1_dyn_min_hz ?? current.dterm_lpf1_static_hz)
+    : current.dterm_lpf1_static_hz;
+
+  // Helper: push gyro LPF1 recommendation (static or dynamic mode)
+  const pushGyroRec = (
+    target: number,
+    reason: string,
+    impact: FilterRecommendation['impact'],
+    confidence: FilterRecommendation['confidence'],
+    ruleId: string
+  ) => {
+    if (gyroLpfDisabled) return;
+    if (gyroDynActive) {
+      // Dynamic mode: tune dyn_min_hz, proportionally adjust dyn_max_hz
+      const currentMin = current.gyro_lpf1_dyn_min_hz!;
+      const currentMax = current.gyro_lpf1_dyn_max_hz ?? currentMin * 2;
+      const ratio = currentMax / Math.max(currentMin, 1);
+      const newMax = Math.round(clamp(target * ratio, target, gyroMaxHz));
+      if (Math.abs(target - currentMin) > NOISE_TARGET_DEADZONE_HZ) {
+        out.push({
+          setting: 'gyro_lpf1_dyn_min_hz',
+          currentValue: currentMin,
+          recommendedValue: target,
+          reason: reason + ' (Dynamic lowpass active — adjusting the minimum cutoff.)',
+          impact,
+          confidence,
+          ruleId,
+        });
+        out.push({
+          setting: 'gyro_lpf1_dyn_max_hz',
+          currentValue: currentMax,
+          recommendedValue: newMax,
+          reason: 'Proportionally adjusted to maintain the dynamic range ratio.',
+          impact: 'latency',
+          confidence,
+          ruleId,
+        });
+        // Ensure static_hz ≤ dyn_min (BF floor constraint)
+        if (current.gyro_lpf1_static_hz > target) {
+          out.push({
+            setting: 'gyro_lpf1_static_hz',
+            currentValue: current.gyro_lpf1_static_hz,
+            recommendedValue: target,
+            reason: 'Static cutoff must be ≤ dynamic minimum (Betaflight constraint).',
+            impact: 'both',
+            confidence,
+            ruleId,
+          });
+        }
+      }
+    } else {
+      // Static mode: tune static_hz directly
+      if (Math.abs(target - current.gyro_lpf1_static_hz) > NOISE_TARGET_DEADZONE_HZ) {
+        out.push({
+          setting: 'gyro_lpf1_static_hz',
+          currentValue: current.gyro_lpf1_static_hz,
+          recommendedValue: target,
+          reason,
+          impact,
+          confidence,
+          ruleId,
+        });
+      }
+    }
+  };
+
+  // Helper: push D-term LPF1 recommendation (static or dynamic mode)
+  const pushDtermRec = (
+    target: number,
+    reason: string,
+    impact: FilterRecommendation['impact'],
+    confidence: FilterRecommendation['confidence'],
+    ruleId: string
+  ) => {
+    if (dtermDynActive) {
+      const currentMin = current.dterm_lpf1_dyn_min_hz!;
+      const currentMax = current.dterm_lpf1_dyn_max_hz ?? currentMin * 2;
+      const ratio = currentMax / Math.max(currentMin, 1);
+      const newMax = Math.round(clamp(target * ratio, target, dtermMaxHz));
+      if (Math.abs(target - currentMin) > NOISE_TARGET_DEADZONE_HZ) {
+        out.push({
+          setting: 'dterm_lpf1_dyn_min_hz',
+          currentValue: currentMin,
+          recommendedValue: target,
+          reason: reason + ' (Dynamic lowpass active — adjusting the minimum cutoff.)',
+          impact,
+          confidence,
+          ruleId,
+        });
+        out.push({
+          setting: 'dterm_lpf1_dyn_max_hz',
+          currentValue: currentMax,
+          recommendedValue: newMax,
+          reason: 'Proportionally adjusted to maintain the dynamic range ratio.',
+          impact: 'latency',
+          confidence,
+          ruleId,
+        });
+        if (current.dterm_lpf1_static_hz > target) {
+          out.push({
+            setting: 'dterm_lpf1_static_hz',
+            currentValue: current.dterm_lpf1_static_hz,
+            recommendedValue: target,
+            reason: 'Static cutoff must be ≤ dynamic minimum (Betaflight constraint).',
+            impact: 'both',
+            confidence,
+            ruleId,
+          });
+        }
+      }
+    } else {
+      if (Math.abs(target - current.dterm_lpf1_static_hz) > NOISE_TARGET_DEADZONE_HZ) {
+        out.push({
+          setting: 'dterm_lpf1_static_hz',
+          currentValue: current.dterm_lpf1_static_hz,
+          recommendedValue: target,
+          reason,
+          impact,
+          confidence,
+          ruleId,
+        });
+      }
+    }
+  };
+
+  // Use deadzone against effective cutoff (dyn_min when dynamic, static otherwise)
+  const gyroDeadzone = overallLevel === 'medium' ? 20 : NOISE_TARGET_DEADZONE_HZ;
+  const dtermDeadzone = overallLevel === 'medium' ? 20 : NOISE_TARGET_DEADZONE_HZ;
+
+  const gyroOffTarget = Math.abs(targetGyroLpf1 - effectiveGyroCutoff) > gyroDeadzone;
+  const dtermOffTarget = Math.abs(targetDtermLpf1 - effectiveDtermCutoff) > dtermDeadzone;
+
   if (overallLevel === 'high') {
-    // High noise → recommend noise-based targets (typically lower cutoffs)
-    if (
-      !gyroLpfDisabled &&
-      Math.abs(targetGyroLpf1 - current.gyro_lpf1_static_hz) > NOISE_TARGET_DEADZONE_HZ
-    ) {
-      out.push({
-        setting: 'gyro_lpf1_static_hz',
-        currentValue: current.gyro_lpf1_static_hz,
-        recommendedValue: targetGyroLpf1,
-        reason:
-          'Your gyro data has a lot of noise. Adjusting the gyro lowpass filter will clean up the signal, ' +
+    if (gyroOffTarget) {
+      pushGyroRec(
+        targetGyroLpf1,
+        'Your gyro data has a lot of noise. Adjusting the gyro lowpass filter will clean up the signal, ' +
           'which helps your flight controller respond to real movement instead of vibrations.' +
           rpmNote +
           propwashNote,
-        impact: 'both',
-        confidence: 'high',
-        ruleId: 'F-NF-H-GYRO',
-      });
+        'both',
+        'high',
+        'F-NF-H-GYRO'
+      );
     }
-
-    if (Math.abs(targetDtermLpf1 - current.dterm_lpf1_static_hz) > NOISE_TARGET_DEADZONE_HZ) {
-      out.push({
-        setting: 'dterm_lpf1_static_hz',
-        currentValue: current.dterm_lpf1_static_hz,
-        recommendedValue: targetDtermLpf1,
-        reason:
-          'High noise is reaching the D-term (derivative) calculation. Adjusting this filter reduces motor ' +
+    if (dtermOffTarget) {
+      pushDtermRec(
+        targetDtermLpf1,
+        'High noise is reaching the D-term (derivative) calculation. Adjusting this filter reduces motor ' +
           'heating and oscillation caused by noisy D-term output.' +
           rpmNote,
-        impact: 'both',
-        confidence: 'high',
-        ruleId: 'F-NF-H-DTERM',
-      });
+        'both',
+        'high',
+        'F-NF-H-DTERM'
+      );
     }
   } else if (overallLevel === 'low') {
-    // Low noise → recommend noise-based targets (typically higher cutoffs = less latency)
-    if (
-      !gyroLpfDisabled &&
-      Math.abs(targetGyroLpf1 - current.gyro_lpf1_static_hz) > NOISE_TARGET_DEADZONE_HZ
-    ) {
-      out.push({
-        setting: 'gyro_lpf1_static_hz',
-        currentValue: current.gyro_lpf1_static_hz,
-        recommendedValue: targetGyroLpf1,
-        reason:
-          'Your quad is very clean with minimal vibrations. Raising the gyro filter cutoff will give you ' +
+    if (gyroOffTarget) {
+      pushGyroRec(
+        targetGyroLpf1,
+        'Your quad is very clean with minimal vibrations. Raising the gyro filter cutoff will give you ' +
           'faster response and sharper control with almost no downside.' +
           rpmNote +
           propwashNote,
-        impact: 'latency',
-        confidence: 'medium',
-        ruleId: 'F-NF-L-GYRO',
-      });
+        'latency',
+        'medium',
+        'F-NF-L-GYRO'
+      );
     }
-
-    if (Math.abs(targetDtermLpf1 - current.dterm_lpf1_static_hz) > NOISE_TARGET_DEADZONE_HZ) {
-      out.push({
-        setting: 'dterm_lpf1_static_hz',
-        currentValue: current.dterm_lpf1_static_hz,
-        recommendedValue: targetDtermLpf1,
-        reason:
-          'Low noise means the D-term filter cutoff can be raised for sharper stick response. ' +
+    if (dtermOffTarget) {
+      pushDtermRec(
+        targetDtermLpf1,
+        'Low noise means the D-term filter cutoff can be raised for sharper stick response. ' +
           'This makes your quad feel more locked-in during fast moves.' +
           rpmNote,
-        impact: 'latency',
-        confidence: 'medium',
-        ruleId: 'F-NF-L-DTERM',
-      });
+        'latency',
+        'medium',
+        'F-NF-L-DTERM'
+      );
     }
   } else {
-    // Medium noise → only recommend if current settings are significantly off-target (>20 Hz)
-    const mediumDeadzone = 20;
-
-    if (
-      !gyroLpfDisabled &&
-      Math.abs(targetGyroLpf1 - current.gyro_lpf1_static_hz) > mediumDeadzone
-    ) {
-      out.push({
-        setting: 'gyro_lpf1_static_hz',
-        currentValue: current.gyro_lpf1_static_hz,
-        recommendedValue: targetGyroLpf1,
-        reason:
-          'Noise levels are moderate but your gyro filter cutoff is significantly off from the optimal range. ' +
+    // Medium noise
+    if (gyroOffTarget) {
+      pushGyroRec(
+        targetGyroLpf1,
+        'Noise levels are moderate but your gyro filter cutoff is significantly off from the optimal range. ' +
           'Adjusting it will better balance noise rejection and response.' +
           rpmNote +
           propwashNote,
-        impact: 'both',
-        confidence: 'low',
-        ruleId: 'F-NF-M-GYRO',
-      });
+        'both',
+        'low',
+        'F-NF-M-GYRO'
+      );
     }
-
-    if (Math.abs(targetDtermLpf1 - current.dterm_lpf1_static_hz) > mediumDeadzone) {
-      out.push({
-        setting: 'dterm_lpf1_static_hz',
-        currentValue: current.dterm_lpf1_static_hz,
-        recommendedValue: targetDtermLpf1,
-        reason:
-          'Noise levels are moderate but your D-term filter cutoff is significantly off from the optimal range. ' +
+    if (dtermOffTarget) {
+      pushDtermRec(
+        targetDtermLpf1,
+        'Noise levels are moderate but your D-term filter cutoff is significantly off from the optimal range. ' +
           'Adjusting it will reduce motor heating without sacrificing too much response.' +
           rpmNote,
-        impact: 'both',
-        confidence: 'low',
-        ruleId: 'F-NF-M-DTERM',
-      });
+        'both',
+        'low',
+        'F-NF-M-DTERM'
+      );
     }
   }
 }
@@ -298,15 +415,19 @@ function recommendResonanceFixes(
   // Find the lowest significant peak frequency that the notch can't handle
   const lowestPeakFreq = Math.min(...peaksNeedingLpf.map((p) => p.frequency));
 
-  // If the gyro LPF is disabled (0) or the peak is below the cutoff, the filter isn't catching it
+  // Use effective cutoff (dyn_min when dynamic active, static otherwise)
+  const gyroDynActive = isGyroDynamicActive(current);
+  const effectiveGyroCutoff = gyroDynActive
+    ? (current.gyro_lpf1_dyn_min_hz ?? current.gyro_lpf1_static_hz)
+    : current.gyro_lpf1_static_hz;
   const gyroLpfDisabled = current.gyro_lpf1_static_hz === 0;
-  if (gyroLpfDisabled || lowestPeakFreq < current.gyro_lpf1_static_hz) {
+  if (gyroLpfDisabled || lowestPeakFreq < effectiveGyroCutoff) {
     const targetCutoff = Math.round(
       clamp(lowestPeakFreq - RESONANCE_CUTOFF_MARGIN_HZ, GYRO_LPF1_MIN_HZ, gyroMaxHz)
     );
 
     // When disabled, always recommend enabling; otherwise check it's lower than current
-    if (gyroLpfDisabled || targetCutoff < current.gyro_lpf1_static_hz) {
+    if (gyroLpfDisabled || targetCutoff < effectiveGyroCutoff) {
       const peakType =
         peaksNeedingLpf.find((p) => p.frequency === lowestPeakFreq)?.type || 'unknown';
       const typeLabel =
@@ -318,15 +439,17 @@ function recommendResonanceFixes(
               ? 'electrical noise'
               : 'noise spike';
 
+      // Dynamic mode: target dyn_min_hz; static mode: target static_hz
+      const settingName = gyroDynActive ? 'gyro_lpf1_dyn_min_hz' : 'gyro_lpf1_static_hz';
       const reasonText = gyroLpfDisabled
         ? `A strong ${typeLabel} was detected at ${Math.round(lowestPeakFreq)} Hz, but your gyro lowpass filter is disabled. ` +
           `Enabling it at ${targetCutoff} Hz will block this vibration.`
         : `A strong ${typeLabel} was detected at ${Math.round(lowestPeakFreq)} Hz, which is below your current ` +
-          `gyro filter cutoff of ${current.gyro_lpf1_static_hz} Hz. Lowering the filter will block this vibration.`;
+          `gyro filter cutoff of ${effectiveGyroCutoff} Hz. Lowering the filter will block this vibration.`;
 
       out.push({
-        setting: 'gyro_lpf1_static_hz',
-        currentValue: current.gyro_lpf1_static_hz,
+        setting: settingName,
+        currentValue: effectiveGyroCutoff,
         recommendedValue: targetCutoff,
         reason: reasonText,
         impact: 'both',
@@ -337,15 +460,21 @@ function recommendResonanceFixes(
   }
 
   // Check D-term LPF similarly
-  if (lowestPeakFreq < current.dterm_lpf1_static_hz) {
+  const dtermDynActive = isDtermDynamicActive(current);
+  const effectiveDtermCutoff = dtermDynActive
+    ? (current.dterm_lpf1_dyn_min_hz ?? current.dterm_lpf1_static_hz)
+    : current.dterm_lpf1_static_hz;
+
+  if (lowestPeakFreq < effectiveDtermCutoff) {
     const targetCutoff = Math.round(
       clamp(lowestPeakFreq - RESONANCE_CUTOFF_MARGIN_HZ, DTERM_LPF1_MIN_HZ, dtermMaxHz)
     );
 
-    if (targetCutoff < current.dterm_lpf1_static_hz) {
+    if (targetCutoff < effectiveDtermCutoff) {
+      const settingName = dtermDynActive ? 'dterm_lpf1_dyn_min_hz' : 'dterm_lpf1_static_hz';
       out.push({
-        setting: 'dterm_lpf1_static_hz',
-        currentValue: current.dterm_lpf1_static_hz,
+        setting: settingName,
+        currentValue: effectiveDtermCutoff,
         recommendedValue: targetCutoff,
         reason:
           `A strong resonance peak at ${Math.round(lowestPeakFreq)} Hz is getting through to the D-term. ` +

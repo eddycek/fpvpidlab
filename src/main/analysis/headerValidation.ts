@@ -184,5 +184,38 @@ export function enrichSettingsFromBBLHeaders(
     }
   }
 
+  if (enriched.dterm_lpf1_dyn_max_hz === undefined) {
+    const val = rawHeaders.get('dterm_lpf1_dyn_max_hz');
+    if (val !== undefined) {
+      const n = parseInt(val, 10);
+      if (!isNaN(n)) {
+        enriched.dterm_lpf1_dyn_max_hz = n;
+        changed = true;
+      }
+    }
+  }
+
+  if (enriched.gyro_lpf1_dyn_min_hz === undefined) {
+    const val = rawHeaders.get('gyro_lowpass_dyn_min_hz');
+    if (val !== undefined) {
+      const n = parseInt(val, 10);
+      if (!isNaN(n)) {
+        enriched.gyro_lpf1_dyn_min_hz = n;
+        changed = true;
+      }
+    }
+  }
+
+  if (enriched.gyro_lpf1_dyn_max_hz === undefined) {
+    const val = rawHeaders.get('gyro_lowpass_dyn_max_hz');
+    if (val !== undefined) {
+      const n = parseInt(val, 10);
+      if (!isNaN(n)) {
+        enriched.gyro_lpf1_dyn_max_hz = n;
+        changed = true;
+      }
+    }
+  }
+
   return changed ? enriched : null;
 }

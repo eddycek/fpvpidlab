@@ -98,84 +98,130 @@ export function analyzeDynamicLowpass(
 /**
  * Generate filter recommendations for dynamic lowpass if appropriate.
  *
- * Recommends both gyro LPF1 and D-term LPF1 dynamic lowpass when throttle-dependent
- * noise is detected. D-term benefits even more from dynamic filtering because D amplifies
- * high-frequency noise — ramping the cutoff with throttle reduces motor heating at high
- * throttle while preserving stick feel at cruise.
+ * Recommends enabling dynamic lowpass when throttle-dependent noise is detected and
+ * dynamic mode is not already active. When dynamic is already active, this function
+ * returns no recommendations — the FilterRecommender handles tuning existing dyn_min/max.
+ *
+ * When throttle-dependent noise is NOT detected and dynamic IS active, recommends
+ * disabling dynamic mode (set dyn_min/max to 0) since it adds no benefit.
  *
  * @param analysis - Result from analyzeDynamicLowpass
- * @param currentGyroLpf1 - Current static gyro LPF1 cutoff (Hz)
- * @param currentDtermLpf1 - Current static D-term LPF1 cutoff (Hz), defaults to 0 (skip)
+ * @param settings - Current filter settings (includes dynamic lowpass state)
  * @returns Array of recommendations (may be empty)
  */
 export function recommendDynamicLowpass(
   analysis: DynamicLowpassAnalysis | undefined,
-  currentGyroLpf1: number,
-  currentDtermLpf1: number = 0
+  settings: {
+    gyro_lpf1_static_hz: number;
+    gyro_lpf1_dyn_min_hz?: number;
+    gyro_lpf1_dyn_max_hz?: number;
+    dterm_lpf1_static_hz: number;
+    dterm_lpf1_dyn_min_hz?: number;
+    dterm_lpf1_dyn_max_hz?: number;
+  }
 ): FilterRecommendation[] {
-  if (!analysis || !analysis.recommended) return [];
+  const gyroDynActive = (settings.gyro_lpf1_dyn_min_hz ?? 0) > 0;
+  const dtermDynActive = (settings.dterm_lpf1_dyn_min_hz ?? 0) > 0;
 
+  if (!analysis) return [];
+
+  // Throttle-dependent noise detected
+  if (analysis.recommended) {
+    // Both already active → FilterRecommender tunes dyn_min/max directly
+    if (gyroDynActive && dtermDynActive) return [];
+    const recs: FilterRecommendation[] = [];
+    const deltaNote = `${analysis.noiseIncreaseDeltaDb.toFixed(0)} dB`;
+
+    // Gyro LPF1: only recommend enabling if not already dynamic
+    if (!gyroDynActive && settings.gyro_lpf1_static_hz > 0) {
+      recs.push(
+        {
+          setting: 'gyro_lpf1_dyn_min_hz',
+          currentValue: 0,
+          recommendedValue: Math.round(settings.gyro_lpf1_static_hz * 0.6),
+          reason:
+            `Noise increases significantly with throttle (${deltaNote} from low to high). ` +
+            'Enabling dynamic lowpass ramps the filter cutoff with throttle — tighter filtering at high throttle, ' +
+            'less latency at cruise.',
+          impact: 'both',
+          confidence: 'medium',
+          ruleId: 'F-DLPF-GYRO',
+        },
+        {
+          setting: 'gyro_lpf1_dyn_max_hz',
+          currentValue: 0,
+          recommendedValue: Math.round(settings.gyro_lpf1_static_hz * 1.4),
+          reason:
+            'Sets the upper limit of the dynamic lowpass range. At low throttle the filter operates near this value, ' +
+            'giving minimal latency when noise is naturally lower.',
+          impact: 'latency',
+          confidence: 'medium',
+          ruleId: 'F-DLPF-GYRO',
+        }
+      );
+    }
+
+    // D-term LPF1: only recommend enabling if not already dynamic
+    if (!dtermDynActive && settings.dterm_lpf1_static_hz > 0) {
+      recs.push(
+        {
+          setting: 'dterm_lpf1_dyn_min_hz',
+          currentValue: 0,
+          recommendedValue: Math.round(settings.dterm_lpf1_static_hz * 0.6),
+          reason:
+            `Throttle-dependent noise (${deltaNote} increase) also affects the D-term. ` +
+            'Enabling dynamic D-term lowpass reduces motor heating at high throttle while keeping ' +
+            'sharp stick response at cruise speeds.',
+          impact: 'both',
+          confidence: 'medium',
+          ruleId: 'F-DLPF-DTERM',
+        },
+        {
+          setting: 'dterm_lpf1_dyn_max_hz',
+          currentValue: 0,
+          recommendedValue: Math.round(settings.dterm_lpf1_static_hz * 1.4),
+          reason:
+            'Upper limit of the D-term dynamic lowpass range. At low throttle the filter uses this higher cutoff ' +
+            'for minimal latency in the D-term path.',
+          impact: 'latency',
+          confidence: 'medium',
+          ruleId: 'F-DLPF-DTERM',
+        }
+      );
+    }
+
+    return recs;
+  }
+
+  // No throttle-dependent noise but dynamic IS active → recommend disabling
+  // (dynamic adds complexity for no benefit when noise is uniform across throttle)
   const recs: FilterRecommendation[] = [];
-  const deltaNote = `${analysis.noiseIncreaseDeltaDb.toFixed(0)} dB`;
-
-  // Gyro LPF1 dynamic lowpass
-  if (currentGyroLpf1 > 0) {
-    recs.push(
-      {
-        setting: 'gyro_lpf1_dyn_min_hz',
-        currentValue: 0,
-        recommendedValue: Math.round(currentGyroLpf1 * 0.6),
-        reason:
-          `Noise increases significantly with throttle (${deltaNote} from low to high). ` +
-          'Enabling dynamic lowpass ramps the filter cutoff with throttle — lower cutoff at high throttle for more filtering, ' +
-          'higher cutoff at low throttle for less latency. This gives you the best of both worlds.',
-        impact: 'both',
-        confidence: 'medium',
-        ruleId: 'F-DLPF-GYRO',
-      },
-      {
-        setting: 'gyro_lpf1_dyn_max_hz',
-        currentValue: 0,
-        recommendedValue: Math.round(currentGyroLpf1 * 1.4),
-        reason:
-          'Sets the upper limit of the dynamic lowpass range. At low throttle the filter operates near this value, ' +
-          'giving minimal latency when noise is naturally lower.',
-        impact: 'latency',
-        confidence: 'medium',
-        ruleId: 'F-DLPF-GYRO',
-      }
-    );
+  if (gyroDynActive) {
+    recs.push({
+      setting: 'gyro_lpf1_dyn_min_hz',
+      currentValue: settings.gyro_lpf1_dyn_min_hz!,
+      recommendedValue: 0,
+      reason:
+        'Noise is consistent across throttle positions — dynamic lowpass provides no benefit. ' +
+        'Disabling it simplifies the filter stack without affecting noise rejection.',
+      impact: 'latency',
+      confidence: 'low',
+      ruleId: 'F-DLPF-GYRO-OFF',
+    });
   }
-
-  // D-term LPF1 dynamic lowpass — D amplifies noise, so dynamic filtering helps even more
-  if (currentDtermLpf1 > 0) {
-    recs.push(
-      {
-        setting: 'dterm_lpf1_dyn_min_hz',
-        currentValue: 0,
-        recommendedValue: Math.round(currentDtermLpf1 * 0.6),
-        reason:
-          `Throttle-dependent noise (${deltaNote} increase) also affects the D-term. ` +
-          'Enabling dynamic D-term lowpass reduces motor heating at high throttle while keeping ' +
-          'sharp stick response at cruise speeds.',
-        impact: 'both',
-        confidence: 'medium',
-        ruleId: 'F-DLPF-DTERM',
-      },
-      {
-        setting: 'dterm_lpf1_dyn_max_hz',
-        currentValue: 0,
-        recommendedValue: Math.round(currentDtermLpf1 * 1.4),
-        reason:
-          'Upper limit of the D-term dynamic lowpass range. At low throttle the filter uses this higher cutoff ' +
-          'for minimal latency in the D-term path.',
-        impact: 'latency',
-        confidence: 'medium',
-        ruleId: 'F-DLPF-DTERM',
-      }
-    );
+  if (dtermDynActive) {
+    recs.push({
+      setting: 'dterm_lpf1_dyn_min_hz',
+      currentValue: settings.dterm_lpf1_dyn_min_hz!,
+      recommendedValue: 0,
+      reason:
+        'Noise is consistent across throttle positions — dynamic D-term lowpass provides no benefit. ' +
+        'Disabling it simplifies the filter stack.',
+      impact: 'latency',
+      confidence: 'low',
+      ruleId: 'F-DLPF-DTERM-OFF',
+    });
   }
-
   return recs;
 }
 

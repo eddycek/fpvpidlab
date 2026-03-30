@@ -170,10 +170,18 @@ describe('MSPClient.getFilterConfiguration', () => {
     // 41: U16 dyn_notch_min       43: U8  rpm_notch_harmonics
     // 44: U8  rpm_notch_min_hz    45: U16 dyn_notch_max
     const buf = Buffer.alloc(47, 0);
+    buf.writeUInt8(1, 17); // dterm_lpf1_type (BIQUAD)
     buf.writeUInt16LE(250, 20); // gyro_lpf1_static_hz
     buf.writeUInt16LE(150, 1); // dterm_lpf1_static_hz
     buf.writeUInt16LE(500, 22); // gyro_lpf2_static_hz
+    buf.writeUInt8(0, 24); // gyro_lpf1_type (PT1)
+    buf.writeUInt8(1, 25); // gyro_lpf2_type (BIQUAD)
     buf.writeUInt16LE(150, 26); // dterm_lpf2_static_hz
+    buf.writeUInt8(1, 28); // dterm_lpf2_type (BIQUAD)
+    buf.writeUInt16LE(200, 29); // gyro_lpf1_dyn_min_hz
+    buf.writeUInt16LE(500, 31); // gyro_lpf1_dyn_max_hz
+    buf.writeUInt16LE(100, 33); // dterm_lpf1_dyn_min_hz
+    buf.writeUInt16LE(250, 35); // dterm_lpf1_dyn_max_hz
     buf.writeUInt16LE(300, 39); // dyn_notch_q
     buf.writeUInt16LE(100, 41); // dyn_notch_min_hz
     buf.writeUInt8(3, 43); // rpm_filter_harmonics
@@ -195,6 +203,14 @@ describe('MSPClient.getFilterConfiguration', () => {
       dyn_notch_q: 300,
       rpm_filter_harmonics: 3,
       rpm_filter_min_hz: 100,
+      dterm_lpf1_type: 1,
+      gyro_lpf1_type: 0,
+      gyro_lpf2_type: 1,
+      dterm_lpf2_type: 1,
+      gyro_lpf1_dyn_min_hz: 200,
+      gyro_lpf1_dyn_max_hz: 500,
+      dterm_lpf1_dyn_min_hz: 100,
+      dterm_lpf1_dyn_max_hz: 250,
     });
   });
 
@@ -223,6 +239,14 @@ describe('MSPClient.getFilterConfiguration', () => {
       dyn_notch_q: 0,
       rpm_filter_harmonics: 0,
       rpm_filter_min_hz: 0,
+      dterm_lpf1_type: 0,
+      gyro_lpf1_type: 0,
+      gyro_lpf2_type: 0,
+      dterm_lpf2_type: 0,
+      gyro_lpf1_dyn_min_hz: 0,
+      gyro_lpf1_dyn_max_hz: 0,
+      dterm_lpf1_dyn_min_hz: 0,
+      dterm_lpf1_dyn_max_hz: 0,
     });
   });
 

@@ -127,13 +127,17 @@ export function estimateGroupDelay(
   let gyroTotalS = 0;
   let dtermTotalS = 0;
 
-  // Gyro LPF1 (PT1 first-order by default in BF)
-  if (settings.gyro_lpf1_static_hz > 0) {
-    const delay = pt1GroupDelay(settings.gyro_lpf1_static_hz, referenceHz);
+  // Gyro LPF1: use dyn_min when dynamic is active (tightest point = worst-case delay)
+  const gyroDynActive = (settings.gyro_lpf1_dyn_min_hz ?? 0) > 0;
+  const effectiveGyroLpf1 = gyroDynActive
+    ? settings.gyro_lpf1_dyn_min_hz!
+    : settings.gyro_lpf1_static_hz;
+  if (effectiveGyroLpf1 > 0) {
+    const delay = pt1GroupDelay(effectiveGyroLpf1, referenceHz);
     gyroTotalS += delay;
     filters.push({
       type: 'gyro_lpf1',
-      cutoffHz: settings.gyro_lpf1_static_hz,
+      cutoffHz: effectiveGyroLpf1,
       delayMs: delay * 1000,
     });
   }
@@ -166,13 +170,17 @@ export function estimateGroupDelay(
     });
   }
 
-  // D-term LPF1 (PT1)
-  if (settings.dterm_lpf1_static_hz > 0) {
-    const delay = pt1GroupDelay(settings.dterm_lpf1_static_hz, referenceHz);
+  // D-term LPF1: use dyn_min when dynamic is active
+  const dtermDynActive = (settings.dterm_lpf1_dyn_min_hz ?? 0) > 0;
+  const effectiveDtermLpf1 = dtermDynActive
+    ? settings.dterm_lpf1_dyn_min_hz!
+    : settings.dterm_lpf1_static_hz;
+  if (effectiveDtermLpf1 > 0) {
+    const delay = pt1GroupDelay(effectiveDtermLpf1, referenceHz);
     dtermTotalS += delay;
     filters.push({
       type: 'dterm_lpf1',
-      cutoffHz: settings.dterm_lpf1_static_hz,
+      cutoffHz: effectiveDtermLpf1,
       delayMs: delay * 1000,
     });
   }
