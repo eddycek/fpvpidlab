@@ -8,15 +8,17 @@ How FPVPIDlab evaluates tuning sessions across all modes — what metrics drive 
 
 Noise floor thresholds are adjusted per drone size. Smaller quads with higher KV motors have inherently higher noise floors — classifying them with 5" standards produces false "HIGH" readings.
 
+Classification uses strict `>` comparisons: exactly on the boundary = the lower category.
+
 | Size | HIGH (noisy) | MEDIUM | LOW (clean) | Typical KV |
 |------|-------------|--------|-------------|------------|
-| 1" | > -15 dB | -30 to -15 | < -30 | 19,000+ |
-| 2.5" | > -20 dB | -35 to -20 | < -35 | 4,500+ |
-| 3" | > -25 dB | -40 to -25 | < -40 | 3,000-4,500 |
-| 4" | > -27 dB | -40 to -27 | < -40 | 2,500-3,500 |
-| 5" | > -30 dB | -50 to -30 | < -50 | 1,750-2,100 |
-| 6" | > -33 dB | -50 to -33 | < -50 | 1,300-1,500 |
-| 7" | > -35 dB | -55 to -35 | < -55 | 1,100-1,300 |
+| 1" | > -15 dB | > -30 and ≤ -15 | ≤ -30 | 19,000+ |
+| 2.5" | > -20 dB | > -35 and ≤ -20 | ≤ -35 | 4,500+ |
+| 3" | > -25 dB | > -40 and ≤ -25 | ≤ -40 | 3,000-4,500 |
+| 4" | > -27 dB | > -40 and ≤ -27 | ≤ -40 | 2,500-3,500 |
+| 5" | > -30 dB | > -50 and ≤ -30 | ≤ -50 | 1,750-2,100 |
+| 6" | > -33 dB | > -50 and ≤ -33 | ≤ -50 | 1,300-1,500 |
+| 7" | > -35 dB | > -55 and ≤ -35 | ≤ -55 | 1,100-1,300 |
 
 **Source**: PIDToolBox -30 dB standard (5" reference), scaled by KV/prop-size relationship.
 
