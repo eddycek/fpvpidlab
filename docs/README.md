@@ -12,6 +12,7 @@ Overview of all design documents in this directory. Completed documents are arch
 
 | Document | Status | Description |
 |----------|--------|-------------|
+| [DYNAMIC_LOWPASS_MSP_FIX](./DYNAMIC_LOWPASS_MSP_FIX.md) | **Proposed** | Read dynamic lowpass fields from MSP, fix recommendations when dynamic mode is active, filter type awareness for group delay |
 | [CHIRP_FLIGHT_ANALYSIS](./CHIRP_FLIGHT_ANALYSIS.md) | **Proposed** | Chirp signal system identification for BF 4.6+ — exponential frequency sweep, per-axis sequential execution, coherence validation, high-precision transfer functions |
 | [UX_IMPROVEMENT_IDEAS](./UX_IMPROVEMENT_IDEAS.md) | **Active** | Backlog of UX improvement ideas (4/7 done, rest are future work) |
 | [PAYMENT_AND_INVOICING](./PAYMENT_AND_INVOICING.md) | **Proposed** | Stripe payment gateway + Trivi API invoicing. End-to-end purchase → invoice → license delivery flow |
