@@ -372,4 +372,68 @@ describe('analyze', () => {
     expect(result.groupDelay!.filters.length).toBeGreaterThan(0);
     expect(result.groupDelay!.referenceFreqHz).toBe(80);
   });
+
+  it('should not produce duplicate dyn_min/dyn_max recommendations', async () => {
+    // Dynamic mode active on FC — FilterRecommender tunes dyn_min/max,
+    // DynamicLowpassRecommender might try to disable them. Only one should win.
+    const settings: CurrentFilterSettings = {
+      ...DEFAULT_FILTER_SETTINGS,
+      gyro_lpf1_dyn_min_hz: 250,
+      gyro_lpf1_dyn_max_hz: 500,
+      dterm_lpf1_dyn_min_hz: 75,
+      dterm_lpf1_dyn_max_hz: 150,
+      rpm_filter_harmonics: 3,
+    };
+
+    // Create flight data with varying throttle (ramp from 0.2 to 0.9)
+    // to exercise both FilterRecommender AND DynamicLowpassRecommender paths
+    const sampleRate = 4000;
+    const durationS = 5;
+    const numSamples = sampleRate * durationS;
+    function makeSeries(fn: (i: number) => number): TimeSeries {
+      const time = new Float64Array(numSamples);
+      const values = new Float64Array(numSamples);
+      for (let i = 0; i < numSamples; i++) {
+        time[i] = i / sampleRate;
+        values[i] = fn(i);
+      }
+      return { time, values };
+    }
+    const gyroFn = (i: number) =>
+      200 * Math.sin((2 * Math.PI * 120 * i) / sampleRate) + (Math.random() - 0.5) * 20;
+    const zeroSeries = makeSeries(() => 0);
+    // Ramp throttle 0.2→0.9 so ThrottleSpectrogramAnalyzer gets multiple bands
+    const throttleSeries = makeSeries((i) => 0.2 + 0.7 * (i / numSamples));
+
+    const data: BlackboxFlightData = {
+      gyro: [makeSeries(gyroFn), makeSeries(gyroFn), makeSeries(gyroFn)],
+      setpoint: [zeroSeries, zeroSeries, zeroSeries, throttleSeries],
+      pidP: [zeroSeries, zeroSeries, zeroSeries],
+      pidI: [zeroSeries, zeroSeries, zeroSeries],
+      pidD: [zeroSeries, zeroSeries, zeroSeries],
+      pidF: [zeroSeries, zeroSeries, zeroSeries],
+      motor: [zeroSeries, zeroSeries, zeroSeries, zeroSeries],
+      debug: [],
+      sampleRateHz: sampleRate,
+      durationSeconds: durationS,
+      frameCount: numSamples,
+    };
+
+    const result = await analyze(data, 0, settings);
+
+    // Must have at least one dyn_min/dyn_max recommendation
+    const dynRecs = result.recommendations.filter(
+      (r) => r.setting.includes('dyn_min') || r.setting.includes('dyn_max')
+    );
+    expect(dynRecs.length).toBeGreaterThan(0);
+
+    // No setting should appear more than once
+    const settingCounts = new Map<string, number>();
+    for (const rec of result.recommendations) {
+      settingCounts.set(rec.setting, (settingCounts.get(rec.setting) ?? 0) + 1);
+    }
+    for (const [setting, count] of settingCounts) {
+      expect(count, `Duplicate recommendation for ${setting}`).toBe(1);
+    }
+  });
 });

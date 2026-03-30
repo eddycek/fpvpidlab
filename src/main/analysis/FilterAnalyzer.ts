@@ -172,8 +172,8 @@ export async function analyze(
   const mechanicalHealth = checkMechanicalHealth(flightData, noiseProfile);
 
   // Step 8: Dynamic lowpass analysis
-  // Skip if FilterRecommender already generated dynamic recs (avoids contradictory
-  // "tune dyn_min" + "disable dyn_min" for the same setting → React duplicate key bug)
+  // Always run analysis, but dedupe any existing dyn_min/dyn_max recommendations so we
+  // don't emit conflicting or duplicate recs for the same setting (avoids React duplicate key bugs).
   const existingDynSettings = new Set(
     recommendations
       .filter((r) => r.setting.includes('dyn_min') || r.setting.includes('dyn_max'))
@@ -267,7 +267,7 @@ async function analyzeEntireFlight(
   // Mechanical health diagnostic
   const mechanicalHealth = checkMechanicalHealth(flightData, noiseProfile);
 
-  // Dynamic lowpass analysis (skip settings already recommended by FilterRecommender)
+  // Always run analysis, but dedupe existing dyn_min/dyn_max recs (same as Step 8 above)
   const existingDynSettings = new Set(
     recommendations
       .filter((r) => r.setting.includes('dyn_min') || r.setting.includes('dyn_max'))
