@@ -172,8 +172,17 @@ export async function analyze(
   const mechanicalHealth = checkMechanicalHealth(flightData, noiseProfile);
 
   // Step 8: Dynamic lowpass analysis
+  // Skip if FilterRecommender already generated dynamic recs (avoids contradictory
+  // "tune dyn_min" + "disable dyn_min" for the same setting → React duplicate key bug)
+  const existingDynSettings = new Set(
+    recommendations
+      .filter((r) => r.setting.includes('dyn_min') || r.setting.includes('dyn_max'))
+      .map((r) => r.setting)
+  );
   const dynamicLowpass = analyzeDynamicLowpass(throttleSpectrogram);
-  const dynLowpassRecs = recommendDynamicLowpass(dynamicLowpass, currentSettings);
+  const dynLowpassRecs = recommendDynamicLowpass(dynamicLowpass, currentSettings).filter(
+    (r) => !existingDynSettings.has(r.setting)
+  );
   if (dynLowpassRecs.length > 0) {
     recommendations.push(...dynLowpassRecs);
   }
@@ -258,9 +267,16 @@ async function analyzeEntireFlight(
   // Mechanical health diagnostic
   const mechanicalHealth = checkMechanicalHealth(flightData, noiseProfile);
 
-  // Dynamic lowpass analysis
+  // Dynamic lowpass analysis (skip settings already recommended by FilterRecommender)
+  const existingDynSettings = new Set(
+    recommendations
+      .filter((r) => r.setting.includes('dyn_min') || r.setting.includes('dyn_max'))
+      .map((r) => r.setting)
+  );
   const dynamicLowpass = analyzeDynamicLowpass(throttleSpectrogram);
-  const dynLowpassRecs = recommendDynamicLowpass(dynamicLowpass, currentSettings);
+  const dynLowpassRecs = recommendDynamicLowpass(dynamicLowpass, currentSettings).filter(
+    (r) => !existingDynSettings.has(r.setting)
+  );
   if (dynLowpassRecs.length > 0) {
     recommendations.push(...dynLowpassRecs);
   }
