@@ -131,7 +131,7 @@ describe('verifyAppliedConfig', () => {
   });
 
   describe('Filter mode', () => {
-    it('marks CLI-only filter settings as unchecked', async () => {
+    it('skips CLI-only filter settings during verification (rpm_filter_q)', async () => {
       const msp = createMockMSPClient(makePIDConfig(), makeFilterConfig());
       const applied: AppliedChange[] = [
         { setting: 'rpm_filter_q', previousValue: 500, newValue: 600 },
@@ -139,8 +139,9 @@ describe('verifyAppliedConfig', () => {
 
       const result = await verifyAppliedConfig(msp, 'filter', undefined, applied);
 
-      expect(result.verified).toBe(false);
-      expect(result.unchecked).toContain('rpm_filter_q');
+      // CLI-only settings are silently skipped — they don't fail verification
+      expect(result.verified).toBe(true);
+      expect(result.unchecked).not.toContain('rpm_filter_q');
     });
 
     it('returns verified=true when all filter values match', async () => {

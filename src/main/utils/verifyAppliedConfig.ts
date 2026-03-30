@@ -77,7 +77,10 @@ function buildActualPIDMap(config: PIDConfiguration): Record<string, number> {
   };
 }
 
-/** Build expected filter map — only MSP-readable fields */
+/** Settings that can only be set via CLI and not read back via MSP */
+const CLI_ONLY_SETTINGS = new Set(['rpm_filter_q']);
+
+/** Build expected filter map — MSP-readable fields + dynamic lowpass */
 function buildExpectedFilterMap(
   currentConfig: CurrentFilterSettings,
   appliedChanges?: AppliedChange[]
@@ -97,9 +100,23 @@ function buildExpectedFilterMap(
   if (currentConfig.dyn_notch_count !== undefined) {
     map.dyn_notch_count = currentConfig.dyn_notch_count;
   }
-  // Patch with applied changes
+  // Dynamic lowpass fields (now read from MSP)
+  if (currentConfig.gyro_lpf1_dyn_min_hz !== undefined) {
+    map.gyro_lpf1_dyn_min_hz = currentConfig.gyro_lpf1_dyn_min_hz;
+  }
+  if (currentConfig.gyro_lpf1_dyn_max_hz !== undefined) {
+    map.gyro_lpf1_dyn_max_hz = currentConfig.gyro_lpf1_dyn_max_hz;
+  }
+  if (currentConfig.dterm_lpf1_dyn_min_hz !== undefined) {
+    map.dterm_lpf1_dyn_min_hz = currentConfig.dterm_lpf1_dyn_min_hz;
+  }
+  if (currentConfig.dterm_lpf1_dyn_max_hz !== undefined) {
+    map.dterm_lpf1_dyn_max_hz = currentConfig.dterm_lpf1_dyn_max_hz;
+  }
+  // Patch with applied changes (skip CLI-only settings that can't be verified)
   if (appliedChanges) {
     for (const change of appliedChanges) {
+      if (CLI_ONLY_SETTINGS.has(change.setting)) continue;
       if (change.setting in map) {
         map[change.setting] = change.newValue;
       }
@@ -123,6 +140,18 @@ function buildActualFilterMap(config: CurrentFilterSettings): Record<string, num
   }
   if (config.dyn_notch_count !== undefined) {
     map.dyn_notch_count = config.dyn_notch_count;
+  }
+  if (config.gyro_lpf1_dyn_min_hz !== undefined) {
+    map.gyro_lpf1_dyn_min_hz = config.gyro_lpf1_dyn_min_hz;
+  }
+  if (config.gyro_lpf1_dyn_max_hz !== undefined) {
+    map.gyro_lpf1_dyn_max_hz = config.gyro_lpf1_dyn_max_hz;
+  }
+  if (config.dterm_lpf1_dyn_min_hz !== undefined) {
+    map.dterm_lpf1_dyn_min_hz = config.dterm_lpf1_dyn_min_hz;
+  }
+  if (config.dterm_lpf1_dyn_max_hz !== undefined) {
+    map.dterm_lpf1_dyn_max_hz = config.dterm_lpf1_dyn_max_hz;
   }
   return map;
 }
@@ -259,9 +288,10 @@ export async function verifyAppliedConfig(
     Object.assign(expected, expectedFilter);
     Object.assign(actual, actualFilter);
 
-    // Check applied changes
+    // Check applied changes (skip CLI-only settings that can't be read back via MSP)
     if (appliedFilterChanges) {
       for (const change of appliedFilterChanges) {
+        if (CLI_ONLY_SETTINGS.has(change.setting)) continue;
         const act = actualFilter[change.setting];
         if (act === undefined) {
           unchecked.push(change.setting);
