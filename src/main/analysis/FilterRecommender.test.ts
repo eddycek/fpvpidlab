@@ -1211,7 +1211,11 @@ describe('dynamic lowpass awareness in recommend()', () => {
     level: 'high' | 'medium' | 'low',
     floorDb: number = -30
   ): NoiseProfile {
-    const axis: AxisNoiseProfile = { noiseFloorDb: floorDb, peakCount: 1, peaks: [] };
+    const axis: AxisNoiseProfile = {
+      noiseFloorDb: floorDb,
+      peaks: [],
+      spectrum: { frequencies: new Float64Array(0), magnitudes: new Float64Array(0) },
+    };
     return {
       overallLevel: level,
       roll: axis,

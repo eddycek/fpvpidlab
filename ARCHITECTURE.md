@@ -1,6 +1,6 @@
 # Architecture Overview
 
-**Last Updated:** March 29, 2026 | **Phase 4 Complete, Phase 6 Complete** | **2852 unit tests, 136 files + 37 Playwright E2E tests**
+**Last Updated:** March 30, 2026 | **Phase 4 Complete, Phase 6 Complete** | **2866 unit tests, 136 files + 37 Playwright E2E tests**
 
 ---
 
@@ -156,7 +156,7 @@ Jumbo: auto-upgraded when payload > 255 bytes (for flash reads)
 | `MSP_DATAFLASH_SUMMARY` | 70 | Flash capacity/usage |
 | `MSP_DATAFLASH_READ` | 71 | Download Blackbox data |
 | `MSP_DATAFLASH_ERASE` | 72 | Erase flash |
-| `MSP_FILTER_CONFIG` | 92 | Read current filter settings (47+ bytes, BF 4.3+) — includes RPM filter (bytes 43-44) and dynamic notch (bytes 39, 47) |
+| `MSP_FILTER_CONFIG` | 92 | Read current filter settings (47+ bytes, BF 4.3+) — includes RPM filter (bytes 43-44), dynamic notch (bytes 39, 47), dynamic lowpass (gyro: bytes 17,24,25; D-term: bytes 28,29-36) |
 | `MSP_PID_ADVANCED` | 94 | Read feedforward configuration (45 bytes: boost, per-axis gains, smoothing, jitter, transition, max rate limit) |
 | `MSP_PID` | 112 | Read PID configuration (9 bytes: 3 axes × 3 terms) |
 | `MSP_STATUS_EX` | 150 | Extended status (PID profile index, profile count) |
@@ -289,10 +289,10 @@ Two independent analysis pipelines: **filter tuning** (FFT noise analysis) and *
 | `FFTCompute.ts` | 171 | 20 | Welch's method, Hanning window |
 | `SegmentSelector.ts` | 195 | 27 | Hover + throttle sweep detection |
 | `NoiseAnalyzer.ts` | 246 | 25 | Peak detection, noise classification |
-| `FilterRecommender.ts` | 627 | 80 | Noise-based filter targets, RPM-aware bounds, propwash floor, medium noise, notch-aware resonance, LPF2, preset gap analysis settings |
+| `FilterRecommender.ts` | 627 | 80 | Noise-based filter targets, RPM-aware bounds, dynamic-lowpass-aware (tunes dyn_min/max when active), propwash floor, medium noise, notch-aware resonance, LPF2, preset gap analysis settings |
 | `FilterAnalyzer.ts` | 206 | 19 | Filter analysis orchestrator (data quality, throttle spectrogram, group delay) |
 | `ThrottleSpectrogramAnalyzer.ts` | — | 19 | Throttle-dependent spectrogram analysis |
-| `GroupDelayEstimator.ts` | — | 23 | Group delay estimation, filter latency measurement |
+| `GroupDelayEstimator.ts` | — | 23 | Group delay estimation, filter latency measurement, uses dyn_min_hz when dynamic active |
 | `StepDetector.ts` | 142 | 16 | Derivative-based step input detection |
 | `StepMetrics.ts` | 330 | 38 | Rise time, overshoot, settling, trace, FF contribution, adaptive window |
 | `PIDRecommender.ts` | 430 | 207 | Flight-PID-anchored P/D recommendations, FF-aware, damping ratio, I-term, quad-size-aware bounds, D-min/TPA advisory, preset gap analysis settings |
@@ -340,9 +340,10 @@ Safety bounds (RPM-aware):
 Dead zone: 5 Hz minimum change to recommend
 Resonance: if prominent peak (>12 dB) is below current cutoff → lower cutoff to peak - 20 Hz
 RPM active: recommend dyn_notch_count=1, dyn_notch_q=500 (frame resonance only)
+Dynamic lowpass active (dyn_min_hz > 0): target dyn_min/max instead of static_hz
 ```
 
-RPM filter state is detected from `MSP_FILTER_CONFIG` (bytes 43-44) or BBL raw headers as fallback. The `rpmFilterActive` flag propagates through to `FilterAnalysisResult` and the UI.
+RPM filter state is detected from `MSP_FILTER_CONFIG` (bytes 43-44) or BBL raw headers as fallback. Dynamic lowpass state is detected from `MSP_FILTER_CONFIG` dynamic lowpass fields (gyro: offsets 17,24,25; D-term: offsets 28,29-36). Helper exports: `isRpmFilterActive()`, `isGyroDynamicActive()`, `isDtermDynamicActive()`. The `rpmFilterActive` flag propagates through to `FilterAnalysisResult` and the UI.
 
 Recommendations are **convergent** (idempotent): re-analyzing the same log after applying produces no further changes.
 
@@ -842,7 +843,7 @@ Hardware error (FC timeout, USB disconnect)
 
 ## Testing Strategy
 
-**2852 unit tests across 136 files + 37 Playwright E2E tests**. See [TESTING.md](./TESTING.md) for complete inventory.
+**2866 unit tests across 136 files + 37 Playwright E2E tests**. See [TESTING.md](./TESTING.md) for complete inventory.
 
 | Area | Files | Tests |
 |------|-------|-------|

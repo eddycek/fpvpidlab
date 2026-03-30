@@ -144,7 +144,7 @@ npm run rebuild
 - `UnsupportedVersionError` in `src/main/utils/errors.ts`
 - **DEBUG_GYRO_SCALED**: Removed in BF 2025.12 (4.6+). Header validation and FCInfoDisplay skip debug mode check for 4.6+
 - **CLI naming**: All `feedforward_*` (4.3+ naming only). No `ff_*` (4.2) support needed
-- **MSP_FILTER_CONFIG**: 47-byte layout stable from 4.3 onward
+- **MSP_FILTER_CONFIG**: 47-byte layout stable from 4.3 onward. Dynamic lowpass fields: gyro (offsets 17,24,25), D-term (offsets 28,29-36)
 - Full policy: `docs/BF_VERSION_POLICY.md`
 
 ### IPC Architecture (Modular Handlers)
@@ -279,10 +279,10 @@ Analyzes gyro noise spectra to produce filter tuning recommendations.
 - **SegmentSelector**: Finds stable hover segments and throttle sweep segments (excludes takeoff/landing/acro)
 - **FFTCompute**: Hanning window, Welch's method (50% overlap), power spectral density
 - **NoiseAnalyzer**: Noise floor estimation, peak detection (prominence-based), source classification (frame resonance 80-200 Hz, motor harmonics, electrical >500 Hz)
-- **FilterRecommender**: Absolute noise-based target computation (convergent), safety bounds, propwash-aware gyro LPF1 floor (100 Hz min, bypass at -15 dB extreme noise), beginner-friendly explanations. Medium noise handling (conditional LPF2 recommendations), notch-aware resonance (notch already covering peak suppresses LPF lowering), conditional dynamic notch Q based on noise severity
+- **FilterRecommender**: Absolute noise-based target computation (convergent), safety bounds, propwash-aware gyro LPF1 floor (100 Hz min, bypass at -15 dB extreme noise), beginner-friendly explanations. Medium noise handling (conditional LPF2 recommendations), notch-aware resonance (notch already covering peak suppresses LPF lowering), conditional dynamic notch Q based on noise severity. Dynamic-lowpass-aware: when `dyn_min_hz > 0`, all noise-floor and resonance rules target `dyn_min_hz`/`dyn_max_hz` instead of `static_hz`, proportionally adjusting max to maintain ratio. Exports `isGyroDynamicActive()`, `isDtermDynamicActive()`
 - **ThrottleSpectrogramAnalyzer**: Bins gyro data by throttle level (10 bands), per-band FFT spectra and noise floors. Returns `ThrottleSpectrogramResult`
-- **GroupDelayEstimator**: Per-filter group delay estimation (PT1, biquad, notch). Returns `FilterGroupDelay` with gyroTotalMs, dtermTotalMs, warning if >2ms. Smart `dyn_notch_q` handling: `Q > 10 ? Q / 100 : Q` for BF internal storage quirk
-- **DynamicLowpassRecommender**: Analyzes throttle spectrogram for throttle-dependent noise (≥6 dB increase, Pearson ≥0.6). Recommends dynamic lowpass for both gyro LPF1 and D-term LPF1 (when static cutoffs are non-zero). D-term benefits more because derivative amplifies high-frequency noise. Min/max = current × 0.6/1.4
+- **GroupDelayEstimator**: Per-filter group delay estimation (PT1, biquad, notch). Returns `FilterGroupDelay` with gyroTotalMs, dtermTotalMs, warning if >2ms. Smart `dyn_notch_q` handling: `Q > 10 ? Q / 100 : Q` for BF internal storage quirk. Uses `dyn_min_hz` when dynamic lowpass is active (worst-case delay at tightest cutoff point)
+- **DynamicLowpassRecommender**: Analyzes throttle spectrogram for throttle-dependent noise (≥6 dB increase, Pearson ≥0.6). When dynamic is NOT active and throttle noise detected: recommends enabling dynamic lowpass (min = current × 0.6, max = current × 1.4). When dynamic IS already active: returns no recommendations (FilterRecommender handles tuning dyn_min/max directly). When dynamic IS active but NO throttle-dependent noise: recommends disabling (dyn_min → 0) with low confidence. Rules: F-DLPF-GYRO, F-DLPF-DTERM (enable), F-DLPF-GYRO-OFF, F-DLPF-DTERM-OFF (disable)
 - **FilterAnalyzer**: Orchestrator with async progress reporting. Passes both `gyro_lpf1_static_hz` and `dterm_lpf1_static_hz` to dynamic lowpass recommender. Returns throttle spectrogram + group delay in result
 - IPC: `ANALYSIS_RUN_FILTER` + `EVENT_ANALYSIS_PROGRESS`
 - Dependency: `fft.js`
@@ -415,7 +415,8 @@ Completed tuning sessions are archived with self-contained metrics for compariso
 4. Stage 4: Save to EEPROM and reboot FC
 
 **MSP Filter Config** (`MSP_FILTER_CONFIG`, command 92):
-- Reads current filter settings directly from FC (gyro LPF1/2, D-term LPF1/2, dynamic notch)
+- Reads current filter settings directly from FC (gyro LPF1/2, D-term LPF1/2, dynamic notch, dynamic lowpass)
+- Dynamic lowpass fields: `gyro_lpf1_dyn_min_hz` (offset 17), `gyro_lpf1_dyn_max_hz` (24-25), `dterm_lpf1_dyn_min_hz` (28), `dterm_lpf1_dyn_max_hz` (29-36)
 - Auto-read in analysis handlers when FC connected and settings not provided
 - Byte layout verified against betaflight-configurator MSPHelper.js
 

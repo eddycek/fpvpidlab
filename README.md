@@ -81,10 +81,11 @@ Connecting with BF 4.2 or earlier will show an error and auto-disconnect. See [B
 - Medium noise handling: 20 Hz deadzone with low-confidence recommendations (avoids churn in the -50 to -30 dB range)
 - Notch-aware resonance filtering: peaks within dyn_notch range are excluded from LPF recommendations (notch already handles them)
 - RPM filter awareness: widens safety bounds (gyro LPF1 up to 500 Hz), optimizes dynamic notch count and Q
+- Dynamic lowpass awareness: when `dyn_min_hz > 0`, tunes `dyn_min`/`dyn_max` instead of static cutoff; proportionally adjusts max to maintain dynamic range ratio; enforces BF constraint `static_hz <= dyn_min_hz`
 - Conditional dynamic notch Q: Q=300 (wide) when strong frame resonance detected, Q=500 (narrow) otherwise
 - LPF2 recommendations: disable when RPM active + clean signal (< -45 dB), enable when noisy (≥ -30 dB) without RPM
 - Propwash floor protection (never pushes gyro LPF1 below 100 Hz)
-- Group delay estimation for filter chain latency visualization
+- Group delay estimation for filter chain latency visualization (uses `dyn_min_hz` when dynamic active for worst-case delay)
 
 ### Automated PID Tuning
 - Step response analysis (rise time, overshoot, settling time, latency, ringing)
@@ -212,7 +213,7 @@ See [QUICK_START.md](./QUICK_START.md) for installation, setup, all available co
 
 All UI changes must include tests. Tests automatically run before commits. Coverage thresholds enforced: 80% lines/functions/statements, 75% branches.
 
-**Unit tests:** 2852 tests across 136 files — MSP protocol, storage managers, IPC handlers, UI components, hooks, BBL parser fuzz, analysis pipeline validation, telemetry, diagnostic, license, auto-updater.
+**Unit tests:** 2866 tests across 136 files — MSP protocol, storage managers, IPC handlers, UI components, hooks, BBL parser fuzz, analysis pipeline validation, telemetry, diagnostic, license, auto-updater.
 
 **Playwright E2E:** 37 tests across 7 spec files — launches real Electron app in demo mode, walks through complete tuning cycles (Filter Tune, PID Tune, Flash Tune, diagnostic reports, and stress-test edge cases).
 
@@ -663,7 +664,8 @@ The -10 dB and -70 dB anchor points are calibrated from real Blackbox logs acros
 | **Noise floor → lowpass (high)** | Noise > -30 dB | Set gyro/D-term LPF1 to noise-based target | High | Linear interpolation from BF guide bounds (see above) |
 | **Noise floor → lowpass (medium)** | Noise -50 to -30 dB, \|target − current\| > 20 Hz | Set gyro/D-term LPF1 to noise-based target | Low | Medium noise: wider deadzone (20 Hz), low confidence to avoid churn |
 | **Dead zone** | \|target − current\| ≤ 5 Hz (high noise) or ≤ 20 Hz (medium noise) | No change recommended | — | Prevents micro-adjustments that add no real benefit |
-| **Resonance peak → cutoff** | Peak ≥ 12 dB above floor AND outside dyn_notch range AND below current cutoff | Lower cutoff to peakFreq − 20 Hz (clamped to bounds) | High | Notch-aware: peaks within dyn_notch_min–max are handled by the notch, not LPF |
+| **Dynamic mode targeting** | Any noise-floor rule fires AND `dyn_min_hz > 0` | Target `dyn_min_hz` instead of `static_hz`; proportionally adjust `dyn_max_hz` to maintain ratio; lower `static_hz` to ≤ `dyn_min` (BF constraint) | Same as base rule | When dynamic lowpass is active, the tightest cutoff is `dyn_min` — tuning static would have no effect |
+| **Resonance peak → cutoff** | Peak ≥ 12 dB above floor AND outside dyn_notch range AND below current cutoff | Lower cutoff to peakFreq − 20 Hz (clamped to bounds). When dynamic active, targets `dyn_min_hz` | High | Notch-aware: peaks within dyn_notch_min–max are handled by the notch, not LPF |
 | **Disabled gyro LPF + resonance** | gyro_lpf1 = 0 (disabled) AND resonance peak outside notch range | Enable gyro LPF1 at peakFreq − 20 Hz | High | Common BF 4.4+ config with RPM filter; re-enable when needed |
 | **Dynamic notch range** | Peak below `dyn_notch_min_hz` | Lower dyn_notch_min to peakFreq − 20 Hz (floor: 50 Hz) | Medium | Notch can't track peaks outside its configured range |
 | **Dynamic notch range** | Peak above `dyn_notch_max_hz` | Raise dyn_notch_max to peakFreq + 20 Hz (ceiling: 1000 Hz) | Medium | Same as above, upper bound |
@@ -674,11 +676,15 @@ The -10 dB and -70 dB anchor points are calibrated from real Blackbox logs acros
 | **LPF2 disable (D-term)** | RPM active AND noise < -45 dB | Disable D-term LPF2 | Medium | Clean signal with RPM: D-term LPF2 latency unnecessary |
 | **LPF2 enable (gyro)** | No RPM AND noise ≥ -30 dB AND LPF2 disabled | Enable gyro LPF2 | Low | Noisy without RPM: extra filtering protects motors |
 | **LPF2 enable (D-term)** | No RPM AND noise ≥ -30 dB AND LPF2 disabled | Enable D-term LPF2 | Low | High noise without RPM needs additional D-term protection |
-| **Dynamic lowpass (gyro)** | Throttle spectrogram noise increases ≥ 6 dB from low to high throttle AND Pearson correlation ≥ 0.6 AND gyro LPF1 > 0 | Enable `gyro_lpf1_dyn_min_hz` (current × 0.6) and `gyro_lpf1_dyn_max_hz` (current × 1.4) | Medium | Throttle-ramped cutoff: more filtering at high throttle, less latency at cruise |
-| **Dynamic lowpass (D-term)** | Same throttle-noise trigger as gyro AND D-term LPF1 > 0 | Enable `dterm_lpf1_dyn_min_hz` (current × 0.6) and `dterm_lpf1_dyn_max_hz` (current × 1.4) | Medium | D amplifies high-frequency noise — dynamic filtering reduces motor heating at high throttle while preserving stick feel at cruise |
+| **F-DLPF-GYRO** | Throttle spectrogram noise increases ≥ 6 dB, Pearson ≥ 0.6, gyro LPF1 > 0, AND gyro dynamic NOT already active | Enable `gyro_lpf1_dyn_min_hz` (current × 0.6) and `gyro_lpf1_dyn_max_hz` (current × 1.4) | Medium | Throttle-ramped cutoff: more filtering at high throttle, less latency at cruise |
+| **F-DLPF-DTERM** | Same throttle-noise trigger as F-DLPF-GYRO AND D-term LPF1 > 0 AND D-term dynamic NOT already active | Enable `dterm_lpf1_dyn_min_hz` (current × 0.6) and `dterm_lpf1_dyn_max_hz` (current × 1.4) | Medium | D amplifies high-frequency noise — dynamic filtering reduces motor heating at high throttle while preserving stick feel at cruise |
+| **F-DLPF-GYRO-OFF** | Throttle noise delta < 6 dB OR correlation < 0.6, AND `gyro_lpf1_dyn_min_hz > 0` | Disable gyro dynamic lowpass (`dyn_min_hz → 0`) | Low | Dynamic adds complexity for no benefit when noise is uniform across throttle |
+| **F-DLPF-DTERM-OFF** | Same no-throttle-noise trigger AND `dterm_lpf1_dyn_min_hz > 0` | Disable D-term dynamic lowpass (`dyn_min_hz → 0`) | Low | Simplify filter stack when throttle-dependent noise is absent |
 | **Deduplication** | Multiple rules target same setting | Keep more aggressive value, upgrade confidence | — | Ensures a single coherent recommendation per setting |
 
 **RPM filter awareness:** When RPM filter is active, safety bounds widen because 36 per-motor notch filters already handle motor noise. The dynamic notch is optimized (count 3→1, Q 300→500) since only frame resonances remain.
+
+**Dynamic lowpass awareness:** When `dyn_min_hz > 0`, the FilterRecommender recognizes that the effective cutoff is `dyn_min` (not `static_hz`). All noise-floor and resonance rules transparently target `dyn_min_hz`/`dyn_max_hz` instead of `static_hz`, maintaining the dynamic range ratio. The DynamicLowpassRecommender only fires enable/disable rules when the dynamic state needs to change — when dynamic is already active, the FilterRecommender handles tuning directly.
 
 #### Filter Methodology Sources
 
