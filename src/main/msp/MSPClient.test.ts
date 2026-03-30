@@ -11,6 +11,15 @@ import {
   buildPIDData,
   buildDataflashSummaryData,
 } from './test/mspResponseFactory';
+import {
+  writeField,
+  FILTER_CONFIG,
+  PID_ADVANCED,
+  ADVANCED_CONFIG,
+  DATAFLASH_SUMMARY,
+  STATUS_EX,
+  SDCARD_SUMMARY,
+} from './mspLayouts';
 
 // Mock dependencies
 vi.mock('serialport', () => ({
@@ -163,33 +172,27 @@ describe('MSPClient.getFilterConfiguration', () => {
 
   it('parses valid MSP_FILTER_CONFIG response into correct CurrentFilterSettings', async () => {
     // Build a 49-byte response buffer matching Betaflight 4.3+ layout
-    // (from betaflight-configurator MSPHelper.js):
-    //  0: U8  gyro_lpf1 (legacy)   1: U16 dterm_lpf1    17: U8  dterm_lpf1_type
-    // 20: U16 gyro_lpf1 (full)    22: U16 gyro_lpf2     24: U8  gyro_lpf1_type
-    // 26: U16 dterm_lpf2          29: U16 gyro_dyn_min   31: U16 gyro_dyn_max
-    // 33: U16 dterm_dyn_min       35: U16 dterm_dyn_max  39: U16 dyn_notch_q
-    // 41: U16 dyn_notch_min       43: U8  rpm_harmonics  44: U8  rpm_min_hz
-    // 45: U16 dyn_notch_max       47: U8  dyn_lpf_expo   48: U8  dyn_notch_count
+    // See mspLayouts.ts FILTER_CONFIG for full field map
     const buf = Buffer.alloc(49, 0);
-    buf.writeUInt8(1, 17); // dterm_lpf1_type (BIQUAD)
-    buf.writeUInt16LE(250, 20); // gyro_lpf1_static_hz
-    buf.writeUInt16LE(150, 1); // dterm_lpf1_static_hz
-    buf.writeUInt16LE(500, 22); // gyro_lpf2_static_hz
-    buf.writeUInt8(0, 24); // gyro_lpf1_type (PT1)
-    buf.writeUInt8(1, 25); // gyro_lpf2_type (BIQUAD)
-    buf.writeUInt16LE(150, 26); // dterm_lpf2_static_hz
-    buf.writeUInt8(1, 28); // dterm_lpf2_type (BIQUAD)
-    buf.writeUInt16LE(200, 29); // gyro_lpf1_dyn_min_hz
-    buf.writeUInt16LE(500, 31); // gyro_lpf1_dyn_max_hz
-    buf.writeUInt16LE(100, 33); // dterm_lpf1_dyn_min_hz
-    buf.writeUInt16LE(250, 35); // dterm_lpf1_dyn_max_hz
-    buf.writeUInt16LE(300, 39); // dyn_notch_q
-    buf.writeUInt16LE(100, 41); // dyn_notch_min_hz
-    buf.writeUInt8(3, 43); // rpm_filter_harmonics
-    buf.writeUInt8(100, 44); // rpm_filter_min_hz
-    buf.writeUInt16LE(600, 45); // dyn_notch_max_hz
-    buf.writeUInt8(5, 47); // dterm_lpf1_dyn_expo
-    buf.writeUInt8(3, 48); // dyn_notch_count
+    writeField(buf, FILTER_CONFIG.DTERM_LPF1_TYPE, 1); // dterm_lpf1_type (BIQUAD)
+    writeField(buf, FILTER_CONFIG.GYRO_LPF1_HZ, 250); // gyro_lpf1_static_hz
+    writeField(buf, FILTER_CONFIG.DTERM_LPF1_HZ, 150); // dterm_lpf1_static_hz
+    writeField(buf, FILTER_CONFIG.GYRO_LPF2_HZ, 500); // gyro_lpf2_static_hz
+    writeField(buf, FILTER_CONFIG.GYRO_LPF1_TYPE, 0); // gyro_lpf1_type (PT1)
+    writeField(buf, FILTER_CONFIG.GYRO_LPF2_TYPE, 1); // gyro_lpf2_type (BIQUAD)
+    writeField(buf, FILTER_CONFIG.DTERM_LPF2_HZ, 150); // dterm_lpf2_static_hz
+    writeField(buf, FILTER_CONFIG.DTERM_LPF2_TYPE, 1); // dterm_lpf2_type (BIQUAD)
+    writeField(buf, FILTER_CONFIG.GYRO_DYN_LPF_MIN, 200); // gyro_lpf1_dyn_min_hz
+    writeField(buf, FILTER_CONFIG.GYRO_DYN_LPF_MAX, 500); // gyro_lpf1_dyn_max_hz
+    writeField(buf, FILTER_CONFIG.DTERM_DYN_LPF_MIN, 100); // dterm_lpf1_dyn_min_hz
+    writeField(buf, FILTER_CONFIG.DTERM_DYN_LPF_MAX, 250); // dterm_lpf1_dyn_max_hz
+    writeField(buf, FILTER_CONFIG.DYN_NOTCH_Q, 300); // dyn_notch_q
+    writeField(buf, FILTER_CONFIG.DYN_NOTCH_MIN_HZ, 100); // dyn_notch_min_hz
+    writeField(buf, FILTER_CONFIG.RPM_HARMONICS, 3); // rpm_filter_harmonics
+    writeField(buf, FILTER_CONFIG.RPM_MIN_HZ, 100); // rpm_filter_min_hz
+    writeField(buf, FILTER_CONFIG.DYN_NOTCH_MAX_HZ, 600); // dyn_notch_max_hz
+    writeField(buf, FILTER_CONFIG.DYN_LPF_CURVE_EXPO, 5); // dterm_lpf1_dyn_expo
+    writeField(buf, FILTER_CONFIG.DYN_NOTCH_COUNT, 3); // dyn_notch_count
 
     mockSendCommand.mockResolvedValue({ command: MSPCommand.MSP_FILTER_CONFIG, data: buf });
 
@@ -257,17 +260,17 @@ describe('MSPClient.getFilterConfiguration', () => {
 
   it('reads dyn_lpf_curve_expo from byte 47 and dyn_notch_count from byte 48', async () => {
     const buf = Buffer.alloc(49, 0);
-    buf.writeUInt16LE(250, 20); // gyro_lpf1_static_hz
-    buf.writeUInt16LE(150, 1); // dterm_lpf1_static_hz
-    buf.writeUInt16LE(500, 22); // gyro_lpf2_static_hz
-    buf.writeUInt16LE(150, 26); // dterm_lpf2_static_hz
-    buf.writeUInt16LE(300, 39); // dyn_notch_q
-    buf.writeUInt16LE(100, 41); // dyn_notch_min_hz
-    buf.writeUInt8(3, 43); // rpm_filter_harmonics
-    buf.writeUInt8(100, 44); // rpm_filter_min_hz
-    buf.writeUInt16LE(600, 45); // dyn_notch_max_hz
-    buf.writeUInt8(7, 47); // dterm_lpf1_dyn_expo (NOT dyn_notch_count!)
-    buf.writeUInt8(3, 48); // dyn_notch_count (correct offset)
+    writeField(buf, FILTER_CONFIG.GYRO_LPF1_HZ, 250); // gyro_lpf1_static_hz
+    writeField(buf, FILTER_CONFIG.DTERM_LPF1_HZ, 150); // dterm_lpf1_static_hz
+    writeField(buf, FILTER_CONFIG.GYRO_LPF2_HZ, 500); // gyro_lpf2_static_hz
+    writeField(buf, FILTER_CONFIG.DTERM_LPF2_HZ, 150); // dterm_lpf2_static_hz
+    writeField(buf, FILTER_CONFIG.DYN_NOTCH_Q, 300); // dyn_notch_q
+    writeField(buf, FILTER_CONFIG.DYN_NOTCH_MIN_HZ, 100); // dyn_notch_min_hz
+    writeField(buf, FILTER_CONFIG.RPM_HARMONICS, 3); // rpm_filter_harmonics
+    writeField(buf, FILTER_CONFIG.RPM_MIN_HZ, 100); // rpm_filter_min_hz
+    writeField(buf, FILTER_CONFIG.DYN_NOTCH_MAX_HZ, 600); // dyn_notch_max_hz
+    writeField(buf, FILTER_CONFIG.DYN_LPF_CURVE_EXPO, 7); // dterm_lpf1_dyn_expo (NOT dyn_notch_count!)
+    writeField(buf, FILTER_CONFIG.DYN_NOTCH_COUNT, 3); // dyn_notch_count (correct offset)
 
     mockSendCommand.mockResolvedValue({ command: MSPCommand.MSP_FILTER_CONFIG, data: buf });
 
@@ -280,7 +283,7 @@ describe('MSPClient.getFilterConfiguration', () => {
 
   it('does not include dyn_notch_count for minimal 47-byte response', async () => {
     const buf = Buffer.alloc(47, 0);
-    buf.writeUInt8(3, 43); // rpm_filter_harmonics
+    writeField(buf, FILTER_CONFIG.RPM_HARMONICS, 3); // rpm_filter_harmonics
 
     mockSendCommand.mockResolvedValue({ command: MSPCommand.MSP_FILTER_CONFIG, data: buf });
 
@@ -306,16 +309,17 @@ describe('MSPClient.getFeedforwardConfiguration', () => {
   });
 
   it('parses valid MSP_PID_ADVANCED response into FeedforwardConfiguration', async () => {
-    // Build a 45-byte response buffer matching BF 4.3+ layout
-    const buf = Buffer.alloc(45, 0);
-    buf.writeUInt8(50, 8); // feedforwardTransition
-    buf.writeUInt16LE(120, 24); // feedforwardRoll
-    buf.writeUInt16LE(120, 26); // feedforwardPitch
-    buf.writeUInt16LE(80, 28); // feedforwardYaw
-    buf.writeUInt8(37, 41); // feedforwardSmoothFactor
-    buf.writeUInt8(15, 42); // feedforwardBoost
-    buf.writeUInt8(100, 43); // feedforwardMaxRateLimit
-    buf.writeUInt8(7, 44); // feedforwardJitterFactor
+    // Build a 55-byte response buffer matching BF 4.3+ layout
+    // See mspLayouts.ts PID_ADVANCED for full field map
+    const buf = Buffer.alloc(55, 0);
+    writeField(buf, PID_ADVANCED.FF_TRANSITION, 50); // feedforwardTransition
+    writeField(buf, PID_ADVANCED.FF_ROLL, 120); // feedforwardRoll
+    writeField(buf, PID_ADVANCED.FF_PITCH, 120); // feedforwardPitch
+    writeField(buf, PID_ADVANCED.FF_YAW, 80); // feedforwardYaw
+    writeField(buf, PID_ADVANCED.FF_SMOOTH_FACTOR, 37); // feedforwardSmoothFactor
+    writeField(buf, PID_ADVANCED.FF_BOOST, 15); // feedforwardBoost
+    writeField(buf, PID_ADVANCED.FF_MAX_RATE_LIMIT, 100); // feedforwardMaxRateLimit
+    writeField(buf, PID_ADVANCED.FF_JITTER_FACTOR, 7); // feedforwardJitterFactor
 
     mockSendCommand.mockResolvedValue({ command: MSPCommand.MSP_PID_ADVANCED, data: buf });
 
@@ -334,17 +338,17 @@ describe('MSPClient.getFeedforwardConfiguration', () => {
     });
   });
 
-  it('throws on response shorter than 45 bytes', async () => {
+  it('throws on response shorter than minimum length', async () => {
     const buf = Buffer.alloc(30, 0);
     mockSendCommand.mockResolvedValue({ command: MSPCommand.MSP_PID_ADVANCED, data: buf });
 
     await expect(client.getFeedforwardConfiguration()).rejects.toThrow(
-      'Invalid MSP_PID_ADVANCED response - expected at least 45 bytes, got 30'
+      `Invalid MSP_PID_ADVANCED response - expected at least ${PID_ADVANCED.MIN_RESPONSE_LENGTH} bytes, got 30`
     );
   });
 
   it('handles zero values (FF disabled)', async () => {
-    const buf = Buffer.alloc(45, 0);
+    const buf = Buffer.alloc(55, 0);
     mockSendCommand.mockResolvedValue({ command: MSPCommand.MSP_PID_ADVANCED, data: buf });
 
     const result = await client.getFeedforwardConfiguration();
@@ -369,10 +373,10 @@ describe('getPidProcessDenom', () => {
     };
   });
 
-  it('reads pid_process_denom from byte 1 of MSP_ADVANCED_CONFIG', async () => {
+  it('reads pid_process_denom from MSP_ADVANCED_CONFIG', async () => {
     const buf = Buffer.alloc(8, 0);
-    buf.writeUInt8(1, 0); // gyro_sync_denom
-    buf.writeUInt8(2, 1); // pid_process_denom
+    writeField(buf, ADVANCED_CONFIG.GYRO_SYNC_DENOM, 1); // gyro_sync_denom
+    writeField(buf, ADVANCED_CONFIG.PID_PROCESS_DENOM, 2); // pid_process_denom
     mockSendCommand.mockResolvedValue({ command: MSPCommand.MSP_ADVANCED_CONFIG, data: buf });
 
     const result = await client.getPidProcessDenom();
@@ -383,8 +387,8 @@ describe('getPidProcessDenom', () => {
 
   it('returns 1 for default pid_process_denom', async () => {
     const buf = Buffer.alloc(8, 0);
-    buf.writeUInt8(1, 0); // gyro_sync_denom
-    buf.writeUInt8(1, 1); // pid_process_denom = 1 (8kHz PID)
+    writeField(buf, ADVANCED_CONFIG.GYRO_SYNC_DENOM, 1); // gyro_sync_denom
+    writeField(buf, ADVANCED_CONFIG.PID_PROCESS_DENOM, 1); // pid_process_denom = 1 (8kHz PID)
     mockSendCommand.mockResolvedValue({ command: MSPCommand.MSP_ADVANCED_CONFIG, data: buf });
 
     const result = await client.getPidProcessDenom();
@@ -758,11 +762,11 @@ function buildSDCardSummaryData(
   } = {}
 ): Buffer {
   const buf = Buffer.alloc(11, 0);
-  buf.writeUInt8(opts.supported !== false ? 0x01 : 0x00, 0);
-  buf.writeUInt8(opts.state ?? 4, 1); // 4 = READY
-  buf.writeUInt8(opts.lastError ?? 0, 2);
-  buf.writeUInt32LE(opts.freeSizeKB ?? 0, 3);
-  buf.writeUInt32LE(opts.totalSizeKB ?? 0, 7);
+  writeField(buf, SDCARD_SUMMARY.FLAGS, opts.supported !== false ? 0x01 : 0x00);
+  writeField(buf, SDCARD_SUMMARY.STATE, opts.state ?? 4); // 4 = READY
+  writeField(buf, SDCARD_SUMMARY.LAST_ERROR, opts.lastError ?? 0);
+  writeField(buf, SDCARD_SUMMARY.FREE_SIZE_KB, opts.freeSizeKB ?? 0);
+  writeField(buf, SDCARD_SUMMARY.TOTAL_SIZE_KB, opts.totalSizeKB ?? 0);
   return buf;
 }
 
@@ -884,9 +888,9 @@ describe('MSPClient.getBlackboxInfo', () => {
   it('handles invalid size 0x80000000 — falls through to SD card', async () => {
     const { client, sendCommand } = createClientWithStub();
     const buf = Buffer.alloc(13, 0);
-    buf.writeUInt8(0x03, 0);
-    buf.writeUInt32LE(0x80000000, 5);
-    buf.writeUInt32LE(0x80000000, 9);
+    writeField(buf, DATAFLASH_SUMMARY.FLAGS, 0x03);
+    writeField(buf, DATAFLASH_SUMMARY.TOTAL_SIZE, 0x80000000);
+    writeField(buf, DATAFLASH_SUMMARY.USED_SIZE, 0x80000000);
     mockByCommand(sendCommand, {
       [MSPCommand.MSP_DATAFLASH_SUMMARY]: {
         command: MSPCommand.MSP_DATAFLASH_SUMMARY,
@@ -1603,7 +1607,7 @@ describe('MSPClient.getStatusEx', () => {
     const { client, sendCommand } = createClientWithStub();
 
     const data = Buffer.alloc(16);
-    data[10] = 1; // profile index
+    writeField(data, STATUS_EX.PID_PROFILE_INDEX, 1); // profile index
 
     sendCommand.mockResolvedValue({
       command: MSPCommand.MSP_STATUS_EX,
@@ -1619,7 +1623,7 @@ describe('MSPClient.getStatusEx', () => {
     const { client, sendCommand } = createClientWithStub();
 
     const data = Buffer.alloc(16);
-    data[10] = 0;
+    writeField(data, STATUS_EX.PID_PROFILE_INDEX, 0);
 
     sendCommand.mockResolvedValue({
       command: MSPCommand.MSP_STATUS_EX,
@@ -1635,7 +1639,7 @@ describe('MSPClient.getStatusEx', () => {
     const { client, sendCommand } = createClientWithStub();
 
     const data = Buffer.alloc(16);
-    data[10] = 2;
+    writeField(data, STATUS_EX.PID_PROFILE_INDEX, 2);
 
     sendCommand.mockResolvedValue({
       command: MSPCommand.MSP_STATUS_EX,

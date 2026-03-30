@@ -9,6 +9,14 @@ import type { PIDConfiguration } from '@shared/types/pid.types';
 import type { CurrentFilterSettings } from '@shared/types/analysis.types';
 import type { BlackboxInfo } from '@shared/types/blackbox.types';
 import { MSP_PROTOCOL } from '../types';
+import {
+  writeField,
+  FILTER_CONFIG,
+  PID_ADVANCED,
+  ADVANCED_CONFIG,
+  DATAFLASH_SUMMARY,
+  SDCARD_SUMMARY,
+} from '../mspLayouts';
 
 // ─── Binary buffer helpers ───────────────────────────────────────────
 
@@ -126,14 +134,16 @@ export function buildFCVersionData(major: number, minor: number, patch: number):
 }
 
 /** MSP_BOARD_INFO (4) — variable length board info */
-export function buildBoardInfoData(opts: {
-  boardId?: string;
-  hwRevision?: number;
-  boardType?: number;
-  targetName?: string;
-  boardName?: string;
-  manufacturerId?: string;
-} = {}): Buffer {
+export function buildBoardInfoData(
+  opts: {
+    boardId?: string;
+    hwRevision?: number;
+    boardType?: number;
+    targetName?: string;
+    boardName?: string;
+    manufacturerId?: string;
+  } = {}
+): Buffer {
   const {
     boardId = 'S405',
     hwRevision = 0,
@@ -187,58 +197,76 @@ export function buildPIDData(config: PIDConfiguration): Buffer {
 /** MSP_FILTER_CONFIG (92) — 47+ bytes */
 export function buildFilterConfigData(settings: Partial<CurrentFilterSettings> = {}): Buffer {
   const buf = Buffer.alloc(48, 0);
-  if (settings.dterm_lpf1_static_hz !== undefined) buf.writeUInt16LE(settings.dterm_lpf1_static_hz, 1);
-  if (settings.gyro_lpf1_static_hz !== undefined) buf.writeUInt16LE(settings.gyro_lpf1_static_hz, 20);
-  if (settings.gyro_lpf2_static_hz !== undefined) buf.writeUInt16LE(settings.gyro_lpf2_static_hz, 22);
-  if (settings.dterm_lpf2_static_hz !== undefined) buf.writeUInt16LE(settings.dterm_lpf2_static_hz, 26);
-  if (settings.dyn_notch_q !== undefined) buf.writeUInt16LE(settings.dyn_notch_q, 39);
-  if (settings.dyn_notch_min_hz !== undefined) buf.writeUInt16LE(settings.dyn_notch_min_hz, 41);
-  if (settings.rpm_filter_harmonics !== undefined) buf.writeUInt8(settings.rpm_filter_harmonics, 43);
-  if (settings.rpm_filter_min_hz !== undefined) buf.writeUInt8(settings.rpm_filter_min_hz, 44);
-  if (settings.dyn_notch_max_hz !== undefined) buf.writeUInt16LE(settings.dyn_notch_max_hz, 45);
-  if (settings.dyn_notch_count !== undefined) buf.writeUInt8(settings.dyn_notch_count, 47);
+  if (settings.dterm_lpf1_static_hz !== undefined)
+    writeField(buf, FILTER_CONFIG.DTERM_LPF1_HZ, settings.dterm_lpf1_static_hz);
+  if (settings.gyro_lpf1_static_hz !== undefined)
+    writeField(buf, FILTER_CONFIG.GYRO_LPF1_HZ, settings.gyro_lpf1_static_hz);
+  if (settings.gyro_lpf2_static_hz !== undefined)
+    writeField(buf, FILTER_CONFIG.GYRO_LPF2_HZ, settings.gyro_lpf2_static_hz);
+  if (settings.dterm_lpf2_static_hz !== undefined)
+    writeField(buf, FILTER_CONFIG.DTERM_LPF2_HZ, settings.dterm_lpf2_static_hz);
+  if (settings.dyn_notch_q !== undefined)
+    writeField(buf, FILTER_CONFIG.DYN_NOTCH_Q, settings.dyn_notch_q);
+  if (settings.dyn_notch_min_hz !== undefined)
+    writeField(buf, FILTER_CONFIG.DYN_NOTCH_MIN_HZ, settings.dyn_notch_min_hz);
+  if (settings.rpm_filter_harmonics !== undefined)
+    writeField(buf, FILTER_CONFIG.RPM_HARMONICS, settings.rpm_filter_harmonics);
+  if (settings.rpm_filter_min_hz !== undefined)
+    writeField(buf, FILTER_CONFIG.RPM_MIN_HZ, settings.rpm_filter_min_hz);
+  if (settings.dyn_notch_max_hz !== undefined)
+    writeField(buf, FILTER_CONFIG.DYN_NOTCH_MAX_HZ, settings.dyn_notch_max_hz);
+  if (settings.dyn_notch_count !== undefined)
+    writeField(buf, FILTER_CONFIG.DYN_NOTCH_COUNT, settings.dyn_notch_count);
   return buf;
 }
 
 /** MSP_DATAFLASH_SUMMARY (70) — 13 bytes */
-export function buildDataflashSummaryData(info: Partial<BlackboxInfo> & { ready?: number; flags?: number } = {}): Buffer {
+export function buildDataflashSummaryData(
+  info: Partial<BlackboxInfo> & { ready?: number; flags?: number } = {}
+): Buffer {
   const buf = Buffer.alloc(13, 0);
   const ready = info.ready ?? (info.supported !== false ? 0x03 : 0x01);
-  buf.writeUInt8(ready, 0);
-  buf.writeUInt32LE(info.flags ?? 0, 1);
-  buf.writeUInt32LE(info.totalSize ?? 0, 5);
-  buf.writeUInt32LE(info.usedSize ?? 0, 9);
+  writeField(buf, DATAFLASH_SUMMARY.FLAGS, ready);
+  writeField(buf, DATAFLASH_SUMMARY.SECTORS, info.flags ?? 0);
+  writeField(buf, DATAFLASH_SUMMARY.TOTAL_SIZE, info.totalSize ?? 0);
+  writeField(buf, DATAFLASH_SUMMARY.USED_SIZE, info.usedSize ?? 0);
   return buf;
 }
 
 /** MSP_ADVANCED_CONFIG (90) — 8+ bytes (byte 1 = pid_process_denom) */
 export function buildAdvancedConfigData(pidProcessDenom: number, gyroSyncDenom = 1): Buffer {
   const buf = Buffer.alloc(8, 0);
-  buf.writeUInt8(gyroSyncDenom, 0);
-  buf.writeUInt8(pidProcessDenom, 1);
+  writeField(buf, ADVANCED_CONFIG.GYRO_SYNC_DENOM, gyroSyncDenom);
+  writeField(buf, ADVANCED_CONFIG.PID_PROCESS_DENOM, pidProcessDenom);
   return buf;
 }
 
-/** MSP_PID_ADVANCED (94) — 45 bytes (feedforward configuration) */
-export function buildPIDAdvancedData(opts: {
-  ffTransition?: number;
-  ffRoll?: number;
-  ffPitch?: number;
-  ffYaw?: number;
-  ffSmoothFactor?: number;
-  ffBoost?: number;
-  ffMaxRateLimit?: number;
-  ffJitterFactor?: number;
-} = {}): Buffer {
-  const buf = Buffer.alloc(45, 0);
-  if (opts.ffTransition !== undefined) buf.writeUInt8(opts.ffTransition, 8);
-  if (opts.ffRoll !== undefined) buf.writeUInt16LE(opts.ffRoll, 24);
-  if (opts.ffPitch !== undefined) buf.writeUInt16LE(opts.ffPitch, 26);
-  if (opts.ffYaw !== undefined) buf.writeUInt16LE(opts.ffYaw, 28);
-  if (opts.ffSmoothFactor !== undefined) buf.writeUInt8(opts.ffSmoothFactor, 41);
-  if (opts.ffBoost !== undefined) buf.writeUInt8(opts.ffBoost, 42);
-  if (opts.ffMaxRateLimit !== undefined) buf.writeUInt8(opts.ffMaxRateLimit, 43);
-  if (opts.ffJitterFactor !== undefined) buf.writeUInt8(opts.ffJitterFactor, 44);
+/** MSP_PID_ADVANCED (94) — 55+ bytes (feedforward configuration, BF 4.3+) */
+export function buildPIDAdvancedData(
+  opts: {
+    ffTransition?: number;
+    ffRoll?: number;
+    ffPitch?: number;
+    ffYaw?: number;
+    ffSmoothFactor?: number;
+    ffBoost?: number;
+    ffMaxRateLimit?: number;
+    ffJitterFactor?: number;
+  } = {}
+): Buffer {
+  const buf = Buffer.alloc(55, 0);
+  if (opts.ffTransition !== undefined)
+    writeField(buf, PID_ADVANCED.FF_TRANSITION, opts.ffTransition);
+  if (opts.ffRoll !== undefined) writeField(buf, PID_ADVANCED.FF_ROLL, opts.ffRoll);
+  if (opts.ffPitch !== undefined) writeField(buf, PID_ADVANCED.FF_PITCH, opts.ffPitch);
+  if (opts.ffYaw !== undefined) writeField(buf, PID_ADVANCED.FF_YAW, opts.ffYaw);
+  if (opts.ffSmoothFactor !== undefined)
+    writeField(buf, PID_ADVANCED.FF_SMOOTH_FACTOR, opts.ffSmoothFactor);
+  if (opts.ffBoost !== undefined) writeField(buf, PID_ADVANCED.FF_BOOST, opts.ffBoost);
+  if (opts.ffMaxRateLimit !== undefined)
+    writeField(buf, PID_ADVANCED.FF_MAX_RATE_LIMIT, opts.ffMaxRateLimit);
+  if (opts.ffJitterFactor !== undefined)
+    writeField(buf, PID_ADVANCED.FF_JITTER_FACTOR, opts.ffJitterFactor);
   return buf;
 }
 

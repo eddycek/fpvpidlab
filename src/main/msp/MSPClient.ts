@@ -22,6 +22,22 @@ import { ConnectionError, MSPError, TimeoutError } from '../utils/errors';
 import { logger } from '../utils/logger';
 import { MSP, BETAFLIGHT } from '@shared/constants';
 import { UnsupportedVersionError } from '../utils/errors';
+import {
+  readField,
+  writeField,
+  FILTER_CONFIG,
+  PID_ADVANCED,
+  RC_TUNING,
+  ADVANCED_CONFIG,
+  DATAFLASH_SUMMARY,
+  SDCARD_SUMMARY,
+  STATUS_EX,
+  BOARD_INFO,
+  DATAFLASH_READ_REQUEST,
+  DATAFLASH_READ_RESPONSE,
+  SELECT_SETTING,
+  REBOOT,
+} from './mspLayouts';
 
 export class MSPClient extends EventEmitter {
   private connection: MSPConnection;
@@ -343,7 +359,7 @@ export class MSPClient extends EventEmitter {
     }
 
     const boardIdentifier = response.data.toString('utf-8', 0, 4);
-    const boardVersion = response.data.readUInt16LE(4);
+    const boardVersion = readField(response.data, BOARD_INFO.BOARD_VERSION);
     const boardType = response.data[6];
     const targetNameLength = response.data[7];
 
@@ -755,73 +771,43 @@ export class MSPClient extends EventEmitter {
   async getFilterConfiguration(): Promise<CurrentFilterSettings> {
     const response = await this.connection.sendCommand(MSPCommand.MSP_FILTER_CONFIG);
 
-    if (response.data.length < 47) {
+    if (response.data.length < FILTER_CONFIG.MIN_RESPONSE_LENGTH) {
       throw new MSPError(
-        `Invalid MSP_FILTER_CONFIG response - expected at least 47 bytes, got ${response.data.length}`
+        `Invalid MSP_FILTER_CONFIG response - expected at least ${FILTER_CONFIG.MIN_RESPONSE_LENGTH} bytes, got ${response.data.length}`
       );
     }
 
-    // Betaflight 4.4+ MSP_FILTER_CONFIG binary layout
-    // (from betaflight-configurator MSPHelper.js parsing order):
-    //  0: U8  gyro_lpf1_static_hz (legacy, low byte only)
-    //  1: U16 dterm_lpf1_static_hz
-    //  3: U16 yaw_lowpass_hz
-    //  5: U16 gyro_notch_hz
-    //  7: U16 gyro_notch_cutoff
-    //  9: U16 dterm_notch_hz
-    // 11: U16 dterm_notch_cutoff
-    // 13: U16 gyro_notch2_hz
-    // 15: U16 gyro_notch2_cutoff
-    // 17: U8  dterm_lpf1_type
-    // 18: U8  gyro_hardware_lpf
-    // 19: U8  (deprecated)
-    // 20: U16 gyro_lpf1_static_hz (full uint16)
-    // 22: U16 gyro_lpf2_static_hz
-    // 24: U8  gyro_lpf1_type
-    // 25: U8  gyro_lpf2_type
-    // 26: U16 dterm_lpf2_static_hz
-    // 28: U8  dterm_lpf2_type
-    // 29: U16 gyro_lowpass_dyn_min_hz
-    // 31: U16 gyro_lowpass_dyn_max_hz
-    // 33: U16 dterm_lowpass_dyn_min_hz
-    // 35: U16 dterm_lowpass_dyn_max_hz
-    // 37: U8  dyn_notch_range (deprecated)
-    // 38: U8  dyn_notch_width_percent (deprecated)
-    // 39: U16 dyn_notch_q
-    // 41: U16 dyn_notch_min_hz
-    // 43: U8  rpm_notch_harmonics
-    // 44: U8  rpm_notch_min_hz
-    // 45: U16 dyn_notch_max_hz
+    // Betaflight 4.3+ MSP_FILTER_CONFIG binary layout (49 bytes)
+    // See mspLayouts.ts FILTER_CONFIG for full field map
     const settings: CurrentFilterSettings = {
-      gyro_lpf1_static_hz: response.data.readUInt16LE(20),
-      dterm_lpf1_static_hz: response.data.readUInt16LE(1),
-      gyro_lpf2_static_hz: response.data.readUInt16LE(22),
-      dterm_lpf2_static_hz: response.data.readUInt16LE(26),
-      dyn_notch_min_hz: response.data.readUInt16LE(41),
-      dyn_notch_max_hz: response.data.readUInt16LE(45),
-      dyn_notch_q: response.data.readUInt16LE(39),
-      rpm_filter_harmonics: response.data.readUInt8(43),
-      rpm_filter_min_hz: response.data.readUInt8(44),
+      gyro_lpf1_static_hz: readField(response.data, FILTER_CONFIG.GYRO_LPF1_HZ), // gyro_lpf1_static_hz (full uint16)
+      dterm_lpf1_static_hz: readField(response.data, FILTER_CONFIG.DTERM_LPF1_HZ), // dterm_lpf1_static_hz
+      gyro_lpf2_static_hz: readField(response.data, FILTER_CONFIG.GYRO_LPF2_HZ), // gyro_lpf2_static_hz
+      dterm_lpf2_static_hz: readField(response.data, FILTER_CONFIG.DTERM_LPF2_HZ), // dterm_lpf2_static_hz
+      dyn_notch_min_hz: readField(response.data, FILTER_CONFIG.DYN_NOTCH_MIN_HZ), // dyn_notch_min_hz
+      dyn_notch_max_hz: readField(response.data, FILTER_CONFIG.DYN_NOTCH_MAX_HZ), // dyn_notch_max_hz
+      dyn_notch_q: readField(response.data, FILTER_CONFIG.DYN_NOTCH_Q), // dyn_notch_q
+      rpm_filter_harmonics: readField(response.data, FILTER_CONFIG.RPM_HARMONICS), // rpm_filter_harmonics
+      rpm_filter_min_hz: readField(response.data, FILTER_CONFIG.RPM_MIN_HZ), // rpm_filter_min_hz
       // Filter types (0=PT1, 1=BIQUAD, 2=PT2, 3=PT3)
-      dterm_lpf1_type: response.data.readUInt8(17),
-      gyro_lpf1_type: response.data.readUInt8(24),
-      gyro_lpf2_type: response.data.readUInt8(25),
-      dterm_lpf2_type: response.data.readUInt8(28),
+      dterm_lpf1_type: readField(response.data, FILTER_CONFIG.DTERM_LPF1_TYPE), // dterm_lpf1_type
+      gyro_lpf1_type: readField(response.data, FILTER_CONFIG.GYRO_LPF1_TYPE), // gyro_lpf1_type
+      gyro_lpf2_type: readField(response.data, FILTER_CONFIG.GYRO_LPF2_TYPE), // gyro_lpf2_type
+      dterm_lpf2_type: readField(response.data, FILTER_CONFIG.DTERM_LPF2_TYPE), // dterm_lpf2_type
       // Dynamic lowpass min/max (0 = dynamic mode off, uses static cutoff)
-      gyro_lpf1_dyn_min_hz: response.data.readUInt16LE(29),
-      gyro_lpf1_dyn_max_hz: response.data.readUInt16LE(31),
-      dterm_lpf1_dyn_min_hz: response.data.readUInt16LE(33),
-      dterm_lpf1_dyn_max_hz: response.data.readUInt16LE(35),
+      gyro_lpf1_dyn_min_hz: readField(response.data, FILTER_CONFIG.GYRO_DYN_LPF_MIN), // gyro_lpf1_dyn_min_hz
+      gyro_lpf1_dyn_max_hz: readField(response.data, FILTER_CONFIG.GYRO_DYN_LPF_MAX), // gyro_lpf1_dyn_max_hz
+      dterm_lpf1_dyn_min_hz: readField(response.data, FILTER_CONFIG.DTERM_DYN_LPF_MIN), // dterm_lpf1_dyn_min_hz
+      dterm_lpf1_dyn_max_hz: readField(response.data, FILTER_CONFIG.DTERM_DYN_LPF_MAX), // dterm_lpf1_dyn_max_hz
     };
 
-    // Byte 47: dyn_lpf_curve_expo (dterm_lpf1_dyn_expo)
-    // Byte 48: dyn_notch_count (BF 4.3+)
+    // dterm_lpf1_dyn_expo (byte 47) and dyn_notch_count (byte 48) — BF 4.3+
     // NOTE: Previously read byte 47 as dyn_notch_count — was wrong (that's dyn_lpf_curve_expo).
-    if (response.data.length > 47) {
-      settings.dterm_lpf1_dyn_expo = response.data.readUInt8(47);
+    if (response.data.length > FILTER_CONFIG.DYN_LPF_CURVE_EXPO.offset) {
+      settings.dterm_lpf1_dyn_expo = readField(response.data, FILTER_CONFIG.DYN_LPF_CURVE_EXPO);
     }
-    if (response.data.length > 48) {
-      settings.dyn_notch_count = response.data.readUInt8(48);
+    if (response.data.length > FILTER_CONFIG.DYN_NOTCH_COUNT.offset) {
+      settings.dyn_notch_count = readField(response.data, FILTER_CONFIG.DYN_NOTCH_COUNT);
     }
 
     logger.info('Filter configuration read:', settings);
@@ -847,50 +833,53 @@ export class MSPClient extends EventEmitter {
         `Invalid MSP_ADVANCED_CONFIG response - expected at least 2 bytes, got ${response.data.length}`
       );
     }
-    return response.data.readUInt8(1);
+    return readField(response.data, ADVANCED_CONFIG.PID_PROCESS_DENOM);
   }
 
   /**
    * Read feedforward configuration from flight controller via MSP_PID_ADVANCED.
    *
    * Byte layout (BF 4.3+, API 1.44+, from betaflight-configurator MSPHelper.js):
-   *  0-1:  U16 (reserved)        14-15: U16 pidMaxVelocity
-   *  2-3:  U16 (reserved)        16-17: U16 pidMaxVelocityYaw
-   *  4-5:  U16 (reserved)        18:    U8  levelAngleLimit
-   *  6:    U8  (reserved)        19:    U8  levelSensitivity
-   *  7:    U8  vbatPidComp       20-21: U16 (reserved)
-   *  8:    U8  ffTransition      22-23: U16 antiGravityGain
-   *  9-10: U16 (reserved)        24-25: U16 ffRoll
-   * 11:    U8  (reserved)        26-27: U16 ffPitch
-   * 12:    U8  (reserved)        28-29: U16 ffYaw
-   * 13:    U8  (reserved)        30:    U8  antiGravityMode
+   *  0-1:  U16 (reserved)        21-22: U16 antiGravityGain (API 1.45+)
+   *  2-3:  U16 (reserved)        25:    U8  itermRotation
+   *  4-5:  U16 (reserved)        27:    U8  itermRelax
+   *  6:    U8  (reserved)        28:    U8  itermRelaxType
+   *  7:    U8  vbatPidComp       30:    U8  throttleBoost
+   *  8:    U8  ffTransition      32-33: U16 ffRoll
+   *  9-10: U16 (reserved)        34-35: U16 ffPitch
+   * 11:    U8  (reserved)        36-37: U16 ffYaw
+   * 12:    U8  (reserved)        38:    U8  antiGravityMode
+   * 13:    U8  (reserved)        39-41: U8×3 d_min[R/P/Y]
+   *                               42:    U8  d_min_gain
+   * 14-15: U16 pidMaxVelocity    43:    U8  d_min_advance
+   * 16-17: U16 pidMaxVelocityYaw 44:    U8  integratedYaw
+   * 18:    U8  levelAngleLimit   49:    U8  idleMinRpm
+   * 19:    U8  levelSensitivity  50:    U8  ffAveraging
+   * 20:    U8  (reserved)        51:    U8  ffSmoothFactor
+   *                               52:    U8  ffBoost
+   *                               53:    U8  ffMaxRateLimit
+   *                               54:    U8  ffJitterFactor
    *
-   * 31-33: U8×3 d_min[R/P/Y]    40:    U8  ffAveraging
-   * 34:    U8  d_min_gain        41:    U8  ffSmoothFactor
-   * 35:    U8  d_min_advance     42:    U8  ffBoost
-   * 36:    U8  integratedYaw     43:    U8  ffMaxRateLimit
-   * 37:    U8  motorOutLimit     44:    U8  ffJitterFactor
-   * 38:    U8  autoProfCellCnt
-   * 39:    U8  idleMinRpm
+   * See mspLayouts.ts PID_ADVANCED for full field map.
    */
   async getFeedforwardConfiguration(): Promise<FeedforwardConfiguration> {
     const response = await this.connection.sendCommand(MSPCommand.MSP_PID_ADVANCED);
 
-    if (response.data.length < 45) {
+    if (response.data.length < PID_ADVANCED.MIN_RESPONSE_LENGTH) {
       throw new MSPError(
-        `Invalid MSP_PID_ADVANCED response - expected at least 45 bytes, got ${response.data.length}`
+        `Invalid MSP_PID_ADVANCED response - expected at least ${PID_ADVANCED.MIN_RESPONSE_LENGTH} bytes, got ${response.data.length}`
       );
     }
 
     const config: FeedforwardConfiguration = {
-      transition: response.data.readUInt8(8),
-      rollGain: response.data.readUInt16LE(24),
-      pitchGain: response.data.readUInt16LE(26),
-      yawGain: response.data.readUInt16LE(28),
-      boost: response.data.readUInt8(42),
-      smoothFactor: response.data.readUInt8(41),
-      jitterFactor: response.data.readUInt8(44),
-      maxRateLimit: response.data.readUInt8(43),
+      transition: readField(response.data, PID_ADVANCED.FF_TRANSITION), // feedforward_transition
+      rollGain: readField(response.data, PID_ADVANCED.FF_ROLL), // feedforward_roll
+      pitchGain: readField(response.data, PID_ADVANCED.FF_PITCH), // feedforward_pitch
+      yawGain: readField(response.data, PID_ADVANCED.FF_YAW), // feedforward_yaw
+      boost: readField(response.data, PID_ADVANCED.FF_BOOST), // feedforward_boost
+      smoothFactor: readField(response.data, PID_ADVANCED.FF_SMOOTH_FACTOR), // feedforward_smooth_factor
+      jitterFactor: readField(response.data, PID_ADVANCED.FF_JITTER_FACTOR), // feedforward_jitter_factor
+      maxRateLimit: readField(response.data, PID_ADVANCED.FF_MAX_RATE_LIMIT), // feedforward_max_rate_limit
     };
 
     logger.info('Feedforward configuration read:', config);
@@ -915,35 +904,35 @@ export class MSPClient extends EventEmitter {
   async getRatesConfiguration(): Promise<RatesConfiguration> {
     const response = await this.connection.sendCommand(MSPCommand.MSP_RC_TUNING);
 
-    if (response.data.length < 23) {
+    if (response.data.length < RC_TUNING.MIN_RESPONSE_LENGTH) {
       throw new MSPError(
-        `Invalid MSP_RC_TUNING response - expected at least 23 bytes, got ${response.data.length}`
+        `Invalid MSP_RC_TUNING response - expected at least ${RC_TUNING.MIN_RESPONSE_LENGTH} bytes, got ${response.data.length}`
       );
     }
 
     const RATES_TYPE_MAP: RatesType[] = ['BETAFLIGHT', 'RACEFLIGHT', 'KISS', 'ACTUAL', 'QUICK'];
-    const ratesTypeIndex = response.data.readUInt8(22);
+    const ratesTypeIndex = readField(response.data, RC_TUNING.RATES_TYPE);
     const ratesType: RatesType = RATES_TYPE_MAP[ratesTypeIndex] ?? 'BETAFLIGHT';
 
     const config: RatesConfiguration = {
       ratesType,
       roll: {
-        rcRate: response.data.readUInt8(0),
-        rate: response.data.readUInt8(2),
-        rcExpo: response.data.readUInt8(1),
-        rateLimit: response.data.readUInt16LE(16),
+        rcRate: readField(response.data, RC_TUNING.RC_RATE_ROLL), // rc_rate (roll)
+        rate: readField(response.data, RC_TUNING.ROLL_RATE), // rollRate
+        rcExpo: readField(response.data, RC_TUNING.RC_EXPO_ROLL), // rcExpo (roll)
+        rateLimit: readField(response.data, RC_TUNING.ROLL_RATE_LIMIT), // roll_rate_limit
       },
       pitch: {
-        rcRate: response.data.readUInt8(12),
-        rate: response.data.readUInt8(3),
-        rcExpo: response.data.readUInt8(13),
-        rateLimit: response.data.readUInt16LE(18),
+        rcRate: readField(response.data, RC_TUNING.RC_PITCH_RATE), // rcPitchRate
+        rate: readField(response.data, RC_TUNING.PITCH_RATE), // pitchRate
+        rcExpo: readField(response.data, RC_TUNING.RC_PITCH_EXPO), // rcPitchExpo
+        rateLimit: readField(response.data, RC_TUNING.PITCH_RATE_LIMIT), // pitch_rate_limit
       },
       yaw: {
-        rcRate: response.data.readUInt8(11),
-        rate: response.data.readUInt8(4),
-        rcExpo: response.data.readUInt8(10),
-        rateLimit: response.data.readUInt16LE(20),
+        rcRate: readField(response.data, RC_TUNING.RC_YAW_RATE), // rcYawRate
+        rate: readField(response.data, RC_TUNING.YAW_RATE), // yawRate
+        rcExpo: readField(response.data, RC_TUNING.RC_YAW_EXPO), // rcYawExpo
+        rateLimit: readField(response.data, RC_TUNING.YAW_RATE_LIMIT), // yaw_rate_limit
       },
     };
 
@@ -1008,16 +997,12 @@ export class MSPClient extends EventEmitter {
       }
 
       // Parse MSP_SDCARD_SUMMARY response (11 bytes)
-      // Byte 0: flags (bit 0 = supported)
-      // Byte 1: state (0=not-present, 1=fatal, 2=card-init, 3=fs-init, 4=ready)
-      // Byte 2: last error
-      // Bytes 3-6: free space in KB (uint32 LE)
-      // Bytes 7-10: total space in KB (uint32 LE)
-      const flags = response.data.readUInt8(0);
-      const state = response.data.readUInt8(1) as SDCardState;
-      const lastError = response.data.readUInt8(2);
-      const freeSizeKB = response.data.readUInt32LE(3);
-      const totalSizeKB = response.data.readUInt32LE(7);
+      // See mspLayouts.ts SDCARD_SUMMARY for full field map
+      const flags = readField(response.data, SDCARD_SUMMARY.FLAGS); // flags (bit 0 = supported)
+      const state = readField(response.data, SDCARD_SUMMARY.STATE) as SDCardState; // state
+      const lastError = readField(response.data, SDCARD_SUMMARY.LAST_ERROR); // last error
+      const freeSizeKB = readField(response.data, SDCARD_SUMMARY.FREE_SIZE_KB); // free space in KB
+      const totalSizeKB = readField(response.data, SDCARD_SUMMARY.TOTAL_SIZE_KB); // total space in KB
 
       const supported = (flags & 0x01) !== 0;
 
@@ -1159,9 +1144,10 @@ export class MSPClient extends EventEmitter {
     }
 
     // Parse dataflash summary response (13 bytes total)
-    const ready = response.data.readUInt8(0);
-    const totalSize = response.data.readUInt32LE(5);
-    const usedSize = response.data.readUInt32LE(9);
+    // See mspLayouts.ts DATAFLASH_SUMMARY for full field map
+    const ready = readField(response.data, DATAFLASH_SUMMARY.FLAGS); // flags (bit0=ready, bit1=supported)
+    const totalSize = readField(response.data, DATAFLASH_SUMMARY.TOTAL_SIZE); // totalSize
+    const usedSize = readField(response.data, DATAFLASH_SUMMARY.USED_SIZE); // usedSize
 
     logger.debug('Blackbox parsed:', { ready, totalSize, usedSize, readyHex: ready.toString(16) });
 
@@ -1218,7 +1204,7 @@ export class MSPClient extends EventEmitter {
     // Use MSC_UTC (3) on Linux, MSC (2) on macOS/Windows
     const rebootType = process.platform === 'linux' ? 3 : 2;
     const payload = Buffer.alloc(1);
-    payload.writeUInt8(rebootType, 0);
+    writeField(payload, REBOOT.REBOOT_TYPE, rebootType);
 
     logger.info(
       `Sending MSP_REBOOT with type=${rebootType} (MSC${rebootType === 3 ? '_UTC' : ''})`
@@ -1264,7 +1250,7 @@ export class MSPClient extends EventEmitter {
       throw new MSPError('Invalid MSP_STATUS_EX response - expected at least 11 bytes');
     }
 
-    const pidProfileIndex = response.data[10];
+    const pidProfileIndex = readField(response.data, STATUS_EX.PID_PROFILE_INDEX);
     // Derive profile count from API version (compile-time constant in BF)
     let pidProfileCount = 3;
     if (apiVersion) {
@@ -1293,7 +1279,7 @@ export class MSPClient extends EventEmitter {
     }
 
     const payload = Buffer.alloc(1);
-    payload.writeUInt8(index, 0);
+    writeField(payload, SELECT_SETTING.PROFILE_INDEX, index);
     await this.connection.sendCommand(MSPCommand.MSP_SELECT_SETTING, payload);
 
     logger.info(`Switched to PID profile ${index}`);
@@ -1335,8 +1321,8 @@ export class MSPClient extends EventEmitter {
 
       // Try to read just 10 bytes from address 0
       const request = Buffer.alloc(6);
-      request.writeUInt32LE(0, 0); // address = 0
-      request.writeUInt16LE(10, 4); // size = 10 bytes
+      writeField(request, DATAFLASH_READ_REQUEST.ADDRESS, 0); // address = 0
+      writeField(request, DATAFLASH_READ_REQUEST.SIZE, 10); // size = 10 bytes
 
       logger.debug(`Test request hex: ${request.toString('hex')}`);
 
@@ -1395,8 +1381,8 @@ export class MSPClient extends EventEmitter {
     try {
       // Build request: address (uint32 LE) + size (uint16 LE)
       const request = Buffer.alloc(6);
-      request.writeUInt32LE(address, 0);
-      request.writeUInt16LE(size, 4);
+      writeField(request, DATAFLASH_READ_REQUEST.ADDRESS, address);
+      writeField(request, DATAFLASH_READ_REQUEST.SIZE, size);
 
       // Use 5 second timeout - fail fast so adaptive chunking can adjust quickly
       const response = await this.connection.sendCommand(
@@ -1434,7 +1420,7 @@ export class MSPClient extends EventEmitter {
       return { data: responseData, isCompressed: false };
     }
 
-    const dataSize = responseData.readUInt16LE(4);
+    const dataSize = readField(responseData, DATAFLASH_READ_RESPONSE.DATA_SIZE);
 
     // Detect 7-byte header (with compression flag) vs 6-byte header
     if (responseData.length === 7 + dataSize && responseData.length >= 7) {
