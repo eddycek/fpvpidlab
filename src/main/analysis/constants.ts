@@ -598,6 +598,39 @@ export const DTERM_DYN_EXPO_BY_STYLE: Record<FlightStyle, { min: number; max: nu
 /** BF default dterm_lpf1_dyn_expo */
 export const DTERM_DYN_EXPO_DEFAULT = 5;
 
+// ---- Dynamic Lowpass Multipliers Per Size ----
+// Source: betaflight/firmware-presets (SupaflyFPV, UAV Tech, BF defaults)
+// BF simplified tuning formula: dyn_min = base × mult/100, dyn_max = dyn_min × 2
+// Gyro base: 250 Hz, DTerm base: 75 Hz
+
+export interface DynamicLowpassSizeProfile {
+  /** BF simplified_gyro_filter_multiplier (percentage, 100 = BF default) */
+  gyroMultiplier: number;
+  /** BF simplified_dterm_filter_multiplier (percentage) */
+  dtermMultiplier: number;
+}
+
+/**
+ * Per-size dynamic lowpass multipliers derived from community presets.
+ * Used to validate dynamic lowpass recommendations against size-appropriate ranges.
+ */
+export const DYNAMIC_LOWPASS_BY_SIZE: Record<DroneSize, DynamicLowpassSizeProfile> = {
+  '1"': { gyroMultiplier: 140, dtermMultiplier: 140 },
+  '2.5"': { gyroMultiplier: 140, dtermMultiplier: 140 },
+  '3"': { gyroMultiplier: 140, dtermMultiplier: 140 }, // SupaflyFPV 3-4"
+  '4"': { gyroMultiplier: 120, dtermMultiplier: 140 }, // between 3-4" and 5"
+  '5"': { gyroMultiplier: 100, dtermMultiplier: 100 }, // BF default
+  '6"': { gyroMultiplier: 80, dtermMultiplier: 120 }, // between 5" and 7"
+  '7"': { gyroMultiplier: 80, dtermMultiplier: 120 }, // SupaflyFPV 7"
+};
+
+/** BF simplified tuning base frequencies */
+export const BF_GYRO_LPF1_DYN_BASE_HZ = 250;
+export const BF_DTERM_LPF1_DYN_BASE_HZ = 75;
+
+/** Dynamic lowpass ratio: max = min × this value (BF always uses 2:1) */
+export const DYNAMIC_LOWPASS_RATIO = 2;
+
 // ---- PID Sum Limit Advisory ----
 // Source: docs/PID_TUNING_KNOWLEDGE.md Section 10
 // UAV Tech universally sets both to 1000. Karate Race: yaw limit 1000.

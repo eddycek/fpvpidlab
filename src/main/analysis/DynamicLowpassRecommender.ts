@@ -138,7 +138,7 @@ export function recommendDynamicLowpass(
         {
           setting: 'gyro_lpf1_dyn_min_hz',
           currentValue: 0,
-          recommendedValue: Math.round(settings.gyro_lpf1_static_hz * 0.6),
+          recommendedValue: settings.gyro_lpf1_static_hz,
           reason:
             `Noise increases significantly with throttle (${deltaNote} from low to high). ` +
             'Enabling dynamic lowpass ramps the filter cutoff with throttle — tighter filtering at high throttle, ' +
@@ -150,7 +150,7 @@ export function recommendDynamicLowpass(
         {
           setting: 'gyro_lpf1_dyn_max_hz',
           currentValue: 0,
-          recommendedValue: Math.round(settings.gyro_lpf1_static_hz * 1.4),
+          recommendedValue: settings.gyro_lpf1_static_hz * 2,
           reason:
             'Sets the upper limit of the dynamic lowpass range. At low throttle the filter operates near this value, ' +
             'giving minimal latency when noise is naturally lower.',
@@ -167,7 +167,7 @@ export function recommendDynamicLowpass(
         {
           setting: 'dterm_lpf1_dyn_min_hz',
           currentValue: 0,
-          recommendedValue: Math.round(settings.dterm_lpf1_static_hz * 0.6),
+          recommendedValue: settings.dterm_lpf1_static_hz,
           reason:
             `Throttle-dependent noise (${deltaNote} increase) also affects the D-term. ` +
             'Enabling dynamic D-term lowpass reduces motor heating at high throttle while keeping ' +
@@ -179,7 +179,7 @@ export function recommendDynamicLowpass(
         {
           setting: 'dterm_lpf1_dyn_max_hz',
           currentValue: 0,
-          recommendedValue: Math.round(settings.dterm_lpf1_static_hz * 1.4),
+          recommendedValue: settings.dterm_lpf1_static_hz * 2,
           reason:
             'Upper limit of the D-term dynamic lowpass range. At low throttle the filter uses this higher cutoff ' +
             'for minimal latency in the D-term path.',

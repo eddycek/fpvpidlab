@@ -188,22 +188,22 @@ describe('recommendDynamicLowpass', () => {
     expect(recommendDynamicLowpass(recommendedAnalysis, staticSettings(0))).toEqual([]);
   });
 
-  it('should generate min and max recommendations when dynamic is off', () => {
+  it('should generate min and max with BF 2:1 ratio when dynamic is off', () => {
     const recs = recommendDynamicLowpass(recommendedAnalysis, staticSettings(250));
 
     expect(recs).toHaveLength(2);
     expect(recs[0].setting).toBe('gyro_lpf1_dyn_min_hz');
     expect(recs[0].currentValue).toBe(0);
-    expect(recs[0].recommendedValue).toBe(150); // 250 * 0.6
+    expect(recs[0].recommendedValue).toBe(250); // dyn_min = static (BF convention)
     expect(recs[1].setting).toBe('gyro_lpf1_dyn_max_hz');
-    expect(recs[1].recommendedValue).toBe(350); // 250 * 1.4
+    expect(recs[1].recommendedValue).toBe(500); // dyn_max = static × 2 (BF 2:1 ratio)
   });
 
   it('should scale recommendations based on current static LPF1 value', () => {
     const recs = recommendDynamicLowpass(recommendedAnalysis, staticSettings(200));
 
-    expect(recs[0].recommendedValue).toBe(120); // 200 * 0.6
-    expect(recs[1].recommendedValue).toBe(280); // 200 * 1.4
+    expect(recs[0].recommendedValue).toBe(200); // dyn_min = static
+    expect(recs[1].recommendedValue).toBe(400); // dyn_max = static × 2
   });
 
   it('should include D-term dynamic lowpass when dterm LPF1 is provided', () => {
@@ -211,13 +211,13 @@ describe('recommendDynamicLowpass', () => {
 
     expect(recs).toHaveLength(4);
     expect(recs[0].setting).toBe('gyro_lpf1_dyn_min_hz');
-    expect(recs[0].recommendedValue).toBe(150); // 250 * 0.6
+    expect(recs[0].recommendedValue).toBe(250); // dyn_min = static
     expect(recs[1].setting).toBe('gyro_lpf1_dyn_max_hz');
-    expect(recs[1].recommendedValue).toBe(350); // 250 * 1.4
+    expect(recs[1].recommendedValue).toBe(500); // dyn_max = static × 2
     expect(recs[2].setting).toBe('dterm_lpf1_dyn_min_hz');
-    expect(recs[2].recommendedValue).toBe(90); // 150 * 0.6
+    expect(recs[2].recommendedValue).toBe(150); // dyn_min = static
     expect(recs[3].setting).toBe('dterm_lpf1_dyn_max_hz');
-    expect(recs[3].recommendedValue).toBe(210); // 150 * 1.4
+    expect(recs[3].recommendedValue).toBe(300); // dyn_max = static × 2
   });
 
   it('should skip D-term dynamic lowpass when dterm LPF1 is 0', () => {
@@ -284,5 +284,49 @@ describe('ruleId assignment', () => {
     const recs = recommendDynamicLowpass(notRecommendedAnalysis, dynamicSettings(200, 500));
     expect(recs.length).toBeGreaterThan(0);
     expect(recs[0].ruleId).toBe('F-DLPF-GYRO-OFF');
+  });
+});
+
+describe('community preset validation', () => {
+  it('BF default 5": static=250 → dyn_min=250, dyn_max=500', () => {
+    const recs = recommendDynamicLowpass(recommendedAnalysis, staticSettings(250));
+    expect(recs[0].recommendedValue).toBe(250);
+    expect(recs[1].recommendedValue).toBe(500);
+  });
+
+  it('BF default dterm: static=75 → dyn_min=75, dyn_max=150', () => {
+    const recs = recommendDynamicLowpass(recommendedAnalysis, staticSettings(250, 75));
+    const dtermRecs = recs.filter((r) => r.setting.startsWith('dterm_'));
+    expect(dtermRecs[0].recommendedValue).toBe(75);
+    expect(dtermRecs[1].recommendedValue).toBe(150);
+  });
+
+  it('UAV Tech 5": static=150 → dyn_min=150, dyn_max=300', () => {
+    const recs = recommendDynamicLowpass(recommendedAnalysis, staticSettings(150));
+    expect(recs[0].recommendedValue).toBe(150);
+    expect(recs[1].recommendedValue).toBe(300);
+  });
+
+  it('SupaflyFPV 7": static=200 → dyn_min=200, dyn_max=400', () => {
+    const recs = recommendDynamicLowpass(recommendedAnalysis, staticSettings(200));
+    expect(recs[0].recommendedValue).toBe(200);
+    expect(recs[1].recommendedValue).toBe(400);
+  });
+
+  it('SupaflyFPV 3-4": static=350 → dyn_min=350, dyn_max=700', () => {
+    const recs = recommendDynamicLowpass(recommendedAnalysis, staticSettings(350));
+    expect(recs[0].recommendedValue).toBe(350);
+    expect(recs[1].recommendedValue).toBe(700);
+  });
+
+  it('all presets maintain 2:1 ratio (BF convention)', () => {
+    for (const staticHz of [75, 150, 200, 250, 300, 350]) {
+      const recs = recommendDynamicLowpass(recommendedAnalysis, staticSettings(staticHz));
+      if (recs.length >= 2) {
+        const min = recs[0].recommendedValue;
+        const max = recs[1].recommendedValue;
+        expect(max / min).toBe(2);
+      }
+    }
   });
 });

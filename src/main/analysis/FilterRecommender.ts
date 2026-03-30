@@ -35,6 +35,7 @@ import {
   RPM_FILTER_Q_DEVIATION_THRESHOLD,
   DTERM_DYN_EXPO_BY_STYLE,
   DTERM_DYN_EXPO_DEFAULT,
+  DYNAMIC_LOWPASS_RATIO,
 } from './constants';
 
 /** Detect whether RPM filter is active from settings */
@@ -170,11 +171,10 @@ function recommendNoiseFloorAdjustments(
   ) => {
     if (gyroLpfDisabled) return;
     if (gyroDynActive) {
-      // Dynamic mode: tune dyn_min_hz, proportionally adjust dyn_max_hz
+      // Dynamic mode: tune dyn_min_hz, use BF 2:1 ratio for dyn_max_hz
       const currentMin = current.gyro_lpf1_dyn_min_hz!;
       const currentMax = current.gyro_lpf1_dyn_max_hz ?? currentMin * 2;
-      const ratio = currentMax / Math.max(currentMin, 1);
-      const newMax = Math.round(clamp(target * ratio, target, gyroMaxHz));
+      const newMax = Math.round(clamp(target * DYNAMIC_LOWPASS_RATIO, target, gyroMaxHz));
       if (Math.abs(target - currentMin) > NOISE_TARGET_DEADZONE_HZ) {
         out.push({
           setting: 'gyro_lpf1_dyn_min_hz',
@@ -234,8 +234,7 @@ function recommendNoiseFloorAdjustments(
     if (dtermDynActive) {
       const currentMin = current.dterm_lpf1_dyn_min_hz!;
       const currentMax = current.dterm_lpf1_dyn_max_hz ?? currentMin * 2;
-      const ratio = currentMax / Math.max(currentMin, 1);
-      const newMax = Math.round(clamp(target * ratio, target, dtermMaxHz));
+      const newMax = Math.round(clamp(target * DYNAMIC_LOWPASS_RATIO, target, dtermMaxHz));
       if (Math.abs(target - currentMin) > NOISE_TARGET_DEADZONE_HZ) {
         out.push({
           setting: 'dterm_lpf1_dyn_min_hz',

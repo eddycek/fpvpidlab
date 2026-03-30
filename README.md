@@ -81,7 +81,7 @@ Connecting with BF 4.2 or earlier will show an error and auto-disconnect. See [B
 - Medium noise handling: 20 Hz deadzone with low-confidence recommendations (avoids churn in the -50 to -30 dB range)
 - Notch-aware resonance filtering: peaks within dyn_notch range are excluded from LPF recommendations (notch already handles them)
 - RPM filter awareness: widens safety bounds (gyro LPF1 up to 500 Hz), optimizes dynamic notch count and Q
-- Dynamic lowpass awareness: when `dyn_min_hz > 0`, tunes `dyn_min`/`dyn_max` instead of static cutoff; proportionally adjusts max to maintain dynamic range ratio; enforces BF constraint `static_hz <= dyn_min_hz`
+- Dynamic lowpass awareness: when `dyn_min_hz > 0`, tunes `dyn_min`/`dyn_max` instead of static cutoff; maintains BF 2:1 ratio (dyn_max = 2 × dyn_min); enforces BF constraint `static_hz <= dyn_min_hz`
 - Conditional dynamic notch Q: Q=300 (wide) when strong frame resonance detected, Q=500 (narrow) otherwise
 - LPF2 recommendations: disable when RPM active + clean signal (< -45 dB), enable when noisy (≥ -30 dB) without RPM
 - Propwash floor protection (never pushes gyro LPF1 below 100 Hz)
@@ -676,8 +676,8 @@ The -10 dB and -70 dB anchor points are calibrated from real Blackbox logs acros
 | **LPF2 disable (D-term)** | RPM active AND noise < -45 dB | Disable D-term LPF2 | Medium | Clean signal with RPM: D-term LPF2 latency unnecessary |
 | **LPF2 enable (gyro)** | No RPM AND noise ≥ -30 dB AND LPF2 disabled | Enable gyro LPF2 | Low | Noisy without RPM: extra filtering protects motors |
 | **LPF2 enable (D-term)** | No RPM AND noise ≥ -30 dB AND LPF2 disabled | Enable D-term LPF2 | Low | High noise without RPM needs additional D-term protection |
-| **F-DLPF-GYRO** | Throttle spectrogram noise increases ≥ 6 dB, Pearson ≥ 0.6, gyro LPF1 > 0, AND gyro dynamic NOT already active | Enable `gyro_lpf1_dyn_min_hz` (current × 0.6) and `gyro_lpf1_dyn_max_hz` (current × 1.4) | Medium | Throttle-ramped cutoff: more filtering at high throttle, less latency at cruise |
-| **F-DLPF-DTERM** | Same throttle-noise trigger as F-DLPF-GYRO AND D-term LPF1 > 0 AND D-term dynamic NOT already active | Enable `dterm_lpf1_dyn_min_hz` (current × 0.6) and `dterm_lpf1_dyn_max_hz` (current × 1.4) | Medium | D amplifies high-frequency noise — dynamic filtering reduces motor heating at high throttle while preserving stick feel at cruise |
+| **F-DLPF-GYRO** | Throttle spectrogram noise increases ≥ 6 dB, Pearson ≥ 0.6, gyro LPF1 > 0, AND gyro dynamic NOT already active | Enable `gyro_lpf1_dyn_min_hz` (current static cutoff) and `gyro_lpf1_dyn_max_hz` (current static × 2) | Medium | BF 2:1 ratio convention: dyn_min = static, dyn_max = 2 × static. Throttle-ramped cutoff: more filtering at high throttle, less latency at cruise |
+| **F-DLPF-DTERM** | Same throttle-noise trigger as F-DLPF-GYRO AND D-term LPF1 > 0 AND D-term dynamic NOT already active | Enable `dterm_lpf1_dyn_min_hz` (current static cutoff) and `dterm_lpf1_dyn_max_hz` (current static × 2) | Medium | BF 2:1 ratio convention. D amplifies high-frequency noise — dynamic filtering reduces motor heating at high throttle while preserving stick feel at cruise |
 | **F-DLPF-GYRO-OFF** | Throttle noise delta < 6 dB OR correlation < 0.6, AND `gyro_lpf1_dyn_min_hz > 0` | Disable gyro dynamic lowpass (`dyn_min_hz → 0`) | Low | Dynamic adds complexity for no benefit when noise is uniform across throttle |
 | **F-DLPF-DTERM-OFF** | Same no-throttle-noise trigger AND `dterm_lpf1_dyn_min_hz > 0` | Disable D-term dynamic lowpass (`dyn_min_hz → 0`) | Low | Simplify filter stack when throttle-dependent noise is absent |
 | **Deduplication** | Multiple rules target same setting | Keep more aggressive value, upgrade confidence | — | Ensures a single coherent recommendation per setting |

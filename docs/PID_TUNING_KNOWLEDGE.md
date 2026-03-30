@@ -200,6 +200,37 @@ From BF Tuning Guide and community consensus:
 - BF dynamic ranges: Low 83-500 Hz, Medium 110-660 Hz, High 166-900 Hz
 - Useful for quads without RPM filter (no bidirectional DSHOT)
 
+### Dynamic Lowpass Preset Values (Community Consensus)
+
+BF simplified tuning uses a consistent formula:
+- `gyro_lpf1_dyn_min_hz = 250 × multiplier / 100`
+- `gyro_lpf1_dyn_max_hz = 500 × multiplier / 100` (always 2× dyn_min)
+- `gyro_lpf1_static_hz = dyn_min` (BF convention: static = dyn_min when dynamic enabled)
+- D-term uses same pattern with base 75/150 Hz
+
+The **2:1 ratio** (max = 2 × min) is universal across all BF presets and simplified tuning modes.
+
+#### Preset Multiplier Comparison
+
+| Preset | Quad | Gyro Mult | Gyro min/max | DTerm Mult | DTerm min/max | RPM? |
+|--------|------|-----------|-------------|-----------|--------------|------|
+| BF Default | generic | 100 | 250/500 | 100 | 75/150 | No |
+| SupaflyFPV | 3-4" | 140 | 350/700 | 140 | 105/210 | Optional |
+| SupaflyFPV | 5" | 120 | 300/600 | 140 | 105/210 | Optional |
+| SupaflyFPV | 7" | 80 | 200/400 | 140 | 105/210 | Optional |
+| UAV Tech | 5" | 60 | 150/300 | 120 | 90/180 | Optional |
+| BF RPM Clean | 5" clean | 175 | 0(off)/875 | 105 | 78/157 | Yes |
+| BF RPM Normal | 5" typical | 100 | 0(off)/500 | 100 | 75/150 | Yes |
+| BF RPM Noisy | 5" worn | 50 | 0(off)/250 | 85 | 63/127 | Yes |
+
+**Key observations:**
+- With RPM filter active, many presets DISABLE gyro LPF1 entirely (static=0, dyn_min=0), relying on RPM+LPF2+notches
+- SupaflyFPV uses HIGHER multipliers for smaller quads (140 for 3-4" vs 80 for 7") — smaller quads have higher-frequency noise
+- D-term multiplier tends to be higher than gyro multiplier (SupaflyFPV: dterm=140 across all sizes)
+- UAV Tech uses the most conservative gyro filtering (mult=60 → dyn_min=150 Hz)
+
+**FPVPIDlab rule**: When enabling dynamic lowpass, use `dyn_min = current static_hz`, `dyn_max = static_hz × 2` (matching BF 2:1 convention). Source: betaflight/firmware-presets.
+
 ### Dynamic Notch (SDFT-Based)
 
 - Uses Sliding Discrete Fourier Transform to track noise peaks in real-time
