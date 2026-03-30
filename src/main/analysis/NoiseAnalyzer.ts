@@ -10,12 +10,13 @@ import type {
   AxisNoiseProfile,
   NoiseProfile,
 } from '@shared/types/analysis.types';
+import type { DroneSize } from '@shared/types/profile.types';
 import {
   PEAK_PROMINENCE_DB,
   PEAK_LOCAL_WINDOW_BINS,
   NOISE_FLOOR_PERCENTILE,
-  NOISE_LEVEL_HIGH_DB,
-  NOISE_LEVEL_MEDIUM_DB,
+  NOISE_LEVEL_BY_SIZE,
+  NOISE_LEVEL_DEFAULT,
   FRAME_RESONANCE_MIN_HZ,
   FRAME_RESONANCE_MAX_HZ,
   ELECTRICAL_NOISE_MIN_HZ,
@@ -249,32 +250,37 @@ export function averageSpectra(spectra: PowerSpectrum[]): PowerSpectrum {
 
 /**
  * Determine overall noise level from axis noise profiles.
+ * Uses size-aware thresholds: smaller/higher-KV quads tolerate higher noise floors.
  */
 export function categorizeNoiseLevel(
   roll: AxisNoiseProfile,
   pitch: AxisNoiseProfile,
-  _yaw: AxisNoiseProfile
+  _yaw: AxisNoiseProfile,
+  droneSize?: DroneSize
 ): NoiseProfile['overallLevel'] {
+  const thresholds = droneSize ? NOISE_LEVEL_BY_SIZE[droneSize] : NOISE_LEVEL_DEFAULT;
   // Use the worst (highest) noise floor across roll and pitch (yaw is typically noisier, less relevant)
   const worstFloor = Math.max(roll.noiseFloorDb, pitch.noiseFloorDb);
 
-  if (worstFloor > NOISE_LEVEL_HIGH_DB) return 'high';
-  if (worstFloor > NOISE_LEVEL_MEDIUM_DB) return 'medium';
+  if (worstFloor > thresholds.highDb) return 'high';
+  if (worstFloor > thresholds.mediumDb) return 'medium';
   return 'low';
 }
 
 /**
  * Build a complete noise profile from axis profiles.
+ * @param droneSize - Used for size-aware noise classification thresholds
  */
 export function buildNoiseProfile(
   roll: AxisNoiseProfile,
   pitch: AxisNoiseProfile,
-  yaw: AxisNoiseProfile
+  yaw: AxisNoiseProfile,
+  droneSize?: DroneSize
 ): NoiseProfile {
   return {
     roll,
     pitch,
     yaw,
-    overallLevel: categorizeNoiseLevel(roll, pitch, yaw),
+    overallLevel: categorizeNoiseLevel(roll, pitch, yaw, droneSize),
   };
 }

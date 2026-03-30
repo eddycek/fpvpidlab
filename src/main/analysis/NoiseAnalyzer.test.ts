@@ -198,11 +198,7 @@ describe('classifyPeak', () => {
 
   it('should classify equally-spaced peaks as motor_harmonic', () => {
     // Peaks at 150, 300, 450 Hz — harmonics of 150 Hz fundamental
-    const allPeaks = [
-      { frequency: 150 },
-      { frequency: 300 },
-      { frequency: 450 },
-    ];
+    const allPeaks = [{ frequency: 150 }, { frequency: 300 }, { frequency: 450 }];
     expect(classifyPeak(150, allPeaks)).toBe('motor_harmonic');
     expect(classifyPeak(300, allPeaks)).toBe('motor_harmonic');
   });
@@ -310,6 +306,34 @@ describe('categorizeNoiseLevel', () => {
     const yaw = makeAxisProfile(-60);
     expect(categorizeNoiseLevel(roll, pitch, yaw)).toBe('high');
   });
+
+  it('should use size-aware thresholds for 4" quad', () => {
+    // -26 dB on 5" = HIGH (> -30), on 4" also HIGH (> -27)
+    // -28 dB on 5" = HIGH (> -30), but on 4" = MEDIUM (threshold is -27)
+    const roll = makeAxisProfile(-28);
+    const pitch = makeAxisProfile(-28);
+    const yaw = makeAxisProfile(-20);
+    expect(categorizeNoiseLevel(roll, pitch, yaw)).toBe('high'); // -28 > -30 → HIGH on 5"
+    expect(categorizeNoiseLevel(roll, pitch, yaw, '4"')).toBe('medium'); // -28 < -27 → MEDIUM on 4"
+  });
+
+  it('should use size-aware thresholds for 7" quad', () => {
+    // -34 dB on 5" = MEDIUM, but on 7" = HIGH (threshold is -35)
+    const roll = makeAxisProfile(-34);
+    const pitch = makeAxisProfile(-34);
+    const yaw = makeAxisProfile(-30);
+    expect(categorizeNoiseLevel(roll, pitch, yaw)).toBe('medium'); // 5" default
+    expect(categorizeNoiseLevel(roll, pitch, yaw, '7"')).toBe('high'); // 7" threshold -35
+  });
+
+  it('should use size-aware thresholds for 1" whoop', () => {
+    // -18 dB on 5" = HIGH, but on 1" = MEDIUM (threshold is -15)
+    const roll = makeAxisProfile(-18);
+    const pitch = makeAxisProfile(-18);
+    const yaw = makeAxisProfile(-10);
+    expect(categorizeNoiseLevel(roll, pitch, yaw)).toBe('high'); // 5" default
+    expect(categorizeNoiseLevel(roll, pitch, yaw, '1"')).toBe('medium'); // 1" threshold -15
+  });
 });
 
 describe('buildNoiseProfile', () => {
@@ -323,5 +347,16 @@ describe('buildNoiseProfile', () => {
     expect(profile.pitch).toBe(pitch);
     expect(profile.yaw).toBe(yaw);
     expect(profile.overallLevel).toBe('medium');
+  });
+
+  it('should pass droneSize through to categorization', () => {
+    const roll = makeAxisProfile(-28);
+    const pitch = makeAxisProfile(-28);
+    const yaw = makeAxisProfile(-20);
+
+    const profile5 = buildNoiseProfile(roll, pitch, yaw);
+    const profile4 = buildNoiseProfile(roll, pitch, yaw, '4"');
+    expect(profile5.overallLevel).toBe('high'); // -28 > -30 → HIGH on 5"
+    expect(profile4.overallLevel).toBe('medium'); // -28 < -27 → MEDIUM on 4"
   });
 });

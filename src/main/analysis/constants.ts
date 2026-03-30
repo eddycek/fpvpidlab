@@ -61,9 +61,40 @@ export const PEAK_LOCAL_WINDOW_BINS = 50;
 /** Percentile for noise floor estimation (0.25 = lower quartile) */
 export const NOISE_FLOOR_PERCENTILE = 0.25;
 
-/** Noise level thresholds in dB (noise floor above these values) */
+/** Noise level thresholds in dB (noise floor above these values).
+ * These are the 5" defaults — use NOISE_LEVEL_BY_SIZE for size-aware classification.
+ * Source: PIDToolBox community standard (-30 dB for "clean" 5" build). */
 export const NOISE_LEVEL_HIGH_DB = -30;
 export const NOISE_LEVEL_MEDIUM_DB = -50;
+
+// ---- Size-Aware Noise Classification ----
+// Smaller quads with higher KV motors have inherently higher noise floors.
+// The -30 dB PIDToolBox standard was calibrated for 5" freestyle quads.
+// Source: community testing, BF tuning notes, PIDToolBox convention.
+
+export interface NoiseLevelThresholds {
+  /** Noise floor above this = HIGH noise (aggressive filtering needed) */
+  highDb: number;
+  /** Noise floor above this = MEDIUM noise (moderate filtering). Below = LOW (clean). */
+  mediumDb: number;
+}
+
+/**
+ * Per-size noise classification thresholds.
+ * Higher KV motors excite the gyro more → higher noise floor is "normal".
+ */
+export const NOISE_LEVEL_BY_SIZE: Record<DroneSize, NoiseLevelThresholds> = {
+  '1"': { highDb: -15, mediumDb: -30 }, // Extreme KV (19000+), budget gyros
+  '2.5"': { highDb: -20, mediumDb: -35 }, // High KV (4500+)
+  '3"': { highDb: -25, mediumDb: -40 }, // High KV (3000-4500)
+  '4"': { highDb: -27, mediumDb: -40 }, // Medium-high KV (2500-3500)
+  '5"': { highDb: -30, mediumDb: -50 }, // PIDToolBox standard
+  '6"': { highDb: -33, mediumDb: -50 }, // Lower KV, larger props
+  '7"': { highDb: -35, mediumDb: -55 }, // Lowest KV, should be very clean
+};
+
+/** Fallback when drone size is unknown (= 5" standard) */
+export const NOISE_LEVEL_DEFAULT: NoiseLevelThresholds = NOISE_LEVEL_BY_SIZE['5"'];
 
 // ---- Peak Classification Frequency Bands ----
 

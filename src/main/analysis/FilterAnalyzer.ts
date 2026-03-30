@@ -140,7 +140,7 @@ export async function analyze(
   const rollNoise = analyzeAxisNoise(rollSpectra);
   const pitchNoise = analyzeAxisNoise(pitchSpectra);
   const yawNoise = analyzeAxisNoise(yawSpectra);
-  const noiseProfile = buildNoiseProfile(rollNoise, pitchNoise, yawNoise);
+  const noiseProfile = buildNoiseProfile(rollNoise, pitchNoise, yawNoise, options?.droneSize);
 
   await yieldToEventLoop();
 
@@ -241,7 +241,7 @@ async function analyzeEntireFlight(
   const rollNoise = analyzeAxisNoise(spectraByAxis[0]);
   const pitchNoise = analyzeAxisNoise(spectraByAxis[1]);
   const yawNoise = analyzeAxisNoise(spectraByAxis[2]);
-  const noiseProfile = buildNoiseProfile(rollNoise, pitchNoise, yawNoise);
+  const noiseProfile = buildNoiseProfile(rollNoise, pitchNoise, yawNoise, options?.droneSize);
 
   // Compute throttle spectrogram
   let throttleSpectrogram: ThrottleSpectrogramResult | undefined;
