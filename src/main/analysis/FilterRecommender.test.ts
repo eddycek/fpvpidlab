@@ -1107,6 +1107,32 @@ describe('recommendRpmFilterQ', () => {
     expect(rec).toBeDefined();
     expect(rec!.recommendedValue).toBe(700);
   });
+
+  it('should use correct midpoint for 3" quad', () => {
+    const settings: CurrentFilterSettings = {
+      ...DEFAULT_FILTER_SETTINGS,
+      rpm_filter_harmonics: 3,
+      rpm_filter_q: 400, // well below 750 midpoint for 3"
+    };
+    const rec = recommendRpmFilterQ(settings, '3"');
+    expect(rec).toBeDefined();
+    expect(rec!.setting).toBe('rpm_filter_q');
+    expect(rec!.recommendedValue).toBe(750);
+    expect(rec!.ruleId).toBe('F-RPM-Q');
+  });
+
+  it('should use correct midpoint for 4" quad', () => {
+    const settings: CurrentFilterSettings = {
+      ...DEFAULT_FILTER_SETTINGS,
+      rpm_filter_harmonics: 3,
+      rpm_filter_q: 1000, // above 750 midpoint for 4"
+    };
+    const rec = recommendRpmFilterQ(settings, '4"');
+    expect(rec).toBeDefined();
+    expect(rec!.setting).toBe('rpm_filter_q');
+    expect(rec!.recommendedValue).toBe(750);
+    expect(rec!.ruleId).toBe('F-RPM-Q');
+  });
 });
 
 // ---- D-term LPF Dynamic Expo Advisory (F-DEXP) ----

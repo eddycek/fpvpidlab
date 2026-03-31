@@ -348,20 +348,24 @@ async function takeScreenshot(targetWidth?: number, targetHeight?: number) {
 
   // Resize to target dimensions if provided (for high-res audit captures)
   const originalSize = win.getSize();
-  if (targetWidth && targetHeight) {
-    win.setSize(targetWidth, targetHeight);
-    // Wait for layout reflow after resize
-    await new Promise((r) => setTimeout(r, 500));
-  } else {
-    await new Promise((r) => setTimeout(r, 200));
-  }
+  const didResize = !!(targetWidth && targetHeight);
+  let pngBuffer: Buffer;
+  try {
+    if (didResize) {
+      win.setSize(targetWidth!, targetHeight!);
+      // Wait for layout reflow after resize
+      await new Promise((r) => setTimeout(r, 500));
+    } else {
+      await new Promise((r) => setTimeout(r, 200));
+    }
 
-  const image = await win.webContents.capturePage();
-  const pngBuffer = image.toPNG();
-
-  // Restore original size if resized
-  if (targetWidth && targetHeight) {
-    win.setSize(originalSize[0], originalSize[1]);
+    const image = await win.webContents.capturePage();
+    pngBuffer = image.toPNG();
+  } finally {
+    // Restore original size if resized — even if capture throws
+    if (didResize) {
+      win.setSize(originalSize[0], originalSize[1]);
+    }
   }
 
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
