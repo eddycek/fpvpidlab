@@ -61,10 +61,11 @@ debug-screenshots/
 playwright-report/
 test-results/
 
-# Real flight BBL fixtures (large binary files, not for git)
+# Real flight BBL fixtures (large binary files)
 src/main/blackbox/__fixtures__/*.bbl
-test-fixtures/
 src/main/blackbox/__fixtures__/*.bfl
+# Keep test-fixtures/bbl/ tracked — one fixture for CI integration tests
+# Additional fixtures can be added as needed for new test cases
 
 # Temp files
 *.temp
