@@ -2,11 +2,11 @@
 export interface Env {
   TELEMETRY_BUCKET: R2Bucket;
   ADMIN_KEY: string;
-  RESEND_API_KEY: string;
+  RESEND_API_KEY?: string;
   /** Recipient email for reports and notifications */
-  REPORT_EMAIL: string;
+  REPORT_EMAIL?: string;
   /** Sender email address (must be verified in Resend) */
-  REPORT_FROM_EMAIL: string;
+  REPORT_FROM_EMAIL?: string;
   /** Max diagnostic reports per installation per window (default: 5) */
   DIAGNOSTIC_RATE_LIMIT_MAX?: string;
   /** Rate limit window in minutes (default: 60) */

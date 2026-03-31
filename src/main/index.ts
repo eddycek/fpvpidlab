@@ -337,14 +337,19 @@ async function initialize(): Promise<void> {
                     session.appliedPIDChanges,
                     session.appliedFilterChanges
                   );
-                  await tuningSessionManager.updatePhase(existingProfile.id, session.phase, {
-                    applyVerified: verifyResult.verified,
-                    applyMismatches:
-                      verifyResult.mismatches.length > 0 ? verifyResult.mismatches : undefined,
-                    applyExpected: verifyResult.expected,
-                    applyActual: verifyResult.actual,
-                    applySuspicious: verifyResult.suspicious || undefined,
-                  });
+                  const verifiedSession = await tuningSessionManager.updatePhase(
+                    existingProfile.id,
+                    session.phase,
+                    {
+                      applyVerified: verifyResult.verified,
+                      applyMismatches:
+                        verifyResult.mismatches.length > 0 ? verifyResult.mismatches : undefined,
+                      applyExpected: verifyResult.expected,
+                      applyActual: verifyResult.actual,
+                      applySuspicious: verifyResult.suspicious || undefined,
+                    }
+                  );
+                  sendTuningSessionChanged(verifiedSession);
                   if (verifyResult.verified) {
                     logger.info('Post-apply verification: all settings match FC');
                   } else {
@@ -371,9 +376,12 @@ async function initialize(): Promise<void> {
                     tuningType,
                     snapshotRole: 'post-tuning',
                   });
-                  await tuningSessionManager.updatePhase(existingProfile.id, session.phase, {
-                    postTuningSnapshotId: snapshot.id,
-                  });
+                  const updatedWithSnapshot = await tuningSessionManager.updatePhase(
+                    existingProfile.id,
+                    session.phase,
+                    { postTuningSnapshotId: snapshot.id }
+                  );
+                  sendTuningSessionChanged(updatedWithSnapshot);
                   logger.info(`Post-tuning snapshot created on reconnect: ${snapshot.id}`);
                 } catch (snapErr) {
                   logger.warn(

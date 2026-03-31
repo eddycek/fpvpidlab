@@ -4,8 +4,8 @@ export interface Env {
   ADMIN_KEY: string;
   ED25519_PRIVATE_KEY: string;
   ED25519_PUBLIC_KEY: string;
-  RESEND_API_KEY: string;
-  RESEND_FROM_EMAIL: string;
+  RESEND_API_KEY?: string;
+  RESEND_FROM_EMAIL?: string;
 }
 
 /** D1 row for the licenses table */

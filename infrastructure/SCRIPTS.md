@@ -53,6 +53,10 @@ PIDLAB_ENV=prod ./infrastructure/scripts/generate-key.sh
 ./infrastructure/scripts/telemetry-metrics.sh         # Metric distributions: noise, overshoot, bandwidth
 ./infrastructure/scripts/telemetry-verification.sh    # Verification success rates by tuning mode
 ./infrastructure/scripts/telemetry-convergence.sh     # Quality score convergence across sessions
+
+# V3 analytics (requires v3 bundles with structured events):
+./infrastructure/scripts/telemetry-errors.sh           # Error breakdown: types, unique installs, funnel dropoff
+./infrastructure/scripts/telemetry-events.sh           # Raw structured events by installation
 ```
 
 ## Diagnostic Report Management

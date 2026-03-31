@@ -42,7 +42,7 @@ interface ComponentDef {
   worst: number;
 }
 
-/** Noise floor values below this are sentinel/no-signal — treat as missing */
+/** Noise floor values at or below this are sentinel/no-signal — treat as missing */
 const NOISE_FLOOR_VALID_MIN = -100;
 
 /** Average noise floor across axes, excluding sentinel values (-240 dB) */
