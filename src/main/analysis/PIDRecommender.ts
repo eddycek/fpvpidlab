@@ -52,9 +52,11 @@ import {
   DMIN_GAP_MIN_FRACTION,
   PROPWASH_IRELAX_CUTOFF_REDUCTION,
   PROPWASH_IRELAX_CUTOFF_FLOOR,
+  PROPWASH_IRELAX_CUTOFF_FLOOR_SEVERE,
   PROPWASH_TPA_BREAKPOINT_MIN,
   PROPWASH_TPA_RATE_MAX,
   PROPWASH_SEVERITY_SEVERE,
+  PROPWASH_SEVERITY_VERY_SEVERE,
   PROPWASH_SEVERITY_MINIMAL,
   FF_DOMINATED_MIN_STEPS,
   type QuadSizeBounds,
@@ -345,7 +347,13 @@ export function recommendPID(
 
   // Post-process: propwash-aware d_min recommendations
   if (propWash || dMinContext) {
-    const dMinRecs = recommendPropWashDMin(propWash, dMinContext, flightPIDs, droneSize);
+    const dMinRecs = recommendPropWashDMin(
+      propWash,
+      dMinContext,
+      flightPIDs,
+      droneSize,
+      flightStyle
+    );
     recommendations.push(...dMinRecs);
   }
 
@@ -622,7 +630,8 @@ export function recommendPropWashDMin(
   propWash: PropWashAnalysis | undefined,
   dMinContext: DMinContext | undefined,
   flightPIDs: PIDConfiguration | undefined,
-  droneSize?: DroneSize
+  droneSize?: DroneSize,
+  flightStyle: FlightStyle = 'balanced'
 ): PIDRecommendation[] {
   const recs: PIDRecommendation[] = [];
   if (!dMinContext) return recs;
@@ -632,7 +641,9 @@ export function recommendPropWashDMin(
   // Rule PW-DMIN-GAIN: If propwash severe AND d_min active AND gain is low → increase
   if (isSevere && propWash && dMinContext.active && dMinContext.gain !== undefined) {
     const sizeProfile = droneSize ? DMIN_BY_SIZE[droneSize] : undefined;
-    const targetGain = sizeProfile?.gain ?? DMIN_GAIN_FREESTYLE;
+    // Style-aware gain: smooth pilots get lower target, aggressive pilots get higher
+    const targetGain =
+      sizeProfile?.gainByStyle?.[flightStyle] ?? sizeProfile?.gain ?? DMIN_GAIN_FREESTYLE;
     if (dMinContext.gain < DMIN_GAIN_FREESTYLE && targetGain > (dMinContext.gain ?? 0)) {
       recs.push({
         setting: 'd_min_gain',
@@ -1198,27 +1209,32 @@ export function recommendItermRelaxCutoff(
   if (currentCutoff === undefined) return undefined;
 
   // Rule PW-IRELAX-CUTOFF: propwash severe + cutoff too high → lower cutoff
+  // Severity-aware floor: very severe propwash allows lowering to 10 (freestyle-low range),
+  // moderate propwash only to 15 (BF default). Per community guidance: "reduce 15 → 10 → 7 → 5".
   if (
     propWash &&
     propWash.meanSeverity >= PROPWASH_SEVERITY_SEVERE &&
-    currentCutoff > PROPWASH_IRELAX_CUTOFF_FLOOR
+    currentCutoff > PROPWASH_IRELAX_CUTOFF_FLOOR_SEVERE
   ) {
-    const targetCutoff = Math.max(
-      PROPWASH_IRELAX_CUTOFF_FLOOR,
-      currentCutoff - PROPWASH_IRELAX_CUTOFF_REDUCTION
-    );
-    return {
-      setting: 'iterm_relax_cutoff',
-      currentValue: currentCutoff,
-      recommendedValue: targetCutoff,
-      reason:
-        `Severe prop wash detected (${propWash.meanSeverity.toFixed(1)}× baseline) and iterm_relax_cutoff is ${currentCutoff}. ` +
-        `Lowering to ${targetCutoff} increases I-term suppression during prop wash events, ` +
-        'reducing the oscillation that occurs during descents and power loops.',
-      impact: 'stability',
-      confidence: 'medium',
-      ruleId: 'PW-IRELAX-CUTOFF',
-    };
+    const floor =
+      propWash.meanSeverity >= PROPWASH_SEVERITY_VERY_SEVERE
+        ? PROPWASH_IRELAX_CUTOFF_FLOOR_SEVERE
+        : PROPWASH_IRELAX_CUTOFF_FLOOR;
+    const targetCutoff = Math.max(floor, currentCutoff - PROPWASH_IRELAX_CUTOFF_REDUCTION);
+    if (targetCutoff < currentCutoff) {
+      return {
+        setting: 'iterm_relax_cutoff',
+        currentValue: currentCutoff,
+        recommendedValue: targetCutoff,
+        reason:
+          `Severe prop wash detected (${propWash.meanSeverity.toFixed(1)}× baseline) and iterm_relax_cutoff is ${currentCutoff}. ` +
+          `Lowering to ${targetCutoff} increases I-term suppression during prop wash events, ` +
+          'reducing the oscillation that occurs during descents and power loops.',
+        impact: 'stability',
+        confidence: 'medium',
+        ruleId: 'PW-IRELAX-CUTOFF',
+      };
+    }
   }
 
   // Original style-based recommendation

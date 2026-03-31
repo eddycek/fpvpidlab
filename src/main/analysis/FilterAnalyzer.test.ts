@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { analyze } from './FilterAnalyzer';
+import { GYRO_LPF1_MIN_HZ } from './constants';
 import type { BlackboxFlightData, TimeSeries } from '@shared/types/blackbox.types';
 import type { AnalysisProgress, CurrentFilterSettings } from '@shared/types/analysis.types';
 import { DEFAULT_FILTER_SETTINGS } from '@shared/types/analysis.types';
@@ -170,10 +171,12 @@ describe('analyze', () => {
     };
 
     const result = await analyze(data, 0, customSettings);
-    // Shouldn't recommend going below minimum
+    // Should still produce valid recommendations (within safety bounds)
     const gyroRec = result.recommendations.find((r) => r.setting === 'gyro_lpf1_static_hz');
     if (gyroRec) {
-      expect(gyroRec.recommendedValue).toBeGreaterThanOrEqual(100);
+      // Noise-based target is absolute — may go below current value if noise warrants it.
+      // Must respect safety minimum.
+      expect(gyroRec.recommendedValue).toBeGreaterThanOrEqual(GYRO_LPF1_MIN_HZ);
     }
   });
 
