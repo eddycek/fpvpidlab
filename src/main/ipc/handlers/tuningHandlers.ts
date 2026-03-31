@@ -319,6 +319,7 @@ export function registerTuningHandlers(deps: HandlerDependencies): void {
             throw new Error(
               `Feedforward changes failed (${appliedFeedforward}/${ffRecs.length} applied). ` +
                 `${appliedPIDs > 0 ? (pidRolledBack ? 'PID values were automatically rolled back. ' : `${appliedPIDs} PID changes are still in FC RAM. `) : ''}` +
+                `${appliedFilters > 0 ? `${appliedFilters} filter change${appliedFilters !== 1 ? 's are' : ' is'} still in FC RAM. ` : ''}` +
                 `FC was NOT saved — power cycle to discard, or restore from pre-tuning snapshot.`
             );
           }
