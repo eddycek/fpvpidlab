@@ -369,7 +369,9 @@ export function registerTuningHandlers(deps: HandlerDependencies): void {
               }
 
               if (targetName) {
-                const cmd = `set profile_name = ${targetName}`;
+                // Sanitize: BF CLI allows alphanumeric + underscore + hyphen
+                const sanitized = targetName.replace(/[^a-zA-Z0-9_-]/g, '_');
+                const cmd = `set profile_name = ${sanitized}`;
                 const response = await mspClient.connection.sendCLICommand(cmd);
                 try {
                   validateCLIResponse(cmd, response);

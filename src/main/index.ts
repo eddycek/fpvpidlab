@@ -199,11 +199,11 @@ async function initialize(): Promise<void> {
         logger.info('Creating baseline for existing profile...');
         await snapshotManager.createBaselineIfMissing();
 
-        // Extract PID profile names from baseline CLI diff
+        // Extract PID profile names from baseline CLI diff (scan newest→oldest)
         try {
           const snapshotIds = existingProfile.snapshotIds ?? [];
-          for (const snapId of snapshotIds) {
-            const snap = await snapshotManager.loadSnapshot(snapId);
+          for (let i = snapshotIds.length - 1; i >= 0; i--) {
+            const snap = await snapshotManager.loadSnapshot(snapshotIds[i]);
             if (snap?.configuration?.cliDiff) {
               const profileNames = parseProfileNamesFromDiff(snap.configuration.cliDiff);
               if (Object.keys(profileNames).length > 0) {
@@ -214,8 +214,9 @@ async function initialize(): Promise<void> {
                   bfPidProfileLabels: merged,
                 });
                 logger.info('Extracted PID profile names from CLI diff:', profileNames);
+                break;
               }
-              break; // Only need one snapshot with diff
+              // Has diff but no profile names — continue searching older snapshots
             }
           }
         } catch (err) {
