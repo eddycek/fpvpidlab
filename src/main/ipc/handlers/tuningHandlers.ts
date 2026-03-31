@@ -26,6 +26,65 @@ import { sendAutoReport } from '../../diagnostic/DiagnosticReportService';
 import { MockMSPClient } from '../../demo/MockMSPClient';
 
 /**
+ * Betaflight-valid ranges for CLI filter/FF settings.
+ * Used for pre-apply validation to catch recommender bugs before they reach the FC.
+ */
+const BF_SETTING_RANGES: Record<string, { min: number; max: number }> = {
+  gyro_lpf1_static_hz: { min: 0, max: 1000 },
+  gyro_lpf1_dyn_min_hz: { min: 0, max: 1000 },
+  gyro_lpf1_dyn_max_hz: { min: 0, max: 1000 },
+  gyro_lpf2_static_hz: { min: 0, max: 1000 },
+  dterm_lpf1_static_hz: { min: 0, max: 1000 },
+  dterm_lpf1_dyn_min_hz: { min: 0, max: 1000 },
+  dterm_lpf1_dyn_max_hz: { min: 0, max: 1000 },
+  dterm_lpf2_static_hz: { min: 0, max: 1000 },
+  dterm_lpf1_dyn_expo: { min: 0, max: 10 },
+  dyn_notch_min_hz: { min: 20, max: 1000 },
+  dyn_notch_max_hz: { min: 20, max: 1000 },
+  dyn_notch_count: { min: 0, max: 5 },
+  dyn_notch_q: { min: 1, max: 1000 },
+  rpm_filter_q: { min: 1, max: 1000 },
+  feedforward_boost: { min: 0, max: 50 },
+  d_min_gain: { min: 0, max: 250 },
+  simplified_dmax_gain: { min: 0, max: 250 },
+  iterm_relax: { min: 0, max: 2 },
+  iterm_relax_cutoff: { min: 1, max: 100 },
+  dyn_idle_min_rpm: { min: 0, max: 200 },
+  pidsum_limit: { min: 100, max: 1000 },
+  pidsum_limit_yaw: { min: 100, max: 1000 },
+  feedforward_max_rate_limit: { min: 0, max: 150 },
+  anti_gravity_gain: { min: 0, max: 250 },
+  thrust_linear: { min: 0, max: 150 },
+  tpa_rate: { min: 0, max: 100 },
+  tpa_breakpoint: { min: 1000, max: 2000 },
+  tpa_low_always: { min: 0, max: 1 },
+};
+
+/**
+ * Validate all CLI recommendations are within Betaflight-valid ranges.
+ * Throws before any MSP/CLI interaction if any value is out of range.
+ */
+function validateRecommendationBounds(
+  recs: Array<{ setting: string; recommendedValue: number }>,
+  label: string
+): void {
+  const violations: string[] = [];
+  for (const rec of recs) {
+    const range = BF_SETTING_RANGES[rec.setting];
+    if (!range) continue; // Unknown setting — will be validated by CLI itself
+    const value = Math.round(rec.recommendedValue);
+    if (value < range.min || value > range.max) {
+      violations.push(`${rec.setting} = ${value} (valid: ${range.min}-${range.max})`);
+    }
+  }
+  if (violations.length > 0) {
+    throw new Error(
+      `${label} validation failed — values out of Betaflight range: ${violations.join(', ')}`
+    );
+  }
+}
+
+/**
  * Compute the next tuning session number.
  * Uses max(history count, highest existing snapshot session number) + 1
  * to avoid duplicate numbers when sessions are reset without completing.
@@ -98,6 +157,11 @@ export function registerTuningHandlers(deps: HandlerDependencies): void {
           event.sender.send(IPCChannel.EVENT_TUNING_APPLY_PROGRESS, progress);
         };
 
+        // Pre-apply validation: reject entire apply if any value is out of BF range
+        const actionableFilters = input.filterRecommendations.filter((r) => !r.informational);
+        validateRecommendationBounds(actionableFilters, 'Filter');
+        validateRecommendationBounds(ffRecs, 'Feedforward');
+
         // Order matters: MSP commands first (PIDs), then CLI operations
         // (filters, save). The apply flow enters CLI explicitly for filter/FF
         // commands — exportCLIDiff() detects wasInCLI=true and skips exit.
@@ -116,11 +180,13 @@ export function registerTuningHandlers(deps: HandlerDependencies): void {
         }
 
         // Stage 1: Apply PID recommendations via MSP (must happen before CLI)
+        // Read current PID config before any changes — used for rollback on filter failure
+        let currentConfig: PIDConfiguration | undefined;
         let appliedPIDs = 0;
         if (input.pidRecommendations.length > 0) {
           sendProgress({ stage: 'pid', message: 'Applying PID changes via MSP...', percent: 5 });
 
-          const currentConfig = await mspClient.getPIDConfiguration();
+          currentConfig = await mspClient.getPIDConfiguration();
           const newConfig: PIDConfiguration = JSON.parse(JSON.stringify(currentConfig));
 
           for (const rec of input.pidRecommendations) {
@@ -172,18 +238,30 @@ export function registerTuningHandlers(deps: HandlerDependencies): void {
 
             logger.info(`Applied ${appliedFilters} filter changes via CLI`);
           } catch (filterError) {
-            // #8: PIDs were already written via MSP (Stage 1) but filter CLI commands failed.
+            // PIDs were already written via MSP (Stage 1) but filter CLI commands failed.
             // FC has mixed state: new PIDs + old filters in RAM. Save was NOT called yet.
-            // Pre-tuning snapshot remains valid for rollback.
+            // Attempt automatic PID rollback before surfacing error.
+            let pidRolledBack = false;
+            if (appliedPIDs > 0 && currentConfig) {
+              try {
+                logger.info('Attempting PID rollback to pre-apply configuration...');
+                await mspClient.connection.exitCLI();
+                await mspClient.setPIDConfiguration(currentConfig);
+                pidRolledBack = true;
+                logger.info('PID rollback successful — FC restored to pre-apply PID values');
+              } catch (rollbackError) {
+                logger.error('PID rollback failed — FC still has mixed state:', rollbackError);
+              }
+            }
+
             logger.error(
               `Filter apply failed after ${appliedPIDs} PIDs were already written. ` +
-                `FC has mixed state (new PIDs, old filters). Save was NOT called. ` +
-                `Pre-tuning snapshot is valid for rollback.`,
+                `PID rollback ${pidRolledBack ? 'succeeded' : 'failed'}. Save was NOT called.`,
               filterError
             );
             throw new Error(
               `Filter changes failed (${appliedFilters}/${actionableFilterRecs.length} applied). ` +
-                `${appliedPIDs > 0 ? `${appliedPIDs} PID changes were already written to FC RAM. ` : ''}` +
+                `${appliedPIDs > 0 ? (pidRolledBack ? 'PID values were automatically rolled back. ' : `${appliedPIDs} PID changes are still in FC RAM. `) : ''}` +
                 `FC was NOT saved — power cycle to discard, or restore from pre-tuning snapshot.`
             );
           }
@@ -318,9 +396,10 @@ export function registerTuningHandlers(deps: HandlerDependencies): void {
             const refreshedSession = await tuningSessionManager!.getSession(profileId);
             const tuningType = (refreshedSession?.tuningType ??
               currentSession.tuningType) as keyof typeof TUNING_TYPE_LABELS;
-            // Use session number from pre-tuning snapshot so Pre/Post pairs match
-            let sessionNumber = await getNextSessionNumber(deps, profileId);
-            if (refreshedSession?.baselineSnapshotId && snapshotManager) {
+            // Use session number from TuningSession (set at creation) so Pre/Post pairs match.
+            // Fallback chain: session → baseline snapshot → computed next number
+            let sessionNumber = refreshedSession?.tuningSessionNumber;
+            if (!sessionNumber && refreshedSession?.baselineSnapshotId && snapshotManager) {
               try {
                 const baseline = await snapshotManager.loadSnapshot(
                   refreshedSession.baselineSnapshotId
@@ -331,6 +410,9 @@ export function registerTuningHandlers(deps: HandlerDependencies): void {
               } catch {
                 // Fall back to computed number
               }
+            }
+            if (!sessionNumber) {
+              sessionNumber = await getNextSessionNumber(deps, profileId);
             }
             const label = `Post-tuning #${sessionNumber} (${TUNING_TYPE_LABELS[tuningType]})`;
             // createSnapshot → exportCLIDiff → exit → FC reboots.
@@ -473,9 +555,11 @@ export function registerTuningHandlers(deps: HandlerDependencies): void {
         // Setting rebootPending prevents it from clearing the profile/session.
         // exportCLIDiff() handles the full reboot+reconnect cycle internally.
         let baselineSnapshotId: string | undefined;
+        let computedSessionNumber: number | undefined;
         if (snapshotManager && mspClient?.isConnected()) {
           try {
             const sessionNumber = await getNextSessionNumber(deps, profileId);
+            computedSessionNumber = sessionNumber;
             const label = `Pre-tuning #${sessionNumber} (${TUNING_TYPE_LABELS[resolvedType]})`;
 
             // Protect against disconnect handler clearing state during FC reboot
@@ -508,6 +592,8 @@ export function registerTuningHandlers(deps: HandlerDependencies): void {
               : TUNING_PHASE.FILTER_FLIGHT_PENDING;
         const phaseData: Partial<TuningSession> = {};
         if (baselineSnapshotId) phaseData.baselineSnapshotId = baselineSnapshotId;
+        if (computedSessionNumber !== undefined)
+          phaseData.tuningSessionNumber = computedSessionNumber;
         if (bfPidProfileIndex !== undefined) phaseData.bfPidProfileIndex = bfPidProfileIndex;
         if (ratesConfig) phaseData.ratesConfig = ratesConfig;
         if (Object.keys(phaseData).length > 0) {
