@@ -2978,9 +2978,49 @@ describe('recommendPropWashDMin (Task 3)', () => {
     expect(gainRec).toBeDefined();
     expect(gainRec!.setting).toBe('d_min_gain');
     expect(gainRec!.currentValue).toBe(15);
-    expect(gainRec!.recommendedValue).toBe(30); // DMIN_BY_SIZE['5"'].gain
+    expect(gainRec!.recommendedValue).toBe(25); // DMIN_BY_SIZE['5"'].gainByStyle.balanced
     expect(gainRec!.confidence).toBe('medium');
     expect(gainRec!.reason).toContain('prop wash');
+  });
+
+  it('PW-DMIN-GAIN: should use style-aware gain for smooth style (lower target)', () => {
+    const dMin: DMinContext = { active: true, roll: 20, pitch: 22, gain: 15 };
+    const flightPIDs: PIDConfiguration = {
+      roll: { P: 45, I: 80, D: 30 },
+      pitch: { P: 47, I: 84, D: 32 },
+      yaw: { P: 45, I: 80, D: 0 },
+    };
+    const recs = recommendPropWashDMin(severePropWash, dMin, flightPIDs, '5"', 'smooth');
+    const gainRec = recs.find((r) => r.ruleId === 'PW-DMIN-GAIN');
+    expect(gainRec).toBeDefined();
+    expect(gainRec!.recommendedValue).toBe(20); // DMIN_BY_SIZE['5"'].gainByStyle.smooth
+  });
+
+  it('PW-DMIN-GAIN: should use style-aware gain for aggressive style (higher target)', () => {
+    const dMin: DMinContext = { active: true, roll: 20, pitch: 22, gain: 15 };
+    const flightPIDs: PIDConfiguration = {
+      roll: { P: 45, I: 80, D: 30 },
+      pitch: { P: 47, I: 84, D: 32 },
+      yaw: { P: 45, I: 80, D: 0 },
+    };
+    const recs = recommendPropWashDMin(severePropWash, dMin, flightPIDs, '5"', 'aggressive');
+    const gainRec = recs.find((r) => r.ruleId === 'PW-DMIN-GAIN');
+    expect(gainRec).toBeDefined();
+    expect(gainRec!.recommendedValue).toBe(30); // DMIN_BY_SIZE['5"'].gainByStyle.aggressive
+  });
+
+  it('PW-DMIN-GAIN: should fall back to size default gain when style has no entry', () => {
+    const dMin: DMinContext = { active: true, roll: 20, pitch: 22, gain: 15 };
+    const flightPIDs: PIDConfiguration = {
+      roll: { P: 45, I: 80, D: 30 },
+      pitch: { P: 47, I: 84, D: 32 },
+      yaw: { P: 45, I: 80, D: 0 },
+    };
+    // 7" has no gainByStyle → falls back to gain: 20
+    const recs = recommendPropWashDMin(severePropWash, dMin, flightPIDs, '7"', 'balanced');
+    const gainRec = recs.find((r) => r.ruleId === 'PW-DMIN-GAIN');
+    expect(gainRec).toBeDefined();
+    expect(gainRec!.recommendedValue).toBe(20); // DMIN_BY_SIZE['7"'].gain
   });
 
   it('PW-DMIN-GAIN: should not fire when gain is already at freestyle level', () => {
@@ -3084,11 +3124,28 @@ describe('recommendItermRelaxCutoff propwash-aware (Task 4)', () => {
     expect(rec!.ruleId).toBe('PW-IRELAX-CUTOFF');
   });
 
-  it('PW-IRELAX-CUTOFF: should not fire when cutoff is already <= max', () => {
+  it('PW-IRELAX-CUTOFF: should not fire when cutoff is at moderate floor and severity is moderate', () => {
+    // cutoff=15, severity=6.0 (severe but < 7.5 threshold for lower floor)
+    // floor=15 (moderate), target=max(15, 15-5)=15 → no change, skip
     const rec = recommendItermRelaxCutoff(15, 'balanced', severePropWash);
-    // cutoff=15 is not > PROPWASH_IRELAX_CUTOFF_FLOOR(15), so propwash rule skips
-    // Fall through to style-based check — 15 vs typical 12: deviation = 3/12 = 0.25 < 0.5
+    // Falls through to style-based check — 15 vs typical 12: deviation = 3/12 = 0.25 < 0.5
     expect(rec).toBeUndefined();
+  });
+
+  it('PW-IRELAX-CUTOFF: should use lower floor (10) for very severe propwash', () => {
+    // severity=8.0 >= 5.0 * 1.5 = 7.5 → floor=10
+    const verySeverePropWash = makePropWash({ meanSeverity: 8.0 });
+    const rec = recommendItermRelaxCutoff(15, 'balanced', verySeverePropWash);
+    expect(rec).toBeDefined();
+    expect(rec!.ruleId).toBe('PW-IRELAX-CUTOFF');
+    expect(rec!.recommendedValue).toBe(10); // max(10, 15-5) = 10
+  });
+
+  it('PW-IRELAX-CUTOFF: should not go below severe floor (10) even with very severe propwash', () => {
+    const verySeverePropWash = makePropWash({ meanSeverity: 10.0 });
+    const rec = recommendItermRelaxCutoff(12, 'balanced', verySeverePropWash);
+    expect(rec).toBeDefined();
+    expect(rec!.recommendedValue).toBe(10); // max(10, 12-5) = 10
   });
 
   it('PW-IRELAX-CUTOFF: should not fire when propwash is mild', () => {

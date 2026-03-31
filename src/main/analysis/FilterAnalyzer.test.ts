@@ -170,10 +170,12 @@ describe('analyze', () => {
     };
 
     const result = await analyze(data, 0, customSettings);
-    // Shouldn't recommend going below minimum
+    // Should still produce valid recommendations (within safety bounds)
     const gyroRec = result.recommendations.find((r) => r.setting === 'gyro_lpf1_static_hz');
     if (gyroRec) {
-      expect(gyroRec.recommendedValue).toBeGreaterThanOrEqual(100);
+      // Noise-based target is absolute — may go below current value if noise warrants it.
+      // Must respect safety minimum (GYRO_LPF1_MIN_HZ = 75).
+      expect(gyroRec.recommendedValue).toBeGreaterThanOrEqual(75);
     }
   });
 

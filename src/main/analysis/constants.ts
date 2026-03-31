@@ -706,6 +706,8 @@ export interface DMinSizeProfile {
   pitch: number;
   /** d_min_boost_gain (how fast D ramps up during propwash/stick input) */
   gain: number;
+  /** Style-aware gain targets (overrides `gain` when flight style is known) */
+  gainByStyle?: Partial<Record<FlightStyle, number>>;
 }
 
 export const DMIN_BY_SIZE: Record<DroneSize, DMinSizeProfile> = {
@@ -713,8 +715,18 @@ export const DMIN_BY_SIZE: Record<DroneSize, DMinSizeProfile> = {
   '2.5"': { roll: 22, pitch: 24, gain: 20 },
   '3"': { roll: 25, pitch: 27, gain: 25 },
   '4"': { roll: 27, pitch: 30, gain: 30 },
-  '5"': { roll: 30, pitch: 34, gain: 30 },
-  '6"': { roll: 30, pitch: 34, gain: 25 },
+  '5"': {
+    roll: 30,
+    pitch: 34,
+    gain: 30,
+    gainByStyle: { smooth: 20, balanced: 25, aggressive: 30 },
+  },
+  '6"': {
+    roll: 30,
+    pitch: 34,
+    gain: 25,
+    gainByStyle: { smooth: 15, balanced: 20, aggressive: 25 },
+  },
   '7"': { roll: 28, pitch: 32, gain: 20 },
 };
 
@@ -735,8 +747,12 @@ export const DMIN_ADVANCE_DEFAULT = 20;
 /** Propwash-specific iterm_relax cutoff reduction (lower = more I suppression during oscillation) */
 export const PROPWASH_IRELAX_CUTOFF_REDUCTION = 5;
 
-/** Minimum iterm_relax_cutoff floor when propwash is severe (won't reduce below this) */
+/** Minimum iterm_relax_cutoff floor for moderate propwash (won't reduce below this) */
 export const PROPWASH_IRELAX_CUTOFF_FLOOR = 15;
+
+/** Lower floor for very severe propwash (severity >= PROPWASH_SEVERITY_SEVERE).
+ * Allows reaching freestyle-low range (10) per community guidance: "reduce 15 → 10 → 7 → 5" */
+export const PROPWASH_IRELAX_CUTOFF_FLOOR_SEVERE = 10;
 
 // ---- Propwash TPA ----
 
