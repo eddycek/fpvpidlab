@@ -54,7 +54,7 @@ API keys for authenticating requests to `/admin/stats/*` endpoints on telemetry 
 
 Resend email delivery API key for daily telemetry cron report, diagnostic report notifications, and beta program emails.
 
-- **Used by**: Terraform (injected as Worker secret on both telemetry and license Workers)
+- **Used by**: Terraform (telemetry Worker) + `wrangler secret put` in CI (license Worker)
 - **Scope**: Resend email sending only
 - **Created in**: resend.com dashboard
 
