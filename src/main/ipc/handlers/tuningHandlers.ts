@@ -27,8 +27,10 @@ import { sendAutoReport } from '../../diagnostic/DiagnosticReportService';
 import { MockMSPClient } from '../../demo/MockMSPClient';
 
 /**
- * Betaflight-valid ranges for CLI filter/FF settings.
- * Used for pre-apply validation to catch recommender bugs before they reach the FC.
+ * Pre-apply validation ranges for recommended values.
+ * Filter/FF entries use Betaflight firmware limits (0-1000 Hz, etc.).
+ * PID entries use safety bounds from QUAD_SIZE_BOUNDS (tighter than BF's 0-255)
+ * to catch recommender bugs before they reach the FC.
  */
 const BF_SETTING_RANGES: Record<string, { min: number; max: number }> = {
   gyro_lpf1_static_hz: { min: 0, max: 1000 },
@@ -74,7 +76,8 @@ const BF_SETTING_RANGES: Record<string, { min: number; max: number }> = {
 };
 
 /**
- * Validate all CLI recommendations are within Betaflight-valid ranges.
+ * Validate all recommendations are within valid ranges before applying.
+ * Filter/FF: Betaflight firmware limits. PID: safety bounds from constants.
  * Throws before any MSP/CLI interaction if any value is out of range.
  */
 function validateRecommendationBounds(
@@ -92,7 +95,7 @@ function validateRecommendationBounds(
   }
   if (violations.length > 0) {
     throw new Error(
-      `${label} validation failed — values out of Betaflight range: ${violations.join(', ')}`
+      `${label} validation failed — values out of safe range: ${violations.join(', ')}`
     );
   }
 }
