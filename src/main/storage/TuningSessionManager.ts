@@ -11,6 +11,41 @@ import type { TuningSession, TuningPhase, TuningType } from '@shared/types/tunin
 import { TUNING_TYPE, TUNING_PHASE } from '@shared/constants';
 import { logger } from '../utils/logger';
 
+/**
+ * Valid phase transitions per tuning type.
+ * Each phase maps to the set of phases it can transition TO.
+ * 'completed' is a terminal phase with no outgoing transitions.
+ */
+const VALID_TRANSITIONS: Record<TuningType, Record<string, readonly TuningPhase[]>> = {
+  filter: {
+    [TUNING_PHASE.FILTER_FLIGHT_PENDING]: [
+      TUNING_PHASE.FILTER_LOG_READY,
+      TUNING_PHASE.FILTER_ANALYSIS,
+    ],
+    [TUNING_PHASE.FILTER_LOG_READY]: [TUNING_PHASE.FILTER_ANALYSIS],
+    [TUNING_PHASE.FILTER_ANALYSIS]: [TUNING_PHASE.FILTER_APPLIED],
+    [TUNING_PHASE.FILTER_APPLIED]: [TUNING_PHASE.FILTER_VERIFICATION_PENDING],
+    [TUNING_PHASE.FILTER_VERIFICATION_PENDING]: [TUNING_PHASE.COMPLETED],
+  },
+  pid: {
+    [TUNING_PHASE.PID_FLIGHT_PENDING]: [TUNING_PHASE.PID_LOG_READY, TUNING_PHASE.PID_ANALYSIS],
+    [TUNING_PHASE.PID_LOG_READY]: [TUNING_PHASE.PID_ANALYSIS],
+    [TUNING_PHASE.PID_ANALYSIS]: [TUNING_PHASE.PID_APPLIED],
+    [TUNING_PHASE.PID_APPLIED]: [TUNING_PHASE.PID_VERIFICATION_PENDING],
+    [TUNING_PHASE.PID_VERIFICATION_PENDING]: [TUNING_PHASE.COMPLETED],
+  },
+  flash: {
+    [TUNING_PHASE.FLASH_FLIGHT_PENDING]: [
+      TUNING_PHASE.FLASH_LOG_READY,
+      TUNING_PHASE.FLASH_ANALYSIS,
+    ],
+    [TUNING_PHASE.FLASH_LOG_READY]: [TUNING_PHASE.FLASH_ANALYSIS],
+    [TUNING_PHASE.FLASH_ANALYSIS]: [TUNING_PHASE.FLASH_APPLIED],
+    [TUNING_PHASE.FLASH_APPLIED]: [TUNING_PHASE.FLASH_VERIFICATION_PENDING],
+    [TUNING_PHASE.FLASH_VERIFICATION_PENDING]: [TUNING_PHASE.COMPLETED],
+  },
+};
+
 export class TuningSessionManager {
   private dataDir: string;
 
@@ -82,6 +117,17 @@ export class TuningSessionManager {
     const existing = await this.getSession(profileId);
     if (!existing) {
       throw new Error(`No tuning session found for profile ${profileId}`);
+    }
+
+    // Validate transition: allow same-phase updates (extraData only) and legal forward transitions
+    if (phase !== existing.phase) {
+      const transitions = VALID_TRANSITIONS[existing.tuningType];
+      const allowed = transitions?.[existing.phase];
+      if (!allowed || !allowed.includes(phase)) {
+        throw new Error(
+          `Invalid phase transition: ${existing.tuningType} session cannot go from '${existing.phase}' to '${phase}'`
+        );
+      }
     }
 
     const updated: TuningSession = {

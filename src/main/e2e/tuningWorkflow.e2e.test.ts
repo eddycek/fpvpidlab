@@ -793,7 +793,7 @@ describe('E2E Tuning Workflow', () => {
     it('update tuning phase transitions correctly', async () => {
       await invoke(IPCChannel.TUNING_START_SESSION);
 
-      // Transition through filter phases
+      // Transition through filter phases (valid forward transitions only)
       const phase1 = await invoke(IPCChannel.TUNING_UPDATE_PHASE, 'filter_log_ready', {
         filterLogId: 'log-filter-1',
       });
@@ -809,16 +809,14 @@ describe('E2E Tuning Workflow', () => {
       expect(phase3.success).toBe(true);
       expect(phase3.data.phase).toBe('filter_applied');
 
-      // Transition to PID phases
-      const phase4 = await invoke(IPCChannel.TUNING_UPDATE_PHASE, 'pid_flight_pending');
+      // Continue to verification and completion
+      const phase4 = await invoke(IPCChannel.TUNING_UPDATE_PHASE, 'filter_verification_pending');
       expect(phase4.success).toBe(true);
-      expect(phase4.data.phase).toBe('pid_flight_pending');
+      expect(phase4.data.phase).toBe('filter_verification_pending');
 
-      const phase5 = await invoke(IPCChannel.TUNING_UPDATE_PHASE, 'pid_log_ready', {
-        pidLogId: 'log-pid-1',
-      });
+      const phase5 = await invoke(IPCChannel.TUNING_UPDATE_PHASE, 'completed');
       expect(phase5.success).toBe(true);
-      expect(phase5.data.pidLogId).toBe('log-pid-1');
+      expect(phase5.data.phase).toBe('completed');
 
       // Verify data accumulates across phases
       expect(phase5.data.filterLogId).toBe('log-filter-1');
@@ -1037,13 +1035,14 @@ describe('E2E Tuning Workflow', () => {
       expect(applyRes.data.appliedFilters).toBe(1);
       expect(applyRes.data.rebooted).toBe(true);
 
-      // Step 8: Transition to filter_applied -> pid_flight_pending
+      // Step 8: Transition to filter_applied -> verification -> completed
       await invoke(IPCChannel.TUNING_UPDATE_PHASE, 'filter_applied');
-      await invoke(IPCChannel.TUNING_UPDATE_PHASE, 'pid_flight_pending');
+      await invoke(IPCChannel.TUNING_UPDATE_PHASE, 'filter_verification_pending');
+      await invoke(IPCChannel.TUNING_UPDATE_PHASE, 'completed');
 
       // Verify the full session state
       const finalSession = await invoke(IPCChannel.TUNING_GET_SESSION);
-      expect(finalSession.data.phase).toBe('pid_flight_pending');
+      expect(finalSession.data.phase).toBe('completed');
       expect(finalSession.data.filterLogId).toBe(dlRes.data.id);
     });
 
