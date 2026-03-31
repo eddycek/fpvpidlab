@@ -93,7 +93,7 @@ export function StartTuningModal({
             <label className="start-tuning-profile-label">BF PID Profile</label>
             <div className="start-tuning-profile-selector">
               {Array.from({ length: profileCount }, (_, i) => {
-                const label = pidProfileLabels?.[i];
+                const label = pidProfileLabels?.[i] || `pidlab_${i + 1}`;
                 const isCurrent = i === currentFcProfile;
                 const stats = profileStats.get(i);
                 return (
@@ -103,7 +103,7 @@ export function StartTuningModal({
                     onClick={() => setSelectedProfile(i)}
                   >
                     <span className="start-tuning-profile-num">{i + 1}</span>
-                    {label && <span className="start-tuning-profile-name">{label}</span>}
+                    <span className="start-tuning-profile-name">{label}</span>
                     {isCurrent && <span className="start-tuning-profile-current">current</span>}
                     {stats && stats.sessionCount > 0 ? (
                       <span className="start-tuning-profile-stats">
