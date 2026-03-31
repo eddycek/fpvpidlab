@@ -108,7 +108,7 @@ PID recommendation pipeline:
 - `src/main/analysis/WindDisturbanceDetector.ts` (wind level classification)
 
 Transfer function pipeline:
-- `src/main/analysis/TransferFunctionEstimator.ts` (Wiener deconvolution, bandwidth, phase margin, dcGain, TF rules TF-1 through TF-4)
+- `src/main/analysis/TransferFunctionEstimator.ts` (Wiener deconvolution, bandwidth, phase margin, dcGain — computes TF metrics only, TF rules TF-1..TF-4 are in PIDRecommender.ts `generateFrequencyDomainRecs`)
 - `src/main/analysis/ThrottleTFAnalyzer.ts` (throttle-dependent TF variation)
 
 Data quality:
@@ -191,7 +191,7 @@ For each PID rule, verify:
 
 #### E. MSP Byte Layouts
 For each MSP command in `mspLayouts.ts`, verify:
-- [ ] `MSP_FILTER_CONFIG (92)`: byte offsets match betaflight-configurator `MSPHelper.js` (gyro_lpf1_static_hz at offset 0-1, dterm_lpf1_static_hz at offset 2-3, gyro_lpf1_dyn_min_hz at 17, gyro_lpf1_dyn_max_hz at 24-25, dterm_lpf1_dyn_min_hz at 28, dterm_lpf1_dyn_max_hz at 29-36)
+- [ ] `MSP_FILTER_CONFIG (92)`: layout and field offsets match the `FILTER_CONFIG` definition in `src/main/msp/mspLayouts.ts` and Betaflight configurator / `MSPHelper.js` (do not rely on hardcoded offsets here — read from source)
 - [ ] `MSP_PID_ADVANCED (94)`: feedforward, d_min, tpa, anti_gravity, iterm_relax offsets are correct
 - [ ] `MSP_RC_TUNING (111)`: rate fields match BF configurator
 - [ ] `MSP_ADVANCED_CONFIG (90)`: gyro_sync_denom, pid_process_denom offsets correct
@@ -202,10 +202,10 @@ For each MSP command in `mspLayouts.ts`, verify:
 #### F. BBL Header Field Names
 - [ ] All header key names in `HeaderParser.ts` match actual Betaflight BBL output
 - [ ] `debug_mode` field name and value mapping is correct
-- [ ] `blackbox_sample_rate` / `pid_process_denom` → logging rate calculation matches BF
-- [ ] PID fields (`p_roll`, `i_roll`, `d_roll`, etc.) match BBL CSV naming
+- [ ] `pid_process_denom` → logging rate calculation matches BF (no `blackbox_sample_rate` header in fixtures)
+- [ ] PID fields from `rollPID` / `pitchPID` / `yawPID` headers (CSV columns `P,I,D`) match BBL CSV naming
 - [ ] Filter fields (`gyro_lpf1_static_hz`, `dterm_lpf1_static_hz`, etc.) match BBL naming
-- [ ] D-min fields (`d_min_roll`, `d_min_pitch`, `d_min_gain`) match BBL naming (NOT `d_max_gain`)
+- [ ] D-min / D-boost fields (`d_min_roll`, `d_min_pitch`, `d_max_gain`) match BBL naming (NOT `d_min_gain`)
 - [ ] Feedforward fields (`feedforward_weight`, `feedforward_boost`, etc.) match 4.3+ naming
 - [ ] Motor pole count (`motor_poles`) is parsed for RPM filter validation
 
