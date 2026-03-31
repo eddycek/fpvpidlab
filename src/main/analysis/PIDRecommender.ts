@@ -56,6 +56,7 @@ import {
   PROPWASH_TPA_BREAKPOINT_MIN,
   PROPWASH_TPA_RATE_MAX,
   PROPWASH_SEVERITY_SEVERE,
+  PROPWASH_SEVERITY_VERY_SEVERE,
   PROPWASH_SEVERITY_MINIMAL,
   FF_DOMINATED_MIN_STEPS,
   type QuadSizeBounds,
@@ -1216,7 +1217,7 @@ export function recommendItermRelaxCutoff(
     currentCutoff > PROPWASH_IRELAX_CUTOFF_FLOOR_SEVERE
   ) {
     const floor =
-      propWash.meanSeverity >= PROPWASH_SEVERITY_SEVERE * 1.5
+      propWash.meanSeverity >= PROPWASH_SEVERITY_VERY_SEVERE
         ? PROPWASH_IRELAX_CUTOFF_FLOOR_SEVERE
         : PROPWASH_IRELAX_CUTOFF_FLOOR;
     const targetCutoff = Math.max(floor, currentCutoff - PROPWASH_IRELAX_CUTOFF_REDUCTION);
