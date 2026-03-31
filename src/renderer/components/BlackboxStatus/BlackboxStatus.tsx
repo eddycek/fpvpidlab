@@ -204,7 +204,10 @@ export function BlackboxStatus({ onAnalyze, readonly, refreshKey }: BlackboxStat
 
   return (
     <div className="blackbox-status">
-      <h3>Blackbox Storage {isSDCard ? '(SD Card)' : ''}</h3>
+      <h3>
+        Blackbox Storage {isSDCard ? '(SD Card)' : ''}
+        {readonly && <span className="bb-readonly-badge">Read-only during tuning</span>}
+      </h3>
 
       <div className="storage-info">
         <div className="storage-bar">

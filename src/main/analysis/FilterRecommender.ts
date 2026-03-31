@@ -175,12 +175,18 @@ function recommendNoiseFloorAdjustments(
       // Dynamic mode: tune dyn_min_hz, use BF 2:1 ratio for dyn_max_hz
       const currentMin = current.gyro_lpf1_dyn_min_hz!;
       const currentMax = current.gyro_lpf1_dyn_max_hz ?? currentMin * DYNAMIC_LOWPASS_RATIO;
-      const newMax = Math.round(clamp(target * DYNAMIC_LOWPASS_RATIO, target, gyroMaxHz));
-      if (Math.abs(target - currentMin) > NOISE_TARGET_DEADZONE_HZ) {
+      let newMax = Math.round(clamp(target * DYNAMIC_LOWPASS_RATIO, target, gyroMaxHz));
+      // Enforce BF 2:1 ratio: if clamping broke it, lower dyn_min to preserve ratio
+      let adjustedTarget = target;
+      if (newMax < target * DYNAMIC_LOWPASS_RATIO) {
+        adjustedTarget = Math.floor(newMax / DYNAMIC_LOWPASS_RATIO);
+        newMax = adjustedTarget * DYNAMIC_LOWPASS_RATIO;
+      }
+      if (Math.abs(adjustedTarget - currentMin) > NOISE_TARGET_DEADZONE_HZ) {
         out.push({
           setting: 'gyro_lpf1_dyn_min_hz',
           currentValue: currentMin,
-          recommendedValue: target,
+          recommendedValue: adjustedTarget,
           reason: reason + ' (Dynamic lowpass active — adjusting the minimum cutoff.)',
           impact,
           confidence,
@@ -196,11 +202,11 @@ function recommendNoiseFloorAdjustments(
           ruleId,
         });
         // Ensure static_hz ≤ dyn_min (BF floor constraint)
-        if (current.gyro_lpf1_static_hz > target) {
+        if (current.gyro_lpf1_static_hz > adjustedTarget) {
           out.push({
             setting: 'gyro_lpf1_static_hz',
             currentValue: current.gyro_lpf1_static_hz,
-            recommendedValue: target,
+            recommendedValue: adjustedTarget,
             reason: 'Static cutoff must be ≤ dynamic minimum (Betaflight constraint).',
             impact: 'both',
             confidence,
@@ -235,12 +241,18 @@ function recommendNoiseFloorAdjustments(
     if (dtermDynActive) {
       const currentMin = current.dterm_lpf1_dyn_min_hz!;
       const currentMax = current.dterm_lpf1_dyn_max_hz ?? currentMin * DYNAMIC_LOWPASS_RATIO;
-      const newMax = Math.round(clamp(target * DYNAMIC_LOWPASS_RATIO, target, dtermMaxHz));
-      if (Math.abs(target - currentMin) > NOISE_TARGET_DEADZONE_HZ) {
+      let newMax = Math.round(clamp(target * DYNAMIC_LOWPASS_RATIO, target, dtermMaxHz));
+      // Enforce BF 2:1 ratio: if clamping broke it, lower dyn_min to preserve ratio
+      let adjustedTarget = target;
+      if (newMax < target * DYNAMIC_LOWPASS_RATIO) {
+        adjustedTarget = Math.floor(newMax / DYNAMIC_LOWPASS_RATIO);
+        newMax = adjustedTarget * DYNAMIC_LOWPASS_RATIO;
+      }
+      if (Math.abs(adjustedTarget - currentMin) > NOISE_TARGET_DEADZONE_HZ) {
         out.push({
           setting: 'dterm_lpf1_dyn_min_hz',
           currentValue: currentMin,
-          recommendedValue: target,
+          recommendedValue: adjustedTarget,
           reason: reason + ' (Dynamic lowpass active — adjusting the minimum cutoff.)',
           impact,
           confidence,
@@ -255,11 +267,11 @@ function recommendNoiseFloorAdjustments(
           confidence,
           ruleId,
         });
-        if (current.dterm_lpf1_static_hz > target) {
+        if (current.dterm_lpf1_static_hz > adjustedTarget) {
           out.push({
             setting: 'dterm_lpf1_static_hz',
             currentValue: current.dterm_lpf1_static_hz,
-            recommendedValue: target,
+            recommendedValue: adjustedTarget,
             reason: 'Static cutoff must be ≤ dynamic minimum (Betaflight constraint).',
             impact: 'both',
             confidence,

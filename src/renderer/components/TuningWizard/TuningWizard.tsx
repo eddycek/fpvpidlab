@@ -119,8 +119,8 @@ export function TuningWizard({ logId, mode = 'full', onExit, onApplyComplete }: 
 
       // Auto-close wizard after apply completes — FC is already reconnected,
       // session phase is updated, user returns to dashboard with Erase & Verify banner.
-      // Use ref (not useEffect cleanup) so re-renders don't cancel the timer.
-      autoCloseTimer.current = setTimeout(() => onExitRef.current(), 500);
+      // 2s delay gives user time to see "Apply successful" before wizard closes.
+      autoCloseTimer.current = setTimeout(() => onExitRef.current(), 2000);
     }
 
     if (wizard.applyState === 'idle' || wizard.applyState === 'error') {
@@ -250,14 +250,64 @@ export function TuningWizard({ logId, mode = 'full', onExit, onApplyComplete }: 
 
       <div className="tuning-wizard-content">{renderStep()}</div>
 
-      {wizard.applyState === 'confirming' && (
-        <ApplyConfirmationModal
-          filterCount={wizard.filterResult?.recommendations.length ?? 0}
-          pidCount={wizard.pidResult?.recommendations.length ?? 0}
-          onConfirm={wizard.confirmApply}
-          onCancel={wizard.cancelApply}
-        />
-      )}
+      {wizard.applyState === 'confirming' &&
+        (() => {
+          const filteredFilterChanges = wizard.filterResult?.recommendations
+            .filter((r) => !r.informational && r.currentValue !== r.recommendedValue)
+            .map((r) => ({
+              setting: r.setting,
+              currentValue: r.currentValue,
+              recommendedValue: r.recommendedValue,
+            }));
+
+          // PID source: transfer function in flash mode, pidResult in pid mode
+          const pidSource =
+            mode === TUNING_MODE.FLASH
+              ? wizard.tfResult
+              : mode !== TUNING_MODE.FILTER
+                ? wizard.pidResult
+                : null;
+          const allPidRecs = pidSource?.recommendations ?? [];
+
+          const filteredPidChanges = allPidRecs
+            .filter(
+              (r) =>
+                !r.informational &&
+                r.currentValue !== r.recommendedValue &&
+                r.setting.startsWith('pid_')
+            )
+            .map((r) => ({
+              setting: r.setting,
+              currentValue: r.currentValue,
+              recommendedValue: r.recommendedValue,
+            }));
+
+          const filteredFeedforwardChanges = allPidRecs
+            .filter(
+              (r) =>
+                !r.informational &&
+                r.currentValue !== r.recommendedValue &&
+                r.setting.startsWith('feedforward_')
+            )
+            .map((r) => ({
+              setting: r.setting,
+              currentValue: r.currentValue,
+              recommendedValue: r.recommendedValue,
+            }));
+
+          return (
+            <ApplyConfirmationModal
+              filterCount={filteredFilterChanges?.length ?? 0}
+              pidCount={filteredPidChanges.length}
+              feedforwardCount={filteredFeedforwardChanges.length}
+              filterChanges={filteredFilterChanges}
+              pidChanges={filteredPidChanges}
+              feedforwardChanges={filteredFeedforwardChanges}
+              onConfirm={wizard.confirmApply}
+              onCancel={wizard.cancelApply}
+            />
+          );
+        })()}
     </div>
   );
 }

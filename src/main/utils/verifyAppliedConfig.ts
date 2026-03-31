@@ -241,39 +241,62 @@ export async function verifyAppliedConfig(
       }
     }
 
-    // PID retry on mismatch (1 attempt)
+    // PID retry on mismatch (1 attempt, 10s overall timeout)
     if (mismatches.length > 0) {
-      // Rebuild the full expected config and re-write
-      const retryConfig: PIDConfiguration = JSON.parse(JSON.stringify(pidConfig));
-      if (appliedPIDChanges) {
-        for (const change of appliedPIDChanges) {
-          const match = change.setting.match(/^pid_(roll|pitch|yaw)_(p|i|d)$/i);
-          if (match) {
-            const axis = match[1] as 'roll' | 'pitch' | 'yaw';
-            const term = match[2].toUpperCase() as 'P' | 'I' | 'D';
-            retryConfig[axis][term] = change.newValue;
+      // Save originals before retry — if timeout fires after mismatches.length=0
+      // but before re-population, the originals would be lost.
+      const originalMismatches = [...mismatches];
+
+      const retryPromise = async () => {
+        // Rebuild the full expected config and re-write
+        const retryConfig: PIDConfiguration = JSON.parse(JSON.stringify(pidConfig));
+        if (appliedPIDChanges) {
+          for (const change of appliedPIDChanges) {
+            const match = change.setting.match(/^pid_(roll|pitch|yaw)_(p|i|d)$/i);
+            if (match) {
+              const axis = match[1] as 'roll' | 'pitch' | 'yaw';
+              const term = match[2].toUpperCase() as 'P' | 'I' | 'D';
+              retryConfig[axis][term] = change.newValue;
+            }
           }
         }
-      }
-      await mspClient.setPIDConfiguration(retryConfig);
-      retried = true;
+        await mspClient.setPIDConfiguration(retryConfig);
+        retried = true;
 
-      // Re-read and re-check
-      const pidConfig2 = await mspClient.getPIDConfiguration();
-      const actualPID2 = buildActualPIDMap(pidConfig2);
-      // Update actual map
-      Object.assign(actual, actualPID2);
+        // Re-read and re-check
+        const pidConfig2 = await mspClient.getPIDConfiguration();
+        const actualPID2 = buildActualPIDMap(pidConfig2);
+        // Update actual map
+        Object.assign(actual, actualPID2);
 
-      // Clear and re-check mismatches (unchecked list stays the same)
-      mismatches.length = 0;
-      if (appliedPIDChanges) {
-        for (const change of appliedPIDChanges) {
-          const act = actualPID2[change.setting];
-          if (act !== undefined && act !== change.newValue) {
-            mismatches.push(
-              `${change.setting}: expected ${change.newValue}, got ${act} (after retry)`
-            );
+        // Clear and re-check mismatches (unchecked list stays the same)
+        mismatches.length = 0;
+        if (appliedPIDChanges) {
+          for (const change of appliedPIDChanges) {
+            const act = actualPID2[change.setting];
+            if (act !== undefined && act !== change.newValue) {
+              mismatches.push(
+                `${change.setting}: expected ${change.newValue}, got ${act} (after retry)`
+              );
+            }
           }
+        }
+      };
+
+      const RETRY_TIMEOUT_MS = 10_000;
+      try {
+        await Promise.race([
+          retryPromise(),
+          new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error('PID retry timed out')), RETRY_TIMEOUT_MS)
+          ),
+        ]);
+      } catch {
+        // Timeout or retry failure — restore original mismatches if retry
+        // cleared them before the timeout race was lost.
+        if (mismatches.length === 0) {
+          mismatches.push(...originalMismatches);
+          mismatches.push('PID retry timed out — verification incomplete');
         }
       }
     }

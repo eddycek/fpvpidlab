@@ -73,4 +73,35 @@ describe('ApplyConfirmationModal', () => {
 
     expect(screen.getByText(/Your FC will reboot after applying/)).toBeInTheDocument();
   });
+
+  it('shows feedforward count separately with CLI label', () => {
+    render(
+      <ApplyConfirmationModal
+        filterCount={2}
+        pidCount={3}
+        feedforwardCount={1}
+        onConfirm={vi.fn()}
+        onCancel={vi.fn()}
+      />
+    );
+
+    expect(screen.getByText(/6 changes will be written/)).toBeInTheDocument();
+    expect(screen.getByText('2 filter changes (via CLI)')).toBeInTheDocument();
+    expect(screen.getByText('3 PID changes (via MSP)')).toBeInTheDocument();
+    expect(screen.getByText('1 feedforward change (via CLI)')).toBeInTheDocument();
+  });
+
+  it('hides feedforward pill when count is zero', () => {
+    render(
+      <ApplyConfirmationModal
+        filterCount={2}
+        pidCount={3}
+        feedforwardCount={0}
+        onConfirm={vi.fn()}
+        onCancel={vi.fn()}
+      />
+    );
+
+    expect(screen.queryByText(/feedforward/)).not.toBeInTheDocument();
+  });
 });

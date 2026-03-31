@@ -132,6 +132,9 @@ export interface TuningSession {
   /** True after erase completed (especially for SD card MSC erase). Cleared on next phase transition. */
   eraseCompleted?: boolean;
 
+  /** Tuning session number — set at creation, used for pre/post snapshot pairing */
+  tuningSessionNumber?: number;
+
   /** BF PID profile used in this tuning session (0-based). Undefined = FC default at session start. */
   bfPidProfileIndex?: number;
 

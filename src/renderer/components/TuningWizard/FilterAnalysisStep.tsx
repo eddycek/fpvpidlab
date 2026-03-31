@@ -68,10 +68,18 @@ export function FilterAnalysisStep({
   }
 
   if (filterError) {
+    const hint = filterError.includes('No stable')
+      ? 'Try a longer hover with smooth throttle sweeps (30-60 seconds).'
+      : filterError.includes('segment')
+        ? 'The flight log may be too short. Try a longer flight with varied throttle.'
+        : filterError.includes('parse') || filterError.includes('corrupt')
+          ? 'The log file may be corrupted. Try downloading again or fly a new flight.'
+          : 'Check that the log contains valid gyro data from a real flight.';
     return (
       <div className="analysis-section">
         <h3>Filter Analysis</h3>
         <div className="analysis-error">{filterError}</div>
+        <div className="analysis-error-hint">{hint}</div>
         <div className="analysis-actions">
           <button className="wizard-btn wizard-btn-primary" onClick={runFilterAnalysis}>
             Retry

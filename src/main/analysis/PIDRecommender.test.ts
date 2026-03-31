@@ -403,7 +403,7 @@ describe('PIDRecommender', () => {
     it('should recommend feedforward_boost reduction for FF-dominated overshoot', () => {
       const ffResponse = makeResponse({ overshootPercent: 30, ffDominated: true });
       const profile = makeProfile({
-        responses: [ffResponse],
+        responses: [ffResponse, ffResponse, ffResponse],
         meanOvershoot: 30,
       });
       const ffContext: FeedforwardContext = { active: true, boost: 15 };
@@ -426,6 +426,53 @@ describe('PIDRecommender', () => {
       const pRec = recs.find((r) => r.setting === 'pid_roll_p');
       expect(dRec).toBeUndefined();
       expect(pRec).toBeUndefined();
+    });
+
+    it('should not classify axis as FF-dominated with fewer than 3 steps', () => {
+      // Single FF-dominated step should NOT trigger FF classification
+      const ffResponse = makeResponse({ overshootPercent: 30, ffDominated: true });
+      const profile = makeProfile({
+        responses: [ffResponse],
+        meanOvershoot: 30,
+      });
+      const ffContext: FeedforwardContext = { active: true, boost: 15 };
+
+      const recs = recommendPID(
+        profile,
+        emptyProfile(),
+        emptyProfile(),
+        DEFAULT_PIDS,
+        undefined,
+        ffContext
+      );
+
+      // With only 1 step, axis should NOT be FF-dominated, so no feedforward_boost rec
+      const ffRec = recs.find((r) => r.setting === 'feedforward_boost');
+      expect(ffRec).toBeUndefined();
+      // Instead, standard P/D recommendations should be generated for overshoot
+      const dRec = recs.find((r) => r.setting === 'pid_roll_d');
+      expect(dRec).toBeDefined();
+    });
+
+    it('should not classify axis as FF-dominated with exactly 2 steps', () => {
+      const ffResponse = makeResponse({ overshootPercent: 30, ffDominated: true });
+      const profile = makeProfile({
+        responses: [ffResponse, ffResponse],
+        meanOvershoot: 30,
+      });
+      const ffContext: FeedforwardContext = { active: true, boost: 15 };
+
+      const recs = recommendPID(
+        profile,
+        emptyProfile(),
+        emptyProfile(),
+        DEFAULT_PIDS,
+        undefined,
+        ffContext
+      );
+
+      const ffRec = recs.find((r) => r.setting === 'feedforward_boost');
+      expect(ffRec).toBeUndefined();
     });
 
     it('should not recommend FF changes when overshoot is P-dominated', () => {
@@ -549,8 +596,14 @@ describe('PIDRecommender', () => {
 
     it('should emit feedforward_boost recommendation only once across axes', () => {
       const ffResponse = makeResponse({ overshootPercent: 30, ffDominated: true });
-      const rollProfile = makeProfile({ responses: [ffResponse], meanOvershoot: 30 });
-      const pitchProfile = makeProfile({ responses: [ffResponse], meanOvershoot: 30 });
+      const rollProfile = makeProfile({
+        responses: [ffResponse, ffResponse, ffResponse],
+        meanOvershoot: 30,
+      });
+      const pitchProfile = makeProfile({
+        responses: [ffResponse, ffResponse, ffResponse],
+        meanOvershoot: 30,
+      });
       const ffContext: FeedforwardContext = { active: true, boost: 15 };
 
       const recs = recommendPID(
@@ -1836,9 +1889,10 @@ describe('informational flag', () => {
 
 describe('FF boost step size', () => {
   it('should reduce feedforward_boost by 3 (not 5)', () => {
+    const ffResp = makeResponse({ overshootPercent: 30, ffDominated: true });
     const overshootProfile = makeProfile({
       meanOvershoot: 30,
-      responses: [makeResponse({ overshootPercent: 30, ffDominated: true })],
+      responses: [ffResp, ffResp, ffResp],
     });
     const pids: PIDConfiguration = {
       roll: { P: 45, I: 80, D: 30 },
@@ -2097,6 +2151,7 @@ describe('ruleId assignment', () => {
       responses: [
         makeResponse({ overshootPercent: 25, ffDominated: true }),
         makeResponse({ overshootPercent: 22, ffDominated: true }),
+        makeResponse({ overshootPercent: 28, ffDominated: true }),
       ],
     });
     const ffContext: FeedforwardContext = { active: true, boost: 15 };

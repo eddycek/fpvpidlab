@@ -258,9 +258,11 @@ function AppContent() {
                 ? TUNING_PHASE.FILTER_LOG_READY
                 : TUNING_PHASE.PID_LOG_READY;
           await tuning.updatePhase(logReadyPhase);
+          toast.info('Erase skipped — using existing log data.');
         } else {
           // No data on flash — persist eraseSkipped flag, wait for reconnect after flight
           await tuning.updatePhase(tuning.session!.phase, { eraseSkipped: true });
+          toast.info('Erase skipped — fly your test flight, then reconnect.');
         }
         setBbRefreshKey((k) => k + 1);
         break;

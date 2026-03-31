@@ -132,9 +132,12 @@ export function recommendPID(
     if (profile.responses.length === 0) continue;
 
     // Check if overshoot on this axis is FF-dominated (majority of steps)
+    // Require minimum 3 classified steps to avoid single-step noise affecting recommendations
+    const FF_DOMINATED_MIN_STEPS = 3;
     const ffClassified = profile.responses.filter((r) => r.ffDominated !== undefined);
     const ffDominatedCount = ffClassified.filter((r) => r.ffDominated === true).length;
-    const axisFFDominated = ffClassified.length > 0 && ffDominatedCount > ffClassified.length / 2;
+    const axisFFDominated =
+      ffClassified.length >= FF_DOMINATED_MIN_STEPS && ffDominatedCount > ffClassified.length / 2;
 
     // Compute mean FF energy ratio for this axis (used to modulate P recommendations)
     const meanFFEnergyRatio = profile.meanFFEnergyRatio;

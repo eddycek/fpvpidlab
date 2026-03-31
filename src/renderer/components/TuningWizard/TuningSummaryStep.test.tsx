@@ -126,7 +126,7 @@ describe('TuningSummaryStep', () => {
       />
     );
 
-    expect(screen.getByText(/No changes recommended/)).toBeInTheDocument();
+    expect(screen.getByText(/no changes recommended/i)).toBeInTheDocument();
   });
 
   it('shows recommendation count pills', () => {

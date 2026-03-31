@@ -66,10 +66,18 @@ export function PIDAnalysisStep({
   }
 
   if (pidError) {
+    const hint = pidError.includes('No step')
+      ? 'The log needs sharp stick inputs (snaps). Try quick, aggressive stick movements on roll/pitch.'
+      : pidError.includes('parse') || pidError.includes('corrupt')
+        ? 'The log file may be corrupted. Try downloading again or fly a new flight.'
+        : pidError.includes('short') || pidError.includes('segment')
+          ? 'The flight may be too short. Try at least 30 seconds of stick snaps.'
+          : 'Check that the log contains valid setpoint and gyro data.';
     return (
       <div className="analysis-section">
         <h3>PID Analysis</h3>
         <div className="analysis-error">{pidError}</div>
+        <div className="analysis-error-hint">{hint}</div>
         <div className="analysis-actions">
           <button className="wizard-btn wizard-btn-primary" onClick={runPIDAnalysis}>
             Retry

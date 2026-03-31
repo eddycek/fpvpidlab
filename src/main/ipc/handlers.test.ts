@@ -1419,7 +1419,7 @@ describe('IPC Handlers', () => {
       const { event } = createMockEvent();
       const res = await invokeWithEvent(IPCChannel.TUNING_APPLY_RECOMMENDATIONS, event, input);
       expect(res.success).toBe(false);
-      expect(res.error).toContain('CLI command rejected');
+      expect(res.error).toContain('Feedforward changes failed');
     });
   });
 

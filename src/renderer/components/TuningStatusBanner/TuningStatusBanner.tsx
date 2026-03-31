@@ -281,7 +281,7 @@ export function TuningStatusBanner({
               className="wizard-btn wizard-btn-secondary"
               onClick={() => onAction('use_existing_log')}
             >
-              Use Existing Log
+              Use Existing Log (Latest)
             </button>
           )}
         </>
@@ -370,7 +370,7 @@ export function TuningStatusBanner({
               className="wizard-btn wizard-btn-secondary"
               onClick={() => onAction('use_existing_log')}
             >
-              Use Existing Log
+              Use Existing Log (Latest)
             </button>
           )}
         </>
@@ -414,7 +414,7 @@ export function TuningStatusBanner({
                 className="wizard-btn wizard-btn-secondary"
                 onClick={() => onAction('use_existing_log')}
               >
-                Use Existing Log
+                Use Existing Log (Latest)
               </button>
             )}
           </>
@@ -432,7 +432,7 @@ export function TuningStatusBanner({
             className="wizard-btn wizard-btn-secondary"
             onClick={() => onAction('use_existing_log')}
           >
-            Use Existing Log
+            Use Existing Log (Latest)
           </button>
         )}
         {ui!.guideTip && !erasing && !downloading && (
@@ -493,6 +493,14 @@ export function TuningStatusBanner({
               {session.autoReportId
                 ? ' A diagnostic report was sent automatically.'
                 : ' Consider restoring from pre-tuning snapshot.'}
+            </span>
+          </div>
+        )}
+        {session.eraseSkipped && flashHasData && isFlightPending && (
+          <div className="tuning-bb-warning">
+            <span>
+              Erase was skipped — flash contains pre-existing data. New recordings will append to
+              old logs. Make sure to select the correct log after your flight.
             </span>
           </div>
         )}

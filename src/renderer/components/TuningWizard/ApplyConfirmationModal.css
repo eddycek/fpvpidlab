@@ -36,6 +36,74 @@
   margin-bottom: 24px;
 }
 
+.apply-confirm-details {
+  margin-bottom: 16px;
+}
+
+.apply-confirm-toggle {
+  background: none;
+  border: none;
+  color: var(--text-secondary, #a0a0a0);
+  font-size: 12px;
+  cursor: pointer;
+  padding: 4px 0;
+  text-decoration: underline;
+}
+
+.apply-confirm-toggle:hover {
+  color: var(--text-primary, #fff);
+}
+
+.apply-confirm-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  margin-top: 8px;
+  max-height: 200px;
+  overflow-y: auto;
+  display: block;
+}
+
+.apply-confirm-table thead {
+  display: table;
+  width: 100%;
+  table-layout: fixed;
+}
+
+.apply-confirm-table tbody {
+  display: block;
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.apply-confirm-table tbody tr {
+  display: table;
+  width: 100%;
+  table-layout: fixed;
+}
+
+.apply-confirm-table th {
+  text-align: left;
+  padding: 4px 8px;
+  color: var(--text-secondary, #a0a0a0);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.apply-confirm-table td {
+  padding: 3px 8px;
+  color: var(--text-primary, #fff);
+}
+
+.apply-confirm-setting {
+  font-family: monospace;
+  font-size: 11px;
+}
+
+.apply-confirm-new {
+  color: #4ade80;
+  font-weight: 600;
+}
+
 .apply-confirm-actions {
   display: flex;
   justify-content: flex-end;

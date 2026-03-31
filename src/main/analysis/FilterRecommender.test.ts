@@ -1324,3 +1324,46 @@ describe('dynamic lowpass awareness in recommend()', () => {
     expect(dynMinRec).toBeUndefined();
   });
 });
+
+describe('dynamic lowpass ratio enforcement', () => {
+  it('should maintain BF 2:1 ratio when gyroMaxHz clamps dyn_max', () => {
+    // RPM-enabled quad with gyroMaxHz = 500. Target = 300 → dyn_max = 600 but clamped to 500.
+    // Fix: dyn_min should be adjusted down to 250 so ratio is 500/250 = 2.0
+    const noisy = makeNoiseProfile({ level: 'high', rollFloor: -14, pitchFloor: -14 });
+    const settings: CurrentFilterSettings = {
+      ...DEFAULT_FILTER_SETTINGS,
+      gyro_lpf1_dyn_min_hz: 250,
+      gyro_lpf1_dyn_max_hz: 500,
+      gyro_lpf1_static_hz: 200,
+      rpm_filter_harmonics: 3,
+    };
+
+    const recs = recommend(noisy, settings, '5"');
+    const dynMinRec = recs.find((r) => r.setting === 'gyro_lpf1_dyn_min_hz');
+    const dynMaxRec = recs.find((r) => r.setting === 'gyro_lpf1_dyn_max_hz');
+
+    if (dynMinRec && dynMaxRec) {
+      // The critical invariant: dyn_max >= 2 × dyn_min
+      expect(dynMaxRec.recommendedValue).toBeGreaterThanOrEqual(dynMinRec.recommendedValue * 2);
+    }
+  });
+
+  it('should maintain BF 2:1 ratio for D-term dynamic lowpass when clamped', () => {
+    const noisy = makeNoiseProfile({ level: 'high', rollFloor: -14, pitchFloor: -14 });
+    const settings: CurrentFilterSettings = {
+      ...DEFAULT_FILTER_SETTINGS,
+      dterm_lpf1_dyn_min_hz: 100,
+      dterm_lpf1_dyn_max_hz: 200,
+      dterm_lpf1_static_hz: 80,
+      rpm_filter_harmonics: 3,
+    };
+
+    const recs = recommend(noisy, settings, '5"');
+    const dynMinRec = recs.find((r) => r.setting === 'dterm_lpf1_dyn_min_hz');
+    const dynMaxRec = recs.find((r) => r.setting === 'dterm_lpf1_dyn_max_hz');
+
+    if (dynMinRec && dynMaxRec) {
+      expect(dynMaxRec.recommendedValue).toBeGreaterThanOrEqual(dynMinRec.recommendedValue * 2);
+    }
+  });
+});

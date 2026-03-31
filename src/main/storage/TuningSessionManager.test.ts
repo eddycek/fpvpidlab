@@ -109,10 +109,10 @@ describe('TuningSessionManager', () => {
 
     it('preserves previous extra data across updates', async () => {
       await manager.createSession('profile-1');
-      await manager.updatePhase('profile-1', TUNING_PHASE.FILTER_ANALYSIS, {
+      await manager.updatePhase('profile-1', TUNING_PHASE.FILTER_LOG_READY, {
         filterLogId: 'log-123',
       });
-      const updated = await manager.updatePhase('profile-1', TUNING_PHASE.PID_FLIGHT_PENDING, {
+      const updated = await manager.updatePhase('profile-1', TUNING_PHASE.FILTER_ANALYSIS, {
         appliedFilterChanges: [
           { setting: 'gyro_lpf1_static_hz', previousValue: 250, newValue: 150 },
         ],
@@ -120,7 +120,7 @@ describe('TuningSessionManager', () => {
 
       expect(updated.filterLogId).toBe('log-123');
       expect(updated.appliedFilterChanges).toHaveLength(1);
-      expect(updated.phase).toBe(TUNING_PHASE.PID_FLIGHT_PENDING);
+      expect(updated.phase).toBe(TUNING_PHASE.FILTER_ANALYSIS);
     });
 
     it('throws when session does not exist', async () => {
@@ -186,12 +186,12 @@ describe('TuningSessionManager', () => {
       await manager.createSession('profile-a');
       await manager.createSession('profile-b');
 
-      await manager.updatePhase('profile-a', TUNING_PHASE.PID_FLIGHT_PENDING);
+      await manager.updatePhase('profile-a', TUNING_PHASE.FILTER_LOG_READY);
 
       const sessionA = await manager.getSession('profile-a');
       const sessionB = await manager.getSession('profile-b');
 
-      expect(sessionA!.phase).toBe(TUNING_PHASE.PID_FLIGHT_PENDING);
+      expect(sessionA!.phase).toBe(TUNING_PHASE.FILTER_LOG_READY);
       expect(sessionB!.phase).toBe(TUNING_PHASE.FILTER_FLIGHT_PENDING);
     });
 
@@ -203,6 +203,77 @@ describe('TuningSessionManager', () => {
 
       expect(await manager.getSession('profile-a')).toBeNull();
       expect(await manager.getSession('profile-b')).not.toBeNull();
+    });
+  });
+
+  describe('phase transition validation', () => {
+    it('allows valid forward transitions within same tuning type', async () => {
+      await manager.createSession('profile-1'); // filter type
+      const updated = await manager.updatePhase('profile-1', TUNING_PHASE.FILTER_LOG_READY);
+      expect(updated.phase).toBe(TUNING_PHASE.FILTER_LOG_READY);
+    });
+
+    it('rejects cross-mode transitions (filter → pid phase)', async () => {
+      await manager.createSession('profile-1'); // filter type
+      await expect(
+        manager.updatePhase('profile-1', TUNING_PHASE.PID_FLIGHT_PENDING)
+      ).rejects.toThrow('Invalid phase transition');
+    });
+
+    it('rejects backward transitions', async () => {
+      await manager.createSession('profile-1');
+      await manager.updatePhase('profile-1', TUNING_PHASE.FILTER_LOG_READY);
+      await manager.updatePhase('profile-1', TUNING_PHASE.FILTER_ANALYSIS);
+      await expect(manager.updatePhase('profile-1', TUNING_PHASE.FILTER_LOG_READY)).rejects.toThrow(
+        'Invalid phase transition'
+      );
+    });
+
+    it('allows same-phase updates (extraData only)', async () => {
+      await manager.createSession('profile-1');
+      const updated = await manager.updatePhase('profile-1', TUNING_PHASE.FILTER_FLIGHT_PENDING, {
+        filterLogId: 'log-123',
+      });
+      expect(updated.phase).toBe(TUNING_PHASE.FILTER_FLIGHT_PENDING);
+      expect(updated.filterLogId).toBe('log-123');
+    });
+
+    it('allows skipping log_ready (flight_pending → analysis)', async () => {
+      await manager.createSession('profile-1');
+      const updated = await manager.updatePhase('profile-1', TUNING_PHASE.FILTER_ANALYSIS);
+      expect(updated.phase).toBe(TUNING_PHASE.FILTER_ANALYSIS);
+    });
+
+    it('validates PID session transitions', async () => {
+      await manager.createSession('profile-1', TUNING_TYPE.PID);
+      await manager.updatePhase('profile-1', TUNING_PHASE.PID_LOG_READY);
+      await manager.updatePhase('profile-1', TUNING_PHASE.PID_ANALYSIS);
+      await manager.updatePhase('profile-1', TUNING_PHASE.PID_APPLIED);
+      await manager.updatePhase('profile-1', TUNING_PHASE.PID_VERIFICATION_PENDING);
+      const completed = await manager.updatePhase('profile-1', TUNING_PHASE.COMPLETED);
+      expect(completed.phase).toBe(TUNING_PHASE.COMPLETED);
+    });
+
+    it('validates Flash session transitions', async () => {
+      await manager.createSession('profile-1', TUNING_TYPE.FLASH);
+      await manager.updatePhase('profile-1', TUNING_PHASE.FLASH_LOG_READY);
+      await manager.updatePhase('profile-1', TUNING_PHASE.FLASH_ANALYSIS);
+      await manager.updatePhase('profile-1', TUNING_PHASE.FLASH_APPLIED);
+      await manager.updatePhase('profile-1', TUNING_PHASE.FLASH_VERIFICATION_PENDING);
+      const completed = await manager.updatePhase('profile-1', TUNING_PHASE.COMPLETED);
+      expect(completed.phase).toBe(TUNING_PHASE.COMPLETED);
+    });
+
+    it('rejects transitions from completed phase', async () => {
+      await manager.createSession('profile-1');
+      await manager.updatePhase('profile-1', TUNING_PHASE.FILTER_LOG_READY);
+      await manager.updatePhase('profile-1', TUNING_PHASE.FILTER_ANALYSIS);
+      await manager.updatePhase('profile-1', TUNING_PHASE.FILTER_APPLIED);
+      await manager.updatePhase('profile-1', TUNING_PHASE.FILTER_VERIFICATION_PENDING);
+      await manager.updatePhase('profile-1', TUNING_PHASE.COMPLETED);
+      await expect(
+        manager.updatePhase('profile-1', TUNING_PHASE.FILTER_FLIGHT_PENDING)
+      ).rejects.toThrow('Invalid phase transition');
     });
   });
 });

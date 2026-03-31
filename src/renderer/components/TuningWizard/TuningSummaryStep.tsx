@@ -142,7 +142,7 @@ export function TuningSummaryStep({
     <div className="analysis-section">
       <h3>Tuning Summary</h3>
       {totalRecs === 0 ? (
-        <p>No changes recommended — your tune looks good!</p>
+        <p>Analysis complete — no changes recommended. Your current tune looks good!</p>
       ) : (
         <>
           <div className="summary-stats">
