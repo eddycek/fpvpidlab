@@ -1367,3 +1367,80 @@ describe('dynamic lowpass ratio enforcement', () => {
     }
   });
 });
+
+describe('F-MOTOR-DIAG (Motor Harmonic Diagnostic)', () => {
+  it('should emit F-MOTOR-DIAG when RPM active and motor harmonics detected at ≥12 dB', () => {
+    const noise = makeNoiseProfile({
+      level: 'medium',
+      rollPeaks: [{ frequency: 300, amplitude: 15, type: 'motor_harmonic' }],
+    });
+    const settings: CurrentFilterSettings = {
+      ...DEFAULT_FILTER_SETTINGS,
+      rpm_filter_harmonics: 3,
+    };
+    const recs = recommend(noise, settings);
+    const diag = recs.find((r) => r.ruleId === 'F-MOTOR-DIAG');
+    expect(diag).toBeDefined();
+    expect(diag!.setting).toBe('motor_poles');
+    expect(diag!.informational).toBe(true);
+    expect(diag!.confidence).toBe('low');
+    expect(diag!.reason).toContain('motor_poles');
+    expect(diag!.reason).toContain('15 dB');
+    expect(diag!.reason).toContain('300 Hz');
+  });
+
+  it('should not emit F-MOTOR-DIAG when RPM inactive', () => {
+    const noise = makeNoiseProfile({
+      level: 'medium',
+      rollPeaks: [{ frequency: 300, amplitude: 15, type: 'motor_harmonic' }],
+    });
+    const recs = recommend(noise, DEFAULT_FILTER_SETTINGS);
+    const diag = recs.find((r) => r.ruleId === 'F-MOTOR-DIAG');
+    expect(diag).toBeUndefined();
+  });
+
+  it('should not emit F-MOTOR-DIAG when motor harmonics are below threshold', () => {
+    const noise = makeNoiseProfile({
+      level: 'medium',
+      rollPeaks: [{ frequency: 300, amplitude: 8, type: 'motor_harmonic' }],
+    });
+    const settings: CurrentFilterSettings = {
+      ...DEFAULT_FILTER_SETTINGS,
+      rpm_filter_harmonics: 3,
+    };
+    const recs = recommend(noise, settings);
+    const diag = recs.find((r) => r.ruleId === 'F-MOTOR-DIAG');
+    expect(diag).toBeUndefined();
+  });
+
+  it('should not emit F-MOTOR-DIAG when no motor harmonics detected', () => {
+    const noise = makeNoiseProfile({
+      level: 'medium',
+      rollPeaks: [{ frequency: 150, amplitude: 15, type: 'frame_resonance' }],
+    });
+    const settings: CurrentFilterSettings = {
+      ...DEFAULT_FILTER_SETTINGS,
+      rpm_filter_harmonics: 3,
+    };
+    const recs = recommend(noise, settings);
+    const diag = recs.find((r) => r.ruleId === 'F-MOTOR-DIAG');
+    expect(diag).toBeUndefined();
+  });
+
+  it('should report worst motor harmonic across all axes', () => {
+    const noise = makeNoiseProfile({
+      level: 'medium',
+      rollPeaks: [{ frequency: 300, amplitude: 14, type: 'motor_harmonic' }],
+      pitchPeaks: [{ frequency: 310, amplitude: 20, type: 'motor_harmonic' }],
+    });
+    const settings: CurrentFilterSettings = {
+      ...DEFAULT_FILTER_SETTINGS,
+      rpm_filter_harmonics: 3,
+    };
+    const recs = recommend(noise, settings);
+    const diag = recs.find((r) => r.ruleId === 'F-MOTOR-DIAG');
+    expect(diag).toBeDefined();
+    expect(diag!.reason).toContain('20 dB'); // worst = pitch 20 dB
+    expect(diag!.reason).toContain('310 Hz');
+  });
+});

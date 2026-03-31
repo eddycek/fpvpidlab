@@ -82,7 +82,12 @@ export function recommend(
     recommendDynamicNotchForRPM(noise, current, recommendations, droneSize);
   }
 
-  // 5. LPF2 recommendations (disable when clean + RPM, enable when noisy)
+  // 5. Motor harmonic diagnostic (when RPM active but motor harmonics still detected)
+  if (rpmActive) {
+    recommendMotorHarmonicDiagnostic(noise, recommendations);
+  }
+
+  // 6. LPF2 recommendations (disable when clean + RPM, enable when noisy)
   recommendLpf2Adjustments(noise, current, recommendations, rpmActive);
 
   // Deduplicate: if multiple rules recommend the same setting, keep the more aggressive one
@@ -729,7 +734,45 @@ export function generateSummary(
 }
 
 /**
- * Recommend LPF2 adjustments:
+ * Rule 5: Motor Harmonic Diagnostic (when RPM filter active).
+ * If motor harmonics are still detected at ≥12 dB despite RPM filter,
+ * emit informational warning about motor_poles misconfiguration or ESC telemetry issues.
+ */
+function recommendMotorHarmonicDiagnostic(noise: NoiseProfile, out: FilterRecommendation[]): void {
+  const axes = [noise.roll, noise.pitch, noise.yaw] as const;
+  let worstAmplitude = 0;
+  let worstFrequency = 0;
+
+  for (const axis of axes) {
+    for (const peak of axis.peaks) {
+      if (peak.type === 'motor_harmonic' && peak.amplitude >= RESONANCE_ACTION_THRESHOLD_DB) {
+        if (peak.amplitude > worstAmplitude) {
+          worstAmplitude = peak.amplitude;
+          worstFrequency = peak.frequency;
+        }
+      }
+    }
+  }
+
+  if (worstAmplitude > 0) {
+    out.push({
+      setting: 'motor_poles',
+      currentValue: 0,
+      recommendedValue: 0,
+      reason:
+        `Motor harmonics still detected at ${Math.round(worstAmplitude)} dB (${Math.round(worstFrequency)} Hz) ` +
+        'despite RPM filter being active. Check that motor_poles matches your motors ' +
+        '(typically 14 for standard FPV motors) and verify ESC telemetry is working correctly.',
+      impact: 'noise',
+      confidence: 'low',
+      informational: true,
+      ruleId: 'F-MOTOR-DIAG',
+    });
+  }
+}
+
+/**
+ * Rule 6: Recommend LPF2 adjustments:
  * - With RPM filter + clean noise: disable LPF2 for less latency
  * - Without RPM + high noise + LPF2 disabled: warn to enable
  */

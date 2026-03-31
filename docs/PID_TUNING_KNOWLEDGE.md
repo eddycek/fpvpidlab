@@ -438,10 +438,10 @@ Propwash oscillation occurs during throttle transitions (descent → climb) when
 | Karate Race Spicy | 26/26 | 20 | 20 | 70 | 1250 |
 
 **FPVPIDlab propwash rules:**
-- PW-DMIN-GAIN: increase d_min_gain when propwash severe + gain < 35
+- PW-DMIN-GAIN: increase d_min_gain when propwash severe + gain below style-aware target. Targets vary by flight style and drone size (5": smooth=20, balanced=25, aggressive=30; 6": smooth=15, balanced=20, aggressive=25). Falls back to size default gain when style has no entry, or to DMIN_GAIN_FREESTYLE (35) when size unknown
 - PW-DMIN-GAP: widen d_min/d_max gap when < 20% of d_max
 - PW-DMIN-ENABLE: enable d_min when propwash severe + currently disabled
-- PW-IRELAX-CUTOFF: lower cutoff by 5 when propwash severe + cutoff > 15
+- PW-IRELAX-CUTOFF: lower cutoff by 5 per iteration with severity-aware floor. Moderate severe propwash (≥5×) uses floor=15 (BF default). Very severe propwash (≥7.5×, i.e. PROPWASH_SEVERITY_SEVERE × 1.5) uses floor=10, allowing deeper I-term suppression per community guidance "reduce 15→10→7→5"
 - PW-IRELAX-ENABLE: enable iterm_relax when disabled + propwash detected
 - PW-TPA-MODE: prefer D-only when propwash severe
 - PW-TPA-BREAKPOINT: raise breakpoint to 1350 when < 1300
