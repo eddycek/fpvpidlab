@@ -93,7 +93,7 @@ export function StartTuningModal({
             <label className="start-tuning-profile-label">BF PID Profile</label>
             <div className="start-tuning-profile-selector">
               {Array.from({ length: profileCount }, (_, i) => {
-                const label = pidProfileLabels?.[i] || `pidlab_${i + 1}`;
+                const label = pidProfileLabels?.[i] ?? `pidlab_${i + 1}`;
                 const isCurrent = i === currentFcProfile;
                 const stats = profileStats.get(i);
                 return (
