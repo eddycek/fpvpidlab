@@ -27,6 +27,7 @@ function formatDate(iso: string): string {
 export function LogPickerModal({ onSelect, onCancel }: LogPickerModalProps) {
   const [logs, setLogs] = useState<BlackboxLogMetadata[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -38,8 +39,8 @@ export function LogPickerModal({ onSelect, onCancel }: LogPickerModalProps) {
           setLogs([...list].sort((a, b) => b.timestamp.localeCompare(a.timestamp)));
         }
       })
-      .catch(() => {
-        // ignore
+      .catch((err) => {
+        if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load logs');
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -59,6 +60,10 @@ export function LogPickerModal({ onSelect, onCancel }: LogPickerModalProps) {
 
         {loading ? (
           <p style={{ color: 'var(--text-secondary, #aaa)', fontSize: 13 }}>Loading logs...</p>
+        ) : error ? (
+          <p role="alert" style={{ color: 'var(--error-color, #e44)', fontSize: 13 }}>
+            {error}
+          </p>
         ) : logs.length === 0 ? (
           <p style={{ color: 'var(--text-secondary, #aaa)', fontSize: 13 }}>
             No downloaded logs available.

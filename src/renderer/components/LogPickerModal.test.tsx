@@ -100,4 +100,13 @@ describe('LogPickerModal', () => {
 
     expect(screen.getByRole('dialog', { name: 'Select existing log' })).toBeInTheDocument();
   });
+
+  it('shows error message when listBlackboxLogs fails', async () => {
+    vi.mocked(window.betaflight.listBlackboxLogs).mockRejectedValue(new Error('Connection lost'));
+    render(<LogPickerModal onSelect={onSelect} onCancel={onCancel} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Connection lost')).toBeInTheDocument();
+    });
+  });
 });

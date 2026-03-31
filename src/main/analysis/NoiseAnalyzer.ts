@@ -29,7 +29,7 @@ import {
 export const DB_SENTINEL = -240;
 
 /** Minimum valid noise floor — anything below is treated as no-signal */
-export const DB_FLOOR_VALID = -100;
+const DB_FLOOR_VALID = -100;
 
 /**
  * Estimate the noise floor of a magnitude spectrum.

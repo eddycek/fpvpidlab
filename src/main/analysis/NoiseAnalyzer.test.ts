@@ -72,6 +72,19 @@ describe('estimateNoiseFloor', () => {
     const mags = new Float64Array(100).fill(-45);
     expect(estimateNoiseFloor(mags)).toBe(-45);
   });
+
+  it('should filter out sentinel bins when >25% are at -240 dB', () => {
+    // 30 sentinel bins + 70 real bins at -50 dB → 30% sentinels should be excluded
+    const mags = new Float64Array(100);
+    for (let i = 0; i < 30; i++) mags[i] = -240;
+    for (let i = 30; i < 100; i++) mags[i] = -50;
+
+    const floor = estimateNoiseFloor(mags);
+    // Sentinel bins filtered out, noise floor based only on real data
+    expect(floor).toBe(-50);
+    // Must NOT be dragged down toward -240
+    expect(floor).toBeGreaterThan(-100);
+  });
 });
 
 describe('localNoiseFloor', () => {
