@@ -167,7 +167,7 @@ npm run test:ui           # Visual interface with DOM snapshots
 
 ## Test Inventory
 
-**Total: 2941 unit tests across 137 files + 37 Playwright E2E tests across 7 spec files** (last verified: March 31, 2026)
+**Total: 2952 unit tests across 137 files + 37 Playwright E2E tests across 7 spec files** (last verified: March 31, 2026)
 
 ### UI Components
 
@@ -263,7 +263,7 @@ npm run test:ui           # Visual interface with DOM snapshots
 
 | File | Tests | Description |
 |------|-------|-------------|
-| `ipc/handlers.test.ts` | 109 | All 51 IPC handler channels: connection, FC info, profiles, snapshots, blackbox, PID config, analysis (filter+PID+TF), tuning apply (PID+filter+FF), snapshot restore, tuning session, BB settings fix, BF PID profile selection, handler registration |
+| `ipc/handlers.test.ts` | 110 | All 51 IPC handler channels: connection, FC info, profiles, snapshots, blackbox, PID config, analysis (filter+PID+TF), tuning apply (PID+filter+FF+bounds validation), snapshot restore, tuning session, BB settings fix, BF PID profile selection, handler registration |
 | `ipc/handlers/telemetryHandlers.test.ts` | 4 | Telemetry IPC handlers: get settings, set enabled, send now, error when manager null |
 | `ipc/handlers/diagnosticHandlers.test.ts` | 14 | Diagnostic IPC handler: send report, bundle build, gzip upload, Pro license gate, error handling, BBL upload (fire-and-forget, skip when disabled, file not found, upload failure, verification log selection, telemetry event) |
 
@@ -349,7 +349,7 @@ npm run test:ui           # Visual interface with DOM snapshots
 | `analysis/NoiseAnalyzer.test.ts` | 25 | Peak detection, classification, noise floor |
 | `analysis/FilterRecommender.test.ts` | 92 | Noise-based targets, convergence, safety bounds, RPM-aware bounds, dynamic notch, propwash floor, medium noise handling, notch-aware resonance, LPF2 recommendations, conditional Q, structured ruleId on all recommendations, iterm_relax, anti-gravity, thrust linear, RPM Q, D-max, dyn idle, TPA, D-term expo, pidsum limit, FF rate limit, FF-dominated noise guard |
 | `analysis/DataQualityScorer.test.ts` | 39 | Filter/PID data quality scoring, tier mapping, warnings, confidence adjustment, TF data quality, low coherence warning |
-| `analysis/FilterAnalyzer.test.ts` | 19 | End-to-end pipeline, progress reporting, segment fallback warnings, RPM context propagation, data quality scoring, throttle spectrogram, group delay |
+| `analysis/FilterAnalyzer.test.ts` | 20 | End-to-end pipeline, progress reporting, segment fallback warnings, RPM context propagation, data quality scoring, throttle spectrogram, group delay |
 | `analysis/ThrottleSpectrogramAnalyzer.test.ts` | 17 | Throttle-dependent spectrogram analysis, frequency-throttle mapping, noise source tracking |
 | `analysis/GroupDelayEstimator.test.ts` | 22 | Group delay estimation, filter phase response, latency measurement |
 
@@ -359,7 +359,7 @@ npm run test:ui           # Visual interface with DOM snapshots
 |------|-------|-------------|
 | `analysis/StepDetector.test.ts` | 16 | Derivative-based step detection, hold/cooldown |
 | `analysis/StepMetrics.test.ts` | 53 | Rise time, overshoot, settling, latency, ringing, FF contribution classification, trackingErrorRMS computation and aggregation, adaptive window, FF energy ratio |
-| `analysis/PIDRecommender.test.ts` | 232 | Flight PID anchoring, convergence, safety bounds, FF context, FF-aware recommendations, flight style thresholds, proportional severity scaling, TF-based recommendations, damping ratio, I-term, D-term effectiveness gating, prop wash integration, Rule TF-4 DC gain I-term, quad-size-aware bounds, severity-scaled sluggish P, P-too-high warning, P-too-low warning, informational flag, FF boost step 3, D-min/TPA advisory, structured ruleId on all recommendations, iterm_relax_cutoff, anti-gravity, thrust linear, RPM notch Q, D-max boost, dyn idle, TPA breakpoint/rate, D-term expo, pidsum limit, FF rate limit, RC link FF profiles, bounds clamping validation |
+| `analysis/PIDRecommender.test.ts` | 237 | Flight PID anchoring, convergence, safety bounds, FF context, FF-aware recommendations, flight style thresholds, proportional severity scaling, TF-based recommendations, damping ratio, I-term, D-term effectiveness gating, prop wash integration, Rule TF-4 DC gain I-term, quad-size-aware bounds, severity-scaled sluggish P, P-too-high warning, P-too-low warning, informational flag, FF boost step 3, D-min/TPA advisory, structured ruleId on all recommendations, iterm_relax_cutoff (severity-aware floor), anti-gravity, thrust linear, RPM notch Q, D-max boost, dyn idle, TPA breakpoint/rate, D-term expo, pidsum limit, FF rate limit, RC link FF profiles, bounds clamping validation, style-aware d_min gain |
 | `analysis/PIDAnalyzer.test.ts` | 28 | End-to-end pipeline, progress reporting, FF context wiring, flight style propagation, data quality scoring, cross-axis, propwash integration |
 | `analysis/CrossAxisDetector.test.ts` | 20 | Cross-axis coupling detection, axis interaction analysis |
 | `analysis/PropWashDetector.test.ts` | 15 | Propwash detection, wash-out frequency analysis |
@@ -394,7 +394,7 @@ npm run test:ui           # Visual interface with DOM snapshots
 
 | File | Tests | Description |
 |------|-------|-------------|
-| `analysis/headerValidation.test.ts` | 28 | GYRO_SCALED check, logging rate validation, BF version-aware debug mode, BBL header RPM enrichment, independent field enrichment, preset gap analysis header fields |
+| `analysis/headerValidation.test.ts` | 37 | GYRO_SCALED check, logging rate validation, BF version-aware debug mode, BBL firmware version parsing (with "Betaflight" prefix), BBL header RPM enrichment, independent field enrichment, preset gap analysis header fields |
 
 ### Demo Mode (Offline UX Testing)
 
