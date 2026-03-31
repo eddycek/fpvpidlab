@@ -235,8 +235,9 @@ export function TuningStatusBanner({
     stepIndex = STEP_LABELS.length - 1;
   }
 
+  // flashHasData is false when flashUsedSize is null (unknown/not yet loaded) OR 0 (empty).
   const flashHasData = flashUsedSize != null && flashUsedSize > 0;
-  // Show erased/post-erase state only when flash is actually empty.
+  // Show erased/post-erase state only when storage is actually empty.
   // Flash storage: flashHasData reliably means data exists → offer download.
   // SD card: can't rely on usedSize (FAT overhead makes it always > 0) → use eraseCompleted flag.
   const showErasedState =

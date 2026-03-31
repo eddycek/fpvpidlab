@@ -11,6 +11,11 @@ interface EmailParams {
  * Fire-and-forget: logs errors but does not throw.
  */
 export async function sendEmail(env: Env, params: EmailParams): Promise<boolean> {
+  if (!env.RESEND_API_KEY || !env.RESEND_FROM_EMAIL) {
+    console.warn('Email skipped: RESEND_API_KEY or RESEND_FROM_EMAIL not configured');
+    return false;
+  }
+
   try {
     const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',

@@ -214,7 +214,7 @@ export class MSPClient extends EventEmitter {
 
       // Wait a bit for the port to fully release
       // This prevents "FC not responding" errors when reconnecting immediately
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      await this.delay(1000);
 
       this.connectionStatus = { connected: false };
       this.currentPort = null;
@@ -271,8 +271,13 @@ export class MSPClient extends EventEmitter {
           logger.info(`Port ${portPath} re-appeared after ${Date.now() - start}ms`);
           // Small settle delay — port may not be ready immediately after enumeration
           await this.delay(500);
-          await this.connect(portPath);
-          return true;
+          try {
+            await this.connect(portPath);
+            return true;
+          } catch (connectErr) {
+            logger.warn(`reconnectAfterReboot: connect failed, will retry — ${connectErr}`);
+            // Port appeared but connect failed (e.g. not ready yet) — continue polling
+          }
         }
       } catch {
         // SerialPort.list() can fail transiently during re-enumeration

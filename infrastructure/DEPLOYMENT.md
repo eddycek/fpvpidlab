@@ -4,13 +4,13 @@
 
 ```
 PR opened/updated (infrastructure/** changed)
-  └─ build telemetry + license workers → deploy dev → plan prod
+  └─ build telemetry worker → deploy dev → plan prod
 
 Merge to main
-  └─ build telemetry + license workers → deploy dev → deploy prod
+  └─ build telemetry worker → deploy dev → deploy prod
 ```
 
-- **`build-worker`** + **`build-license-worker`**: `esbuild` compiles TypeScript sources into bundles (parallel)
+- **`build-worker`**: `esbuild` compiles telemetry worker TypeScript source into bundle
 - **`deploy-dev`** (PR + main): `terraform apply` to dev — immediate feedback on PRs (skips fork PRs)
 - **`plan-prod`** (PR only, internal): `terraform plan` for prod — review before merge
 - **`deploy-prod`** (main push): `terraform apply` to prod (runs after dev succeeds)
@@ -22,7 +22,7 @@ Workflow file: `.github/workflows/infrastructure.yml`
 
 ## GitHub Secrets
 
-12 secrets in GitHub repo settings (`Settings → Secrets and variables → Actions`):
+13 secrets in GitHub repo settings (`Settings → Secrets and variables → Actions`):
 
 ### `CLOUDFLARE_PROVISIONING`
 
@@ -54,16 +54,30 @@ API keys for authenticating requests to `/admin/stats/*` endpoints on telemetry 
 
 Resend email delivery API key for daily telemetry cron report, diagnostic report notifications, and beta program emails.
 
-- **Used by**: Terraform (injected as Worker secret on both telemetry and license Workers)
+- **Used by**: Terraform (telemetry Worker) + `wrangler secret put` in CI (license Worker)
 - **Scope**: Resend email sending only
 - **Created in**: resend.com dashboard
 
-### `RESEND_FROM_EMAIL`
+### `TELEMETRY_REPORT_EMAIL`
 
-Verified sender address for Resend email delivery (e.g. `noreply@fpvpidlab.app`).
+Recipient email address for telemetry cron reports and diagnostic report notifications.
 
-- **Used by**: Terraform (injected as Worker secret on both telemetry and license Workers)
-- **Scope**: Email "From" address for cron reports, diagnostic notifications, beta program emails
+- **Used by**: Terraform (injected as `REPORT_EMAIL` Worker secret on telemetry Worker)
+- **Scope**: Email "To" address for cron reports and diagnostic notifications
+
+### `TELEMETRY_REPORT_FROM_EMAIL`
+
+Verified sender address for telemetry Worker email delivery (e.g. `noreply@fpvpidlab.app`).
+
+- **Used by**: Terraform (injected as `REPORT_FROM_EMAIL` Worker secret on telemetry Worker)
+- **Scope**: Email "From" address for cron reports and diagnostic notifications
+
+### `LICENSE_RESEND_FROM_EMAIL`
+
+Verified sender address for license Worker email delivery (e.g. `noreply@fpvpidlab.app`).
+
+- **Used by**: Wrangler (injected as `RESEND_FROM_EMAIL` Worker secret on license Worker)
+- **Scope**: Email "From" address for beta program emails
 
 ### `LICENSE_ED25519_PRIVATE_KEY` + `LICENSE_ED25519_PUBLIC_KEY`
 

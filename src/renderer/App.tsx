@@ -120,7 +120,7 @@ function AppContent() {
     window.betaflight
       .getBlackboxInfo()
       .then((info) => {
-        // Guard: flash→none is transient after erase. Use ref for latest value
+        // Guard: flash→none is transient after erase (flash storage only). Use ref for latest value
         // (avoids stale closure in useEffect subscriptions).
         if (info.storageType === 'none' && storageTypeRef.current === 'flash') {
           setFlashUsedSize(0);
@@ -230,7 +230,7 @@ function AppContent() {
           const phaseForErase = tuning.session?.phase ?? null;
           setErasedForPhase(phaseForErase);
           setFlashUsedSize(0);
-          // Refresh BB panel — eraseBlackboxFlash() already waits for flash recovery
+          // Refresh BB panel — eraseBlackboxFlash() already waits for storage recovery
           setBbRefreshKey((k) => k + 1);
 
           // Persist eraseCompleted so the state survives MSC disconnect/reconnect.
@@ -397,7 +397,7 @@ function AppContent() {
         }
         break;
       case 'skip_erase_verification': {
-        // Skip erase and go directly to verification phase — user will fly with existing flash data
+        // Skip erase and go directly to verification phase — user will fly with existing log data
         const skipVerPhase =
           tuning.session?.tuningType === TUNING_TYPE.FILTER
             ? TUNING_PHASE.FILTER_VERIFICATION_PENDING
@@ -421,7 +421,7 @@ function AppContent() {
           await window.betaflight.eraseBlackboxFlash();
           setErasedForPhase(verPhase);
           setFlashUsedSize(0);
-          // Refresh BB panel — eraseBlackboxFlash() already waits for flash recovery
+          // Refresh BB panel — eraseBlackboxFlash() already waits for storage recovery
           setBbRefreshKey((k) => k + 1);
           // Persist eraseCompleted for SD card MSC disconnect survival
           await tuning.updatePhase(verPhase, { eraseCompleted: true });

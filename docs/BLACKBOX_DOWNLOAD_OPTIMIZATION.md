@@ -23,7 +23,7 @@ The bottleneck is the combination of:
 
 ### Current Implementation
 
-**File**: `src/main/msp/MSPClient.ts` — `downloadBlackboxLog()` (line ~1464)
+**File**: `src/main/msp/MSPClient.ts` — `downloadBlackboxLog()` method
 
 ```
 Initial chunk:  180 bytes
@@ -125,7 +125,7 @@ Recovery from failed MSC probe:
 
 ### Solution B: MSP Request Pipelining (Secondary)
 
-**Impact: 30–50% speedup** | **Complexity: Medium** | **Risk: Low**
+**Impact: 1.5–2× speedup** | **Complexity: Medium** | **Risk: Low**
 
 For FCs that don't support MSC mode, improve the MSP download speed by sending multiple read requests without waiting for each response (pipelining).
 

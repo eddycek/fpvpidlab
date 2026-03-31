@@ -55,11 +55,12 @@ center_sensitivity ≈ rc_rate * 2  (deg/s at center, approximate)
 
 ### QUICK rates
 ```
-max_rate = rc_rate * 10  (deg/s, same concept as ACTUAL but rc_rate encodes max rate directly)
-center_sensitivity is derived from the curve shape — QUICK uses rc_rate as the max rate
+max_rate = srate * 10  (deg/s — srate encodes max rate ÷ 10, same as ACTUAL)
+center_sensitivity = rc_rate  (controls mid-stick feel / curve shape)
 ```
-Note: QUICK rates use `rc_rate` as max rate (÷10) and `srate` controls the curve shape.
-If the user provides QUICK rates, ask them to confirm their max rate or compute it from `rc_rate * 10`.
+Note: QUICK rates use `srate` for max rate (÷10) and `rc_rate` for center sensitivity,
+same as ACTUAL. The curve shape differs (QUICK has a different response curve formula).
+If the user provides QUICK rates, compute max rate from `srate * 10`.
 
 ## Community Benchmark Database
 
