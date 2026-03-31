@@ -337,13 +337,13 @@ Three tuning modes: **Filter Tune** (2 flights: analysis + verification), **PID 
 
 **Flash Tune State Machine**: flash_flight_pending → flash_log_ready → flash_analysis → flash_applied → verification_pending → completed
 
-- **TuningSessionManager** (`src/main/storage/`): CRUD for per-profile session files at `{userData}/data/tuning/{profileId}.json`
+- **TuningSessionManager** (`src/main/storage/`): CRUD for per-profile session files at `{userData}/data/tuning/{profileId}.json`. Phase transition validation: `VALID_TRANSITIONS` map enforces legal forward-only transitions per tuning type (rejects invalid/backward transitions with descriptive error)
 - **useTuningSession hook**: Manages session lifecycle with IPC and event subscription
 - **TuningStatusBanner**: Dashboard banner showing current phase, 4-step indicator (Prepare → Flight → Tune → Verify), action buttons, BF PID profile badge
 - **TuningMode**: `'filter' | 'pid' | 'flash'` — wizard components adapt UI/flow per mode
 - **StartTuningModal**: Mode selection (Filter Tune/PID Tune/Flash Tune) with BF PID profile selector when FC has multiple profiles. Selected profile stored on `TuningSession.bfPidProfileIndex`
 - **Verification flow** (mandatory): After apply, user clicks "Erase & Verify" → fly verification flight → download → analyze verification → completed. Filter Tune: throttle sweep → spectrogram comparison. PID Tune: stick snaps → step response comparison. Flash Tune: hover → noise comparison.
-- **Post-apply verification**: On smart reconnect after apply, `verifyAppliedConfig()` (`src/main/utils/verifyAppliedConfig.ts`) reads back full PID and filter configuration from FC via MSP, compares ALL readable values (not just applied changes), and runs sanity checks (P/I/D=0, filter bypassed). Retries PID write+readback once on mismatch. Results stored on `TuningSession.applyVerified` (boolean), `applyMismatches` (string[]), `applyExpected` (Record<string, number>), `applyActual` (Record<string, number>), `applySuspicious` (boolean), and `autoReportId` (string). TuningStatusBanner shows amber warning if mismatches detected. On failure, auto-submits a diagnostic report via `DiagnosticReportService.sendAutoReport()` (Pro only) with expected/actual values and mismatch details.
+- **Post-apply verification**: On smart reconnect after apply, `verifyAppliedConfig()` (`src/main/utils/verifyAppliedConfig.ts`) reads back full PID and filter configuration from FC via MSP, compares ALL readable values (not just applied changes), and runs sanity checks (P/I/D=0, filter bypassed). Retries PID write+readback once on mismatch (10s timeout to prevent hang). Results stored on `TuningSession.applyVerified` (boolean), `applyMismatches` (string[]), `applyExpected` (Record<string, number>), `applyActual` (Record<string, number>), `applySuspicious` (boolean), and `autoReportId` (string). TuningStatusBanner shows amber warning if mismatches detected. On failure, auto-submits a diagnostic report via `DiagnosticReportService.sendAutoReport()` (Pro only) with expected/actual values and mismatch details.
 - **Archive on completion**: When phase transitions to `completed`, session is archived to `TuningHistoryManager` before becoming dismissable
 - IPC: `TUNING_GET_SESSION`, `TUNING_START_SESSION`, `TUNING_UPDATE_PHASE`, `TUNING_RESET_SESSION`, `TUNING_GET_HISTORY`, `TUNING_UPDATE_VERIFICATION`, `TUNING_UPDATE_HISTORY_VERIFICATION` + `EVENT_TUNING_SESSION_CHANGED`
 - Design doc: `docs/TUNING_WORKFLOW_REVISION.md`
@@ -409,9 +409,10 @@ Completed tuning sessions are archived with self-contained metrics for compariso
 ### Auto-Apply Recommendations
 
 **Apply Flow** (orchestrated in `TUNING_APPLY_RECOMMENDATIONS` IPC handler):
-1. Stage 1: Apply PID changes via MSP (must happen before CLI mode)
+0. Pre-apply: `validateRecommendationBounds()` checks all filter/FF values against `BF_SETTING_RANGES` — rejects entire apply if any value is out of Betaflight-valid range
+1. Stage 1: Apply PID changes via MSP (must happen before CLI mode). Saves `currentConfig` for rollback
 2. Stage 2: Enter CLI mode
-3. Stage 3: Apply filter changes via CLI `set` commands
+3. Stage 3: Apply filter changes via CLI `set` commands. On failure: attempts automatic PID rollback to `currentConfig` before surfacing error
 4. Stage 4: Save to EEPROM and reboot FC
 
 **MSP Filter Config** (`MSP_FILTER_CONFIG`, command 92):
