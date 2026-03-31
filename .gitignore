@@ -64,8 +64,9 @@ test-results/
 # Real flight BBL fixtures (large binary files)
 src/main/blackbox/__fixtures__/*.bbl
 src/main/blackbox/__fixtures__/*.bfl
-# Keep test-fixtures/bbl/ tracked — one fixture for CI integration tests
-# Additional fixtures can be added as needed for new test cases
+# test-fixtures/bbl/ — only the CI fixture is tracked, rest are local-only
+test-fixtures/bbl/*
+!test-fixtures/bbl/blackbox_2026-03-29T11-09-44-682Z.bbl
 
 # Temp files
 *.temp

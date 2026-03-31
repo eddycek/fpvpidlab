@@ -50,17 +50,8 @@ export function registerAnalysisHandlers(deps: HandlerDependencies): void {
 
         logger.info(`Running filter analysis on: ${logMeta.filename}`);
 
-        // Auto-read current filter settings from FC if not provided
-        if (!currentSettings && deps.mspClient?.isConnected()) {
-          try {
-            currentSettings = await deps.mspClient.getFilterConfiguration();
-            logger.info('Read current filter settings from FC');
-          } catch {
-            logger.warn('Could not read filter settings from FC, using defaults');
-          }
-        }
-
-        // Parse the log first
+        // Parse the log first — BBL headers are the primary source for filter settings
+        // (they capture the config at flight time, not the current FC state)
         const data = await fs.readFile(logMeta.filepath);
         const parseResult = await BlackboxParser.parse(data);
 
@@ -81,32 +72,41 @@ export function registerAnalysisHandlers(deps: HandlerDependencies): void {
 
         const session = parseResult.sessions[idx];
 
-        // Enrich filter settings with data from BBL headers as fallback
-        // Runs when any key field is missing (RPM data, dyn_notch_count/q, rpm_filter_q, dterm expo)
-        if (
-          currentSettings &&
-          (currentSettings.rpm_filter_harmonics === undefined ||
-            currentSettings.dyn_notch_count === undefined ||
-            currentSettings.dyn_notch_q === undefined ||
-            currentSettings.rpm_filter_q === undefined ||
-            currentSettings.dterm_lpf1_dyn_expo === undefined ||
-            currentSettings.dterm_lpf1_dyn_min_hz === undefined)
-        ) {
-          const enriched = enrichSettingsFromBBLHeaders(currentSettings, session.header.rawHeaders);
-          if (enriched) {
-            currentSettings = enriched;
-            logger.info('Enriched filter settings from BBL headers');
-          }
-        } else if (!currentSettings) {
-          // No FC connected and no settings provided — try to build from BBL headers
+        // Build filter settings: BBL headers first (flight-time config), MSP as fallback
+        if (!currentSettings) {
           const { DEFAULT_FILTER_SETTINGS } = await import('@shared/types/analysis.types');
-          const enriched = enrichSettingsFromBBLHeaders(
+          const fromBBL = enrichSettingsFromBBLHeaders(
             DEFAULT_FILTER_SETTINGS,
             session.header.rawHeaders
           );
-          if (enriched) {
-            currentSettings = enriched;
-            logger.info('Built filter settings from BBL headers (no FC connected)');
+          if (fromBBL) {
+            currentSettings = fromBBL;
+            logger.info('Built filter settings from BBL headers (primary source)');
+          }
+
+          // Fallback: read from live FC if BBL headers were insufficient
+          if (!currentSettings && deps.mspClient?.isConnected()) {
+            try {
+              currentSettings = await deps.mspClient.getFilterConfiguration();
+              logger.info('Read current filter settings from FC (BBL headers unavailable)');
+            } catch {
+              logger.warn('Could not read filter settings from FC, using defaults');
+            }
+          }
+        }
+
+        // Enrich with MSP data for fields BBL doesn't cover (rare)
+        if (currentSettings && deps.mspClient?.isConnected()) {
+          try {
+            const mspConfig = await deps.mspClient.getFilterConfiguration();
+            // Only fill in fields that BBL didn't provide
+            for (const key of Object.keys(mspConfig) as (keyof typeof mspConfig)[]) {
+              if (currentSettings[key] === undefined && mspConfig[key] !== undefined) {
+                (currentSettings as Record<string, unknown>)[key] = mspConfig[key];
+              }
+            }
+          } catch {
+            // Non-critical — BBL has the primary data
           }
         }
 
