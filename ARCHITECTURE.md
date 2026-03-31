@@ -1,6 +1,6 @@
 # Architecture Overview
 
-**Last Updated:** March 30, 2026 | **Phase 4 Complete, Phase 6 Complete** | **2866 unit tests, 136 files + 37 Playwright E2E tests**
+**Last Updated:** March 31, 2026 | **Phase 4 Complete, Phase 6 Complete** | **2941 unit tests, 137 files + 37 Playwright E2E tests**
 
 ---
 
@@ -843,26 +843,26 @@ Hardware error (FC timeout, USB disconnect)
 
 ## Testing Strategy
 
-**2866 unit tests across 136 files + 37 Playwright E2E tests**. See [TESTING.md](./TESTING.md) for complete inventory.
+**2941 unit tests across 137 files + 37 Playwright E2E tests**. See [TESTING.md](./TESTING.md) for complete inventory.
 
 | Area | Files | Tests |
 |------|-------|-------|
 | Blackbox Parser | 9 | 245 |
-| FFT Analysis (+ Data Quality + Spectrogram + Delay) | 8 | 237 |
-| Step Response + PID + TF + CrossAxis + PropWash + DTerm + Bayesian | 10 | 322 |
-| Header Validation + Constants | 2 | 31 |
-| MSP Protocol & Client | 4 | 187 |
+| FFT Analysis (+ Data Quality + Spectrogram + Delay) | 8 | 269 |
+| Step Response + PID + TF + CrossAxis + PropWash + DTerm + Bayesian | 10 | 446 |
+| Header Validation + Constants | 2 | 11 |
+| MSP Protocol & Client | 4 | 194 |
 | MSC (Mass Storage) | 2 | 45 |
-| Storage Managers | 7 | 127 |
+| Storage Managers | 7 | 135 |
 | IPC Handlers | 3 | 127 |
 | Telemetry | 2 | 38 |
-| Diagnostic | 1 | 14 |
+| Diagnostic | 1 | 12 |
 | License | 1 | 12 |
 | Auto-Updater | 1 | 12 |
-| UI Components + Charts + Contexts | 50 | 751 |
-| React Hooks + Utils | 17 | 183 |
-| Shared Constants & Utils | 5 | 98 |
-| E2E Workflows (Vitest) | 1 | 20 |
+| UI Components + Charts + Contexts | 50 | 782 |
+| React Hooks + Utils | 17 | 185 |
+| Shared Constants & Utils | 5 | 102 |
+| E2E Workflows (Vitest) | 1 | 30 |
 | Demo Mode (Vitest) | 2 | 79 |
 | **Playwright E2E** | **7** | **37** |
 
