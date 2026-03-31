@@ -1942,6 +1942,37 @@ describe('extractDMinContext', () => {
     const ctx = extractDMinContext(headers);
     expect(ctx.active).toBe(false);
   });
+
+  it('should parse CSV format from real BBL (d_min:30,34,0)', () => {
+    const headers = new Map([
+      ['d_min', '30,34,0'],
+      ['d_max_gain', '37'],
+    ]);
+    const ctx = extractDMinContext(headers);
+    expect(ctx.active).toBe(true);
+    expect(ctx.roll).toBe(30);
+    expect(ctx.pitch).toBe(34);
+    expect(ctx.yaw).toBe(0);
+    expect(ctx.gain).toBe(37);
+  });
+
+  it('should prefer CSV format over individual headers', () => {
+    const headers = new Map([
+      ['d_min', '25,28,0'],
+      ['d_min_roll', '99'],
+    ]);
+    const ctx = extractDMinContext(headers);
+    expect(ctx.roll).toBe(25);
+  });
+
+  it('should read d_max_gain (BF naming) not d_min_gain', () => {
+    const headers = new Map([
+      ['d_min', '30,34,0'],
+      ['d_max_gain', '35'],
+    ]);
+    const ctx = extractDMinContext(headers);
+    expect(ctx.gain).toBe(35);
+  });
 });
 
 describe('extractTPAContext', () => {

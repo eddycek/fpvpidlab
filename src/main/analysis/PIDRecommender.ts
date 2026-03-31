@@ -827,10 +827,30 @@ export interface DMinContext {
 }
 
 export function extractDMinContext(rawHeaders: Map<string, string>): DMinContext {
-  const dMinRoll = parseIntOr(rawHeaders.get('d_min_roll'));
-  const dMinPitch = parseIntOr(rawHeaders.get('d_min_pitch'));
-  const dMinYaw = parseIntOr(rawHeaders.get('d_min_yaw'));
-  const dMinGain = parseIntOr(rawHeaders.get('d_min_gain'));
+  // BF BBL writes d_min as CSV: "H d_min:30,34,0" (roll,pitch,yaw)
+  // and gain/advance as: "H d_max_gain:37", "H d_max_advance:20"
+  let dMinRoll: number | undefined;
+  let dMinPitch: number | undefined;
+  let dMinYaw: number | undefined;
+
+  const dMinCsv = rawHeaders.get('d_min');
+  if (dMinCsv) {
+    const parts = dMinCsv.split(',').map((s) => parseInt(s.trim(), 10));
+    if (parts.length >= 3 && parts.every((n) => !isNaN(n))) {
+      dMinRoll = parts[0];
+      dMinPitch = parts[1];
+      dMinYaw = parts[2];
+    }
+  }
+
+  // Fallback: try individual headers (used by demo data / older formats)
+  if (dMinRoll === undefined) dMinRoll = parseIntOr(rawHeaders.get('d_min_roll'));
+  if (dMinPitch === undefined) dMinPitch = parseIntOr(rawHeaders.get('d_min_pitch'));
+  if (dMinYaw === undefined) dMinYaw = parseIntOr(rawHeaders.get('d_min_yaw'));
+
+  // BF uses "d_max_gain" and "d_max_advance" (not "d_min_gain")
+  const dMinGain =
+    parseIntOr(rawHeaders.get('d_max_gain')) ?? parseIntOr(rawHeaders.get('d_min_gain'));
   const active = (dMinRoll ?? 0) > 0 || (dMinPitch ?? 0) > 0;
 
   return {
