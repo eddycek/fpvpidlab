@@ -2,6 +2,12 @@ import { describe, it, expect } from 'vitest';
 import { validateBBLHeader, enrichSettingsFromBBLHeaders } from './headerValidation';
 import type { BBLLogHeader } from '@shared/types/blackbox.types';
 import { DEFAULT_FILTER_SETTINGS } from '@shared/types/analysis.types';
+import {
+  extractDMinContext,
+  extractTPAContext,
+  extractItermRelaxMode,
+  extractFlightPIDs,
+} from './PIDRecommender';
 
 function createHeader(overrides: Partial<BBLLogHeader> = {}): BBLLogHeader {
   const defaults: BBLLogHeader = {
@@ -282,5 +288,129 @@ describe('enrichSettingsFromBBLHeaders', () => {
     if (result) {
       expect(result.dterm_lpf1_dyn_expo).toBe(5);
     }
+  });
+
+  it('should parse gyro dynamic lowpass CSV format (gyro_lpf1_dyn_hz:250,500)', () => {
+    const headers = new Map([['gyro_lpf1_dyn_hz', '250,500']]);
+    const result = enrichSettingsFromBBLHeaders(DEFAULT_FILTER_SETTINGS, headers);
+    expect(result).not.toBeNull();
+    expect(result!.gyro_lpf1_dyn_min_hz).toBe(250);
+    expect(result!.gyro_lpf1_dyn_max_hz).toBe(500);
+  });
+
+  it('should parse dterm dynamic lowpass CSV format (dterm_lpf1_dyn_hz:75,150)', () => {
+    const headers = new Map([['dterm_lpf1_dyn_hz', '75,150']]);
+    const result = enrichSettingsFromBBLHeaders(DEFAULT_FILTER_SETTINGS, headers);
+    expect(result).not.toBeNull();
+    expect(result!.dterm_lpf1_dyn_min_hz).toBe(75);
+    expect(result!.dterm_lpf1_dyn_max_hz).toBe(150);
+  });
+});
+
+/**
+ * Comprehensive test against real BBL headers from VX3.5 (SpeedyBee F405 Mini, BF 4.5.2).
+ * Headers extracted from: test-fixtures/bbl/blackbox_2026-03-29T11-09-44-682Z.bbl
+ *
+ * Validates ALL tuning-relevant headers are parsed correctly by enrichSettingsFromBBLHeaders,
+ * extractFlightPIDs, extractDMinContext, extractItermRelaxMode, extractTPAContext.
+ */
+describe('real BBL header parsing (VX3.5 BF 4.5.2)', () => {
+  // Exact headers from the real BBL file
+  const realHeaders = new Map([
+    ['rollPID', '45,80,40'],
+    ['pitchPID', '47,84,46'],
+    ['yawPID', '45,80,0'],
+    ['d_min', '30,34,0'],
+    ['d_max_gain', '37'],
+    ['d_max_advance', '20'],
+    ['iterm_relax', '1'],
+    ['iterm_relax_type', '1'],
+    ['iterm_relax_cutoff', '15'],
+    ['tpa_mode', '1'],
+    ['tpa_rate', '65'],
+    ['tpa_breakpoint', '1350'],
+    ['tpa_low_rate', '20'],
+    ['tpa_low_breakpoint', '1050'],
+    ['tpa_low_always', '0'],
+    ['gyro_lpf1_static_hz', '500'],
+    ['gyro_lpf1_dyn_hz', '250,500'],
+    ['gyro_lpf1_type', '0'],
+    ['gyro_lpf2_static_hz', '500'],
+    ['gyro_lpf2_type', '0'],
+    ['dterm_lpf1_static_hz', '75'],
+    ['dterm_lpf1_dyn_hz', '75,150'],
+    ['dterm_lpf1_dyn_expo', '5'],
+    ['dterm_lpf1_type', '0'],
+    ['dterm_lpf2_static_hz', '150'],
+    ['dterm_lpf2_type', '0'],
+    ['dyn_notch_count', '1'],
+    ['dyn_notch_q', '500'],
+    ['dyn_notch_min_hz', '100'],
+    ['dyn_notch_max_hz', '600'],
+    ['rpm_filter_harmonics', '3'],
+    ['rpm_filter_min_hz', '100'],
+    ['rpm_filter_q', '500'],
+    ['dshot_bidir', '1'],
+    ['feedforward_transition', '0'],
+    ['feedforward_boost', '15'],
+    ['feedforward_smooth_factor', '25'],
+    ['feedforward_jitter_factor', '7'],
+    ['feedforward_averaging', '0'],
+    ['feedforward_max_rate_limit', '90'],
+    ['pid_process_denom', '2'],
+    ['looptime', '125'],
+    ['debug_mode', '6'],
+    ['rc_smoothing_auto_factor', '30'],
+  ]);
+
+  it('should enrich filter settings from real BBL headers', () => {
+    const result = enrichSettingsFromBBLHeaders(DEFAULT_FILTER_SETTINGS, realHeaders);
+    expect(result).not.toBeNull();
+
+    // Dynamic lowpass (CSV format)
+    expect(result!.gyro_lpf1_dyn_min_hz).toBe(250);
+    expect(result!.gyro_lpf1_dyn_max_hz).toBe(500);
+    expect(result!.dterm_lpf1_dyn_min_hz).toBe(75);
+    expect(result!.dterm_lpf1_dyn_max_hz).toBe(150);
+    expect(result!.dterm_lpf1_dyn_expo).toBe(5);
+
+    // RPM filter
+    expect(result!.rpm_filter_harmonics).toBe(3);
+    expect(result!.rpm_filter_min_hz).toBe(100);
+    expect(result!.rpm_filter_q).toBe(500);
+
+    // Dynamic notch
+    expect(result!.dyn_notch_count).toBe(1);
+    expect(result!.dyn_notch_q).toBe(500);
+  });
+
+  it('should extract d_min context from real BBL CSV format', () => {
+    const ctx = extractDMinContext(realHeaders);
+    expect(ctx.active).toBe(true);
+    expect(ctx.roll).toBe(30);
+    expect(ctx.pitch).toBe(34);
+    expect(ctx.yaw).toBe(0);
+    expect(ctx.gain).toBe(37); // d_max_gain, not d_min_gain
+  });
+
+  it('should extract iterm_relax mode from real BBL', () => {
+    const mode = extractItermRelaxMode(realHeaders);
+    expect(mode).toBe(1); // 1 = RP mode
+  });
+
+  it('should extract TPA context from real BBL', () => {
+    const ctx = extractTPAContext(realHeaders);
+    expect(ctx.active).toBe(true);
+    expect(ctx.rate).toBe(65);
+    expect(ctx.breakpoint).toBe(1350);
+    expect(ctx.mode).toBe(1); // PD mode
+  });
+
+  it('should extract flight PIDs from real BBL CSV format', () => {
+    const pids = extractFlightPIDs(realHeaders);
+    expect(pids).toBeDefined();
+    expect(pids!.roll).toEqual({ P: 45, I: 80, D: 40 });
+    expect(pids!.pitch).toEqual({ P: 47, I: 84, D: 46 });
+    expect(pids!.yaw).toEqual({ P: 45, I: 80, D: 0 });
   });
 });

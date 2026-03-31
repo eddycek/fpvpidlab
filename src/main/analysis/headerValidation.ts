@@ -184,35 +184,83 @@ export function enrichSettingsFromBBLHeaders(
     }
   }
 
-  if (enriched.dterm_lpf1_dyn_max_hz === undefined) {
-    const val = rawHeaders.get('dterm_lpf1_dyn_max_hz');
-    if (val !== undefined) {
-      const n = parseInt(val, 10);
-      if (!isNaN(n)) {
-        enriched.dterm_lpf1_dyn_max_hz = n;
+  // BF BBL writes dynamic lowpass as CSV: "gyro_lpf1_dyn_hz:250,500" (min,max)
+  // and "dterm_lpf1_dyn_hz:75,150" (min,max)
+  // BF BBL writes dynamic lowpass as CSV: "gyro_lpf1_dyn_hz:250,500" (min,max)
+  // and "dterm_lpf1_dyn_hz:75,150" (min,max).
+  // Enrich when value is missing (undefined) OR at default (0 = dynamic off).
+  // MSP reads the real values; BBL enrichment is the fallback when FC is disconnected.
+  const needsGyroDyn =
+    enriched.gyro_lpf1_dyn_min_hz === undefined ||
+    enriched.gyro_lpf1_dyn_min_hz === 0 ||
+    enriched.gyro_lpf1_dyn_max_hz === undefined ||
+    enriched.gyro_lpf1_dyn_max_hz === 0;
+  if (needsGyroDyn) {
+    const csv = rawHeaders.get('gyro_lpf1_dyn_hz');
+    if (csv) {
+      const parts = csv.split(',').map((s) => parseInt(s.trim(), 10));
+      if (parts.length >= 2 && parts.every((n) => !isNaN(n))) {
+        enriched.gyro_lpf1_dyn_min_hz = parts[0];
+        enriched.gyro_lpf1_dyn_max_hz = parts[1];
         changed = true;
+      }
+    }
+    // Fallback: individual headers (demo data / older formats)
+    if (enriched.gyro_lpf1_dyn_min_hz === undefined || enriched.gyro_lpf1_dyn_min_hz === 0) {
+      const val = rawHeaders.get('gyro_lowpass_dyn_min_hz');
+      if (val !== undefined) {
+        const n = parseInt(val, 10);
+        if (!isNaN(n)) {
+          enriched.gyro_lpf1_dyn_min_hz = n;
+          changed = true;
+        }
+      }
+    }
+    if (enriched.gyro_lpf1_dyn_max_hz === undefined || enriched.gyro_lpf1_dyn_max_hz === 0) {
+      const val = rawHeaders.get('gyro_lowpass_dyn_max_hz');
+      if (val !== undefined) {
+        const n = parseInt(val, 10);
+        if (!isNaN(n)) {
+          enriched.gyro_lpf1_dyn_max_hz = n;
+          changed = true;
+        }
       }
     }
   }
 
-  if (enriched.gyro_lpf1_dyn_min_hz === undefined) {
-    const val = rawHeaders.get('gyro_lowpass_dyn_min_hz');
-    if (val !== undefined) {
-      const n = parseInt(val, 10);
-      if (!isNaN(n)) {
-        enriched.gyro_lpf1_dyn_min_hz = n;
+  const needsDtermDyn =
+    enriched.dterm_lpf1_dyn_min_hz === undefined ||
+    enriched.dterm_lpf1_dyn_min_hz === 0 ||
+    enriched.dterm_lpf1_dyn_max_hz === undefined ||
+    enriched.dterm_lpf1_dyn_max_hz === 0;
+  if (needsDtermDyn) {
+    const csv = rawHeaders.get('dterm_lpf1_dyn_hz');
+    if (csv) {
+      const parts = csv.split(',').map((s) => parseInt(s.trim(), 10));
+      if (parts.length >= 2 && parts.every((n) => !isNaN(n))) {
+        enriched.dterm_lpf1_dyn_min_hz = parts[0];
+        enriched.dterm_lpf1_dyn_max_hz = parts[1];
         changed = true;
       }
     }
-  }
-
-  if (enriched.gyro_lpf1_dyn_max_hz === undefined) {
-    const val = rawHeaders.get('gyro_lowpass_dyn_max_hz');
-    if (val !== undefined) {
-      const n = parseInt(val, 10);
-      if (!isNaN(n)) {
-        enriched.gyro_lpf1_dyn_max_hz = n;
-        changed = true;
+    if (enriched.dterm_lpf1_dyn_min_hz === undefined || enriched.dterm_lpf1_dyn_min_hz === 0) {
+      const val = rawHeaders.get('dterm_lpf1_dyn_min_hz');
+      if (val !== undefined) {
+        const n = parseInt(val, 10);
+        if (!isNaN(n)) {
+          enriched.dterm_lpf1_dyn_min_hz = n;
+          changed = true;
+        }
+      }
+    }
+    if (enriched.dterm_lpf1_dyn_max_hz === undefined || enriched.dterm_lpf1_dyn_max_hz === 0) {
+      const val = rawHeaders.get('dterm_lpf1_dyn_max_hz');
+      if (val !== undefined) {
+        const n = parseInt(val, 10);
+        if (!isNaN(n)) {
+          enriched.dterm_lpf1_dyn_max_hz = n;
+          changed = true;
+        }
       }
     }
   }
