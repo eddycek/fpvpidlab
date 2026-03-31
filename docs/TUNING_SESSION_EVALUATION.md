@@ -4,6 +4,19 @@
 
 How FPVPIDlab evaluates tuning sessions across all modes — what metrics drive recommendations, how success is measured, and when convergence is achieved.
 
+## Data Source Priority
+
+**Critical rule: BBL headers are the primary source for analysis settings, MSP is fallback only.**
+
+| Source | Used for | Why |
+|--------|----------|-----|
+| **BBL headers** (primary) | Filter config, PIDs, d_min, iterm_relax, TPA during analysis | Captures exact config at flight time — between flying and analyzing, user may change settings in BF Configurator |
+| **MSP** (fallback) | Fields BBL doesn't cover, UI display, apply verification | Live FC state — correct for readback and display, but may not match flight-time config |
+
+**Implementation**: `analysisHandlers.ts` parses BBL first, builds settings via `enrichSettingsFromBBLHeaders()`, then fills gaps from MSP. PID analysis already uses `extractFlightPIDs(rawHeaders)` from BBL.
+
+**Real BBL integration test**: `test-fixtures/bbl/` contains one tracked BBL fixture (6.2 MB, VX3.5 BF 4.5.2) validated in CI. Header formats verified: CSV fields (`d_min:30,34,0`, `gyro_lpf1_dyn_hz:250,500`), BF naming (`d_max_gain` not `d_min_gain`).
+
 ## Size-Aware Noise Classification
 
 Noise floor thresholds are adjusted per drone size. Smaller quads with higher KV motors have inherently higher noise floors — classifying them with 5" standards produces false "HIGH" readings.
