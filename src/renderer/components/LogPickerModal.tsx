@@ -61,7 +61,9 @@ export function LogPickerModal({ onSelect, onCancel }: LogPickerModalProps) {
         {loading ? (
           <p style={{ color: 'var(--text-secondary, #aaa)', fontSize: 13 }}>Loading logs...</p>
         ) : error ? (
-          <p style={{ color: 'var(--error, #e44)', fontSize: 13 }}>{error}</p>
+          <p role="alert" style={{ color: 'var(--error-color, #e44)', fontSize: 13 }}>
+            {error}
+          </p>
         ) : logs.length === 0 ? (
           <p style={{ color: 'var(--text-secondary, #aaa)', fontSize: 13 }}>
             No downloaded logs available.
