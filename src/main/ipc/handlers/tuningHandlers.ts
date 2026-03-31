@@ -245,6 +245,8 @@ export function registerTuningHandlers(deps: HandlerDependencies): void {
             if (appliedPIDs > 0 && currentConfig) {
               try {
                 logger.info('Attempting PID rollback to pre-apply configuration...');
+                // exitCLI() resets local cliMode flag only — does NOT send 'exit' to FC
+                // (which would trigger a reboot). This allows MSP commands to work again.
                 await mspClient.connection.exitCLI();
                 await mspClient.setPIDConfiguration(currentConfig);
                 pidRolledBack = true;
@@ -298,6 +300,8 @@ export function registerTuningHandlers(deps: HandlerDependencies): void {
             if (appliedPIDs > 0 && currentConfig) {
               try {
                 logger.info('Attempting PID rollback after feedforward failure...');
+                // exitCLI() resets local cliMode flag only — does NOT send 'exit' to FC
+                // (which would trigger a reboot). This allows MSP commands to work again.
                 await mspClient.connection.exitCLI();
                 await mspClient.setPIDConfiguration(currentConfig);
                 pidRolledBack = true;
