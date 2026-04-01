@@ -222,9 +222,12 @@ export const STATUS_EX = {
   MODE: u32(6, 'mode'),
   PID_PROFILE_INDEX: u8(10, 'pidProfileIndex'),
   CPU_LOAD: u16(11, 'cpuload'),
-  /** @deprecated Not used — byte 13 is actually rateProfile in some BF versions.
-   *  MSPClient derives profile count from API version instead. */
+  /** @deprecated Offsets of PID_PROFILE_COUNT and RATE_PROFILE differ between BF/MSP versions.
+   *  In some versions byte 13 is rateProfile and byte 14 is unused; in others the layout differs.
+   *  MSPClient derives profile/rate information from API version instead, so these fields are
+   *  intentionally unused and unsafe to read. */
   PID_PROFILE_COUNT: u8(13, 'numProfiles'),
+  /** @deprecated See PID_PROFILE_COUNT — offset is not reliable across BF/MSP versions. */
   RATE_PROFILE: u8(14, 'rateProfile'),
 } as const;
 

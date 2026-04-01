@@ -344,7 +344,7 @@ export interface QuadSizeBounds {
   dMax: number;
   iMin: number;
   iMax: number;
-  /** Typical P for this size — used for "P too high" informational warning */
+  /** Typical P for this size — used for "P too high" and "P too low" informational warnings */
   pTypical: number;
 }
 
