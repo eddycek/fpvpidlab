@@ -4,7 +4,11 @@ import type { TuningSession, TuningPhase, TuningType } from '@shared/types/tunin
 export interface UseTuningSessionReturn {
   session: TuningSession | null;
   loading: boolean;
-  startSession: (tuningType?: TuningType, bfPidProfileIndex?: number) => Promise<void>;
+  startSession: (
+    tuningType?: TuningType,
+    bfPidProfileIndex?: number,
+    reuseLogId?: string
+  ) => Promise<void>;
   resetSession: () => Promise<void>;
   updatePhase: (phase: TuningPhase, data?: Partial<TuningSession>) => Promise<void>;
 }
@@ -44,10 +48,17 @@ export function useTuningSession(): UseTuningSessionReturn {
     });
   }, [reload]);
 
-  const startSession = useCallback(async (tuningType?: TuningType, bfPidProfileIndex?: number) => {
-    const s = await window.betaflight.startTuningSession(tuningType, bfPidProfileIndex);
-    setSession(s);
-  }, []);
+  const startSession = useCallback(
+    async (tuningType?: TuningType, bfPidProfileIndex?: number, reuseLogId?: string) => {
+      const s = await window.betaflight.startTuningSession(
+        tuningType,
+        bfPidProfileIndex,
+        reuseLogId
+      );
+      setSession(s);
+    },
+    []
+  );
 
   const resetSession = useCallback(async () => {
     await window.betaflight.resetTuningSession();
