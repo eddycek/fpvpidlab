@@ -34,8 +34,8 @@ Noise analysis, step response, transfer function, and data quality scoring modul
 
 - **DTermAnalyzer**: D-term effectiveness via FFT energy ratio in 20-150 Hz band. Used for D-increase gating
 - **FeedforwardAnalyzer**: RC-link-aware FF baseline + step-response refinement (smooth/jitter factors)
-- **MechanicalHealthChecker**: Pre-tuning diagnostics — extreme noise, axis asymmetry, motor imbalance. Can suppress recommendations
-- **WindDisturbanceDetector**: Gyro variance analysis for environmental disturbance. Affects recommendation confidence
+- **MechanicalHealthChecker**: Pre-tuning diagnostics — extreme noise, axis asymmetry, motor imbalance. Produces mechanical-health flags consumed by analyzers (may lower confidence or add warnings)
+- **WindDisturbanceDetector**: Gyro variance analysis for environmental disturbance. Computes and attaches `windDisturbance` metric to analysis result
 - **BayesianPIDOptimizer**: Lightweight Gaussian Process surrogate for iterative PID tuning across sessions
 - **ThrottleTFAnalyzer**: Per-throttle-band transfer function (Wiener deconvolution) for TPA diagnostics (5 bands)
 - **SliderMapper**: Maps raw PID gains to Betaflight Configurator slider UI positions

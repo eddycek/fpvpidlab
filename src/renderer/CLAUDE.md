@@ -35,7 +35,7 @@ Key components:
 - **WizardProgress**: Visual step indicator, dynamic step filtering by mode
 - **Step components**: TestFlightGuideStep (renders FlightGuideContent), SessionSelectStep, FilterAnalysisStep, PIDAnalysisStep, QuickAnalysisStep (Flash Tune), TuningSummaryStep
 - **ApplyConfirmationModal**: Confirmation dialog (snapshot option, reboot warning)
-- **RecommendationCard**: Shared component used in AnalysisOverview, all analysis steps
+- **RecommendationCard**: Shared component used across analysis steps (FilterAnalysisStep, PIDAnalysisStep, QuickAnalysisStep)
 - Flight guide data in `src/shared/constants/flightGuide.ts`
 
 ## Analysis Charts (`components/TuningWizard/charts/`)
