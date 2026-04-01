@@ -283,11 +283,11 @@ From Betaflight firmware-presets repository — categories the Health Check coul
 
 | Source | Focus | URL |
 |--------|-------|-----|
-| Oscar Liang | Comprehensive BF setup guides, size tables | oscarliang.com |
-| Joshua Bardwell | Build guides, ESC/motor config | fpvknowitall.com |
-| Chris Rosser (aos_rc) | Firmware presets, size-specific tunes | aos-rc.com |
-| Betaflight Wiki | Official documentation | betaflight.com/docs |
-| BF firmware-presets | Community preset repository | github.com/betaflight/firmware-presets |
+| Oscar Liang | Comprehensive BF setup guides, size tables | [oscarliang.com](https://oscarliang.com) |
+| Joshua Bardwell | Build guides, ESC/motor config | [fpvknowitall.com](https://fpvknowitall.com) |
+| Chris Rosser (aos_rc) | Firmware presets, size-specific tunes | [aos-rc.com](https://aos-rc.com) |
+| Betaflight Wiki | Official documentation | [betaflight.com/docs](https://betaflight.com/docs) |
+| BF firmware-presets | Community preset repository | [github.com/betaflight/firmware-presets](https://github.com/betaflight/firmware-presets) |
 
 ---
 
