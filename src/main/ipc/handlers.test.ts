@@ -1608,6 +1608,64 @@ describe('IPC Handlers', () => {
       expect(res.success).toBe(false);
       expect(res.error).toContain('No active profile');
     });
+
+    it('auto-advances to *_analysis when reuseLogId provided', async () => {
+      mockTuningMgr.getSession.mockResolvedValue({
+        profileId: 'prof-1',
+        phase: TUNING_PHASE.FILTER_ANALYSIS,
+        filterLogId: 'reused-log-123',
+        startedAt: '2026-01-01',
+        updatedAt: '2026-01-01',
+      });
+
+      const res = await invoke(
+        IPCChannel.TUNING_START_SESSION,
+        TUNING_TYPE.FILTER,
+        undefined,
+        'reused-log-123'
+      );
+      expect(res.success).toBe(true);
+
+      // Should have called updatePhase to advance to filter_analysis with the reused log
+      expect(mockTuningMgr.updatePhase).toHaveBeenCalledWith(
+        'prof-1',
+        TUNING_PHASE.FILTER_ANALYSIS,
+        expect.objectContaining({ filterLogId: 'reused-log-123' })
+      );
+    });
+
+    it('auto-advances PID session with reuseLogId', async () => {
+      mockTuningMgr.getSession.mockResolvedValue({
+        profileId: 'prof-1',
+        phase: TUNING_PHASE.PID_ANALYSIS,
+        pidLogId: 'reused-pid-log',
+        startedAt: '2026-01-01',
+        updatedAt: '2026-01-01',
+      });
+
+      await invoke(IPCChannel.TUNING_START_SESSION, TUNING_TYPE.PID, undefined, 'reused-pid-log');
+      expect(mockTuningMgr.updatePhase).toHaveBeenCalledWith(
+        'prof-1',
+        TUNING_PHASE.PID_ANALYSIS,
+        expect.objectContaining({ pidLogId: 'reused-pid-log' })
+      );
+    });
+
+    it('starts normal session without reuseLogId', async () => {
+      mockTuningMgr.getSession.mockResolvedValue({
+        profileId: 'prof-1',
+        phase: TUNING_PHASE.FILTER_FLIGHT_PENDING,
+        startedAt: '2026-01-01',
+        updatedAt: '2026-01-01',
+      });
+
+      await invoke(IPCChannel.TUNING_START_SESSION);
+      // updatePhase called for initial metadata but NOT for analysis phase advance
+      const analysisCalls = mockTuningMgr.updatePhase.mock.calls.filter(
+        (c: any[]) => c[1] === TUNING_PHASE.FILTER_ANALYSIS
+      );
+      expect(analysisCalls).toHaveLength(0);
+    });
   });
 
   describe('TUNING_UPDATE_PHASE', () => {

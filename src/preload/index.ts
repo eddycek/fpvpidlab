@@ -593,12 +593,14 @@ const betaflightAPI: BetaflightAPI = {
 
   async startTuningSession(
     tuningType?: TuningType,
-    bfPidProfileIndex?: number
+    bfPidProfileIndex?: number,
+    reuseLogId?: string
   ): Promise<TuningSession> {
     const response = await ipcRenderer.invoke(
       IPCChannel.TUNING_START_SESSION,
       tuningType,
-      bfPidProfileIndex
+      bfPidProfileIndex,
+      reuseLogId
     );
     if (!response.success) {
       throw new Error(response.error || 'Failed to start tuning session');

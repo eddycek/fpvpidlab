@@ -591,7 +591,8 @@ export function registerTuningHandlers(deps: HandlerDependencies): void {
     async (
       _event,
       tuningType?: TuningType,
-      bfPidProfileIndex?: number
+      bfPidProfileIndex?: number,
+      reuseLogId?: string
     ): Promise<IPCResponse<TuningSession>> => {
       try {
         const resolvedType: TuningType = tuningType ?? TUNING_TYPE.FILTER;
@@ -689,6 +690,30 @@ export function registerTuningHandlers(deps: HandlerDependencies): void {
         if (ratesConfig) phaseData.ratesConfig = ratesConfig;
         if (Object.keys(phaseData).length > 0) {
           await tuningSessionManager.updatePhase(profileId, initialPhase, phaseData);
+        }
+
+        // Auto-advance to *_ANALYSIS if reusing a log from previous session
+        // (e.g., verification log reused as analysis flight on repeat tuning).
+        // Skips flight_pending and log_ready phases — banner shows "Open Wizard" directly.
+        if (reuseLogId) {
+          const analysisPhase =
+            resolvedType === TUNING_TYPE.FLASH
+              ? TUNING_PHASE.FLASH_ANALYSIS
+              : resolvedType === TUNING_TYPE.PID
+                ? TUNING_PHASE.PID_ANALYSIS
+                : TUNING_PHASE.FILTER_ANALYSIS;
+          const logField =
+            resolvedType === TUNING_TYPE.FLASH
+              ? 'quickLogId'
+              : resolvedType === TUNING_TYPE.PID
+                ? 'pidLogId'
+                : 'filterLogId';
+          await tuningSessionManager.updatePhase(profileId, analysisPhase, {
+            [logField]: reuseLogId,
+          });
+          logger.info(
+            `Reusing log ${reuseLogId} from previous session — auto-advanced to ${analysisPhase}`
+          );
         }
 
         // Persist selected profile as preference for next session

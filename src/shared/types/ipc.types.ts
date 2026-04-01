@@ -303,7 +303,11 @@ export interface BetaflightAPI {
 
   // Tuning Session
   getTuningSession(): Promise<TuningSession | null>;
-  startTuningSession(tuningType?: TuningType, bfPidProfileIndex?: number): Promise<TuningSession>;
+  startTuningSession(
+    tuningType?: TuningType,
+    bfPidProfileIndex?: number,
+    reuseLogId?: string
+  ): Promise<TuningSession>;
   updateTuningPhase(phase: TuningPhase, data?: Partial<TuningSession>): Promise<TuningSession>;
   resetTuningSession(): Promise<void>;
   onTuningSessionChanged(callback: (session: TuningSession | null) => void): () => void;

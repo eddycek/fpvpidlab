@@ -383,7 +383,9 @@ function AppContent() {
           setErasedForPhase(null);
           const previousType = tuning.session?.tuningType;
           const previousProfile = tuning.session?.bfPidProfileIndex;
-          await tuning.startSession(previousType, previousProfile);
+          // Reuse verification log from completed session as analysis flight for new session
+          const reuseLogId = tuning.session?.verificationLogId ?? undefined;
+          await tuning.startSession(previousType, previousProfile, reuseLogId);
           // Re-fetch BB info (may be stale from initial connection during CLI mode)
           refreshBlackboxInfo();
         } catch (err) {
