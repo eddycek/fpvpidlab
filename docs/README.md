@@ -12,6 +12,7 @@ Overview of all design documents in this directory. Completed documents are arch
 
 | Document | Status | Description |
 |----------|--------|-------------|
+| [TUNING_MODE_COMPARISON](./TUNING_MODE_COMPARISON.md) | **Active** | Filter+PID Tune vs Flash Tune comparison — offline cross-validation findings, real-world validation plan |
 | [TUNING_SESSION_EVALUATION](./TUNING_SESSION_EVALUATION.md) | **Active** | Tuning session evaluation strategy — size-aware noise thresholds, per-mode success criteria, convergence detection |
 | [BLACKBOX_DOWNLOAD_OPTIMIZATION](./BLACKBOX_DOWNLOAD_OPTIMIZATION.md) | **Proposed** | MSC mode for flash storage (10–50× speedup) with MSP pipelining fallback (1.5–2×). Larger chunks deprioritized (already tested, poor results) |
 | [CHIRP_FLIGHT_ANALYSIS](./CHIRP_FLIGHT_ANALYSIS.md) | **Proposed** | Chirp signal system identification for BF 4.6+ — exponential frequency sweep, per-axis sequential execution, coherence validation, high-precision transfer functions |
