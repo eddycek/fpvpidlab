@@ -54,13 +54,19 @@ Entry point: `src/main/index.ts`. Manages MSPClient, ProfileManager, SnapshotMan
 ## Auto-Apply Recommendations
 
 **Apply Flow** (orchestrated in `TUNING_APPLY_RECOMMENDATIONS` IPC handler):
-0. Pre-apply: `validateRecommendationBounds()` checks all filter/FF values against `BF_SETTING_RANGES` — rejects entire apply if any value is out of Betaflight-valid range
-1. Stage 1: Apply PID changes via MSP (must happen before CLI mode). Saves `currentConfig` for rollback
-2. Stage 2: Enter CLI mode
-3. Stage 3: Apply filter changes via CLI `set` commands. On failure: attempts automatic PID rollback to `currentConfig` before surfacing error
-4. Stage 4: Save to EEPROM and reboot FC
+0. Pre-apply: `validateRecommendationBounds()` rejects if any value out of `BF_SETTING_RANGES`
+1. PID profile selection safety net — ensures FC is on the correct BF PID profile
+2. Apply PID changes via MSP (must happen before CLI mode). Saves `currentConfig` for rollback
+3. Enter CLI mode
+4. Apply filter changes via CLI `set` commands. On failure: automatic PID rollback to `currentConfig`
+5. Apply feedforward changes via CLI (separate stage from filters)
+6. Sync PID profile name to FC via `set profile_name = X` (8-char BF limit, non-fatal if unsupported)
+7. Save to EEPROM and reboot FC
+8. Post-reboot: inline verification + post-tuning snapshot creation
 
-**Important**: Stage ordering matters — MSP commands must execute before CLI mode, because FC only processes CLI input while in CLI mode (MSP timeouts).
+**Edge case**: If total recommendations = 0, returns success without reboot.
+
+**Important**: MSP commands must execute before CLI mode (FC only processes CLI in CLI mode → MSP timeouts).
 
 **Auto-Snapshot Strategy** (2 per tuning cycle):
 - `Pre-tuning #N (Type)` — created by Start Tuning (rollback safety net)
@@ -93,6 +99,9 @@ Snapshots carry tuning metadata (`tuningSessionNumber`, `tuningType`, `snapshotR
 
 - On reconnect with existing profile, checks if tuning session is in `*_flight_pending` phase
 - If flash has data (`bbInfo.hasLogs && bbInfo.usedSize > 0`), auto-transitions to `*_log_ready`
+- SD card state flags: `eraseSkipped` (treat reconnect as "flew"), `eraseCompleted` (post-erase UI shows guide, don't auto-transition yet)
+- `mscModeActive` flag prevents profile clear during expected MSC disconnect
+- `rebootPending` flag prevents profile clear during expected save-reboot
 - Implemented in `src/main/index.ts` after `createBaselineIfMissing()`
 
 ## Post-Apply Verification

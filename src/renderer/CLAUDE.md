@@ -2,6 +2,15 @@
 
 React application with hooks-based state management. No direct IPC access — uses `window.betaflight` API only.
 
+## Key Hooks
+
+- **useConnection** — FC connection state, port scanning
+- **useProfiles** — Profile CRUD, current profile
+- **useTuningSession** — Active session state, phase transitions
+- **useBlackboxInfo / useBlackboxLogs** — Blackbox storage and log data
+- **useLicense** — Licensing/Pro features
+- **useToast** — Toast notifications
+
 ## Analysis Overview (`components/AnalysisOverview/`)
 
 Read-only single-page analysis view. Opened when user clicks "Analyze" on a downloaded log **without an active tuning session**.
@@ -22,11 +31,11 @@ Multi-step wizard for active tuning sessions (Filter Tune, PID Tune, and Flash T
 - `flash`: Session → Flash Tune Analysis (filter + TF in parallel, auto-runs) → Summary
 
 Key components:
-- **useTuningWizard hook**: State management for parse/filter/PID analysis and apply lifecycle, mode-aware auto-advance and apply
-- **WizardProgress**: Visual step indicator with done/current/upcoming states, dynamic step filtering by mode
-- **FlightGuideContent**: Mode-specific flight phase instructions (filter: throttle sweeps, pid: stick snaps)
-- **TuningSummaryStep**: Mode-specific button labels (Apply Filters/PIDs) and success messages
-- **ApplyConfirmationModal**: Confirmation dialog before applying changes (snapshot option, reboot warning)
+- **useTuningWizard hook**: State management for parse/filter/PID analysis and apply lifecycle
+- **WizardProgress**: Visual step indicator, dynamic step filtering by mode
+- **Step components**: TestFlightGuideStep (renders FlightGuideContent), SessionSelectStep, FilterAnalysisStep, PIDAnalysisStep, QuickAnalysisStep (Flash Tune), TuningSummaryStep
+- **ApplyConfirmationModal**: Confirmation dialog (snapshot option, reboot warning)
+- **RecommendationCard**: Shared component used across analysis steps (FilterAnalysisStep, PIDAnalysisStep, QuickAnalysisStep)
 - Flight guide data in `src/shared/constants/flightGuide.ts`
 
 ## Analysis Charts (`components/TuningWizard/charts/`)
@@ -36,6 +45,7 @@ Interactive visualization using Recharts (SVG).
 - **SpectrumChart**: FFT noise spectrum with per-axis color coding, noise floor reference lines, peak frequency markers
 - **StepResponseChart**: Setpoint vs gyro trace for individual steps, Prev/Next navigation, metrics overlay
 - **TFStepResponseChart**: Synthetic step response from Transfer Function (Wiener deconvolution). Single/comparison modes
+- **BodePlot**: Frequency response visualization (magnitude + phase). Used in AnalysisOverview and analysis steps
 - **ThrottleSpectrogramChart**: Custom SVG heatmap — noise magnitude (dB) across frequency × throttle bands. Accepts both live `data` and `compactData` props
 - **AxisTabs**: Shared tab selector (Roll/Pitch/Yaw/All). Supports `showAll` prop for spectrogram views
 - **chartUtils**: Data conversion (Float64Array → Recharts format), downsampling, findBestStep scoring

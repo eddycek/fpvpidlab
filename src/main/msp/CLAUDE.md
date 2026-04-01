@@ -7,7 +7,9 @@ MultiWii Serial Protocol layer for Betaflight flight controller communication.
 - `MSPProtocol.ts` - Low-level packet encoding/decoding. Jumbo frame support (frames >255 bytes: 2-byte size at offset+4)
 - `MSPConnection.ts` - Serial port handling, CLI mode switching
 - `MSPClient.ts` - High-level API with retry logic
-- `cliUtils.ts` - CLI command response validation (`validateCLIResponse()` throws `CLICommandError` on error patterns: 'Invalid name/value', 'Unknown command', 'Allowed range', line-level `ERROR`). Used in tuning/snapshot/fcInfo IPC handlers
+- `mspLayouts.ts` - Byte offset definitions for all MSP fields (FILTER_CONFIG, PID_ADVANCED, RC_TUNING, etc.). Exports `readField()`, `writeField()` helpers
+- `types.ts` - `MSPCommand` enum (all command IDs), `MSP_PROTOCOL` constants (preamble, jumbo threshold)
+- `cliUtils.ts` - CLI command response validation (`validateCLIResponse()` throws `CLICommandError` on error patterns: 'Invalid name/value', 'Unknown command', 'Allowed range', line-level `ERROR`)
 
 ## Important MSP Behaviors
 
@@ -16,7 +18,6 @@ MultiWii Serial Protocol layer for Betaflight flight controller communication.
 - `MSPConnection.close()` sends `exit` before closing if CLI was entered during the session (`fcEnteredCLI` flag)
 - `exitCLI()`/`forceExitCLI()` only reset local `cliMode` flag — no commands sent to FC
 - `clearFCRebootedFromCLI()` clears the flag after `save` (FC already reboots from save)
-- Board name may be empty/invalid → fallback to target name
 - Connection requires 500ms stabilization delay after port open
 - Retry logic: 2 attempts with reset between failures
 - **Version gate**: `validateFirmwareVersion()` checks API version on connect — rejects BF < 4.3 (API 1.44) with `UnsupportedVersionError`, auto-disconnects

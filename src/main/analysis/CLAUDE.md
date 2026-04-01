@@ -30,6 +30,17 @@ Noise analysis, step response, transfer function, and data quality scoring modul
 - **PIDAnalyzer**: Orchestrator with async progress reporting, threads `flightPIDs` through pipeline. Two-pass step detection (first 500ms, then adaptive). Passes `dTermEffectiveness`, `propWash`, `dMinContext`, and `tpaContext` to `recommendPID()` for integrated D-gain gating and advisory annotations
 - IPC: `ANALYSIS_RUN_PID` + `EVENT_ANALYSIS_PROGRESS`
 
+### Additional Analysis Modules
+
+- **DTermAnalyzer**: D-term effectiveness via FFT energy ratio in 20-150 Hz band. Used for D-increase gating
+- **FeedforwardAnalyzer**: RC-link-aware FF baseline + step-response refinement (smooth/jitter factors)
+- **MechanicalHealthChecker**: Pre-tuning diagnostics — extreme noise, axis asymmetry, motor imbalance. Produces mechanical-health flags consumed by analyzers (may lower confidence or add warnings)
+- **WindDisturbanceDetector**: Gyro variance analysis for environmental disturbance. Computes and attaches `windDisturbance` metric to analysis result
+- **BayesianPIDOptimizer**: Lightweight Gaussian Process surrogate for iterative PID tuning across sessions
+- **ThrottleTFAnalyzer**: Per-throttle-band transfer function (Wiener deconvolution) for TPA diagnostics (5 bands)
+- **SliderMapper**: Maps raw PID gains to Betaflight Configurator slider UI positions
+- **headerValidation**: BBL header parsing/validation utilities, field name mapping
+
 ## Transfer Function Analysis Engine
 
 **Pipeline**: TransferFunctionEstimator (setpoint → gyro deconvolution → H(f) = S_xy(f) / S_xx(f))
@@ -42,19 +53,10 @@ Noise analysis, step response, transfer function, and data quality scoring modul
 
 Rates flight data quality 0-100 before generating recommendations. Integrated into both FilterAnalyzer and PIDAnalyzer.
 
-- **`scoreFilterDataQuality()`**: Sub-scores: segment count (0.20), hover time (0.35), throttle coverage (0.25), segment type (0.20)
-- **`scorePIDDataQuality()`**: Sub-scores: step count (0.30), axis coverage (0.30), magnitude variety (0.20), hold quality (0.20)
-- **`adjustFilterConfidenceByQuality()` / `adjustPIDConfidenceByQuality()`**: Downgrades recommendation confidence for fair/poor data
+- Computes 0-100 score from weighted sub-scores (segment/step count, coverage, hold quality)
+- Downgrades recommendation confidence for fair/poor data quality
 - Tier mapping: 80-100 excellent, 60-79 good, 40-59 fair, 0-39 poor
-- Quality warnings: `few_segments`, `short_hover_time`, `narrow_throttle_coverage`, `few_steps_per_axis`, `missing_axis_coverage`, `low_step_magnitude`, `low_coherence`
 
 ## Flight Quality Score (`src/shared/utils/tuneQualityScore.ts`)
 
-Composite 0-100 score with type-aware components:
-- Filter Tune: noise floor
-- PID Tune: tracking RMS, overshoot (step response), settling time
-- Flash Tune: noise floor, overshoot (TF synthetic step response), phase margin, bandwidth
-- When both step data AND TF are present, 6 components are available
-- Optional Noise Delta component when verification present
-- Points redistributed evenly among available components
-- Displayed as badge in TuningCompletionSummary and TuningHistoryPanel
+Composite 0-100 score with type-aware components (noise floor, overshoot, settling, bandwidth, phase margin). Points redistributed evenly among available components. Displayed as badge in TuningCompletionSummary and TuningHistoryPanel.

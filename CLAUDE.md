@@ -60,6 +60,12 @@ Both `npm run dev` and `npm run dev:demo` start with `DEBUG_SERVER=true`, which 
 | `POST /start-tuning?mode=X` | Start tuning session (mode: filter, pid, flash) |
 | `POST /reset-session` | Delete active tuning session |
 | `POST /erase-flash` | Erase blackbox flash memory |
+| `POST /restore-snapshot?id=X` | Restore a snapshot (backup param optional) |
+| `POST /update-phase?phase=X` | Update tuning session phase (with logId params) |
+| `POST /apply?logId=X&mode=Y` | Apply recommendations from analysis |
+| `POST /open-wizard?logId=X&mode=Y` | Open tuning wizard UI |
+| `POST /wait-connected?timeout=N` | Wait for FC connection (ms timeout) |
+| `GET /analyze?logId=X` | Run full analysis pipeline on a BBL log |
 
 **Configuration:**
 - Controlled by `DEBUG_SERVER=true` environment variable (not active in production builds)
