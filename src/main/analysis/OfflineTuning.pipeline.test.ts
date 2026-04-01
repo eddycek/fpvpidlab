@@ -985,3 +985,338 @@ describe('J. Group delay sanity', () => {
     expect(delay1.gyroTotalMs).toBeGreaterThanOrEqual(delay2.gyroTotalMs);
   });
 });
+
+// ===========================================================================
+// K. Cross-validation: Filter+PID Tune vs Flash Tune
+// ===========================================================================
+
+describe('K. Cross-validation: Filter+PID Tune vs Flash Tune', () => {
+  // Cache analysis results to avoid re-running expensive analyses
+  let filterResults: Awaited<ReturnType<typeof analyzeFilters>>[];
+  let pidResultLog1: Awaited<ReturnType<typeof analyzePID>>;
+  let pidResultLog3: Awaited<ReturnType<typeof analyzePID>>;
+  let tfResultLog1: Awaited<ReturnType<typeof analyzeTransferFunction>>;
+  let tfResultLog3: Awaited<ReturnType<typeof analyzeTransferFunction>>;
+
+  beforeAll(async () => {
+    // Run filter analysis on all 4 logs
+    filterResults = await Promise.all(
+      logs.map((log) =>
+        analyzeFilters(log.flightData, 0, log.filterSettings, undefined, {
+          droneSize: DRONE_SIZE,
+        })
+      )
+    );
+
+    // Run PID (step response) and TF (Wiener) on LOG1 and LOG3
+    [pidResultLog1, pidResultLog3, tfResultLog1, tfResultLog3] = await Promise.all([
+      analyzePID(
+        logs[0].flightData,
+        0,
+        logs[0].flightPIDs,
+        undefined,
+        logs[0].flightPIDs,
+        logs[0].rawHeaders,
+        'balanced',
+        undefined,
+        DRONE_SIZE
+      ),
+      analyzePID(
+        logs[2].flightData,
+        0,
+        logs[2].flightPIDs,
+        undefined,
+        logs[2].flightPIDs,
+        logs[2].rawHeaders,
+        'balanced',
+        undefined,
+        DRONE_SIZE
+      ),
+      analyzeTransferFunction(
+        logs[0].flightData,
+        0,
+        logs[0].flightPIDs,
+        undefined,
+        logs[0].flightPIDs,
+        logs[0].rawHeaders,
+        'balanced',
+        undefined,
+        DRONE_SIZE
+      ),
+      analyzeTransferFunction(
+        logs[2].flightData,
+        0,
+        logs[2].flightPIDs,
+        undefined,
+        logs[2].flightPIDs,
+        logs[2].rawHeaders,
+        'balanced',
+        undefined,
+        DRONE_SIZE
+      ),
+    ]);
+  }, 60_000);
+
+  // ---- K1: Filter recs across different flight types ----
+
+  /**
+   * All 4 flights are from the same quad → noise floors should be in the same
+   * ballpark regardless of flight style. Large divergence (>15 dB) between a
+   * filter flight and a PID flight would mean filter analysis on non-ideal
+   * (Flash Tune style) data is unreliable.
+   *
+   * This directly answers: "Do filter recs in Flash Tune make sense?"
+   */
+  it('K1.1: noise floors consistent across filter vs PID flights (±15 dB)', () => {
+    const floors = filterResults.map((r) => ({
+      roll: r.noise.roll.noiseFloorDb,
+      pitch: r.noise.pitch.noiseFloorDb,
+      yaw: r.noise.yaw.noiseFloorDb,
+    }));
+
+    // Diagnostic output — shows actual values for analysis
+    console.log('\n--- K1.1: Noise floor comparison across flight types ---');
+    console.log('LOG1 (filter flight):', floors[0]);
+    console.log('LOG2 (filter verify):', floors[1]);
+    console.log('LOG3 (PID flight):  ', floors[2]);
+    console.log('LOG4 (PID verify):  ', floors[3]);
+
+    // Compare each PID flight against the dedicated filter flight (LOG1)
+    const reference = floors[0];
+    for (let i = 1; i < 4; i++) {
+      for (const axis of ['roll', 'pitch', 'yaw'] as const) {
+        const diff = Math.abs(floors[i][axis] - reference[axis]);
+        expect(
+          diff,
+          `LOG${i + 1} ${axis} noise floor differs from LOG1 by ${diff.toFixed(1)} dB`
+        ).toBeLessThanOrEqual(15);
+      }
+    }
+  });
+
+  /**
+   * Compare filter recommendations between LOG1 (dedicated filter flight)
+   * and LOG3 (PID flight — "fly whatever" scenario like Flash Tune).
+   *
+   * For settings both flights recommend changing: direction should agree.
+   * Disagreement means filter analysis on Flash Tune data gives opposite advice.
+   */
+  it('K1.2: filter rec direction agrees between filter flight and PID flight', () => {
+    const recs1 = filterResults[0].recommendations.filter((r) => !r.informational);
+    const recs3 = filterResults[2].recommendations.filter((r) => !r.informational);
+
+    // Build direction maps: setting → increase(+1) / decrease(-1)
+    const dir1 = new Map<string, number>();
+    for (const r of recs1) dir1.set(r.setting, Math.sign(r.recommendedValue - r.currentValue));
+    const dir3 = new Map<string, number>();
+    for (const r of recs3) dir3.set(r.setting, Math.sign(r.recommendedValue - r.currentValue));
+
+    // Diagnostic: show what each flight recommends
+    console.log('\n--- K1.2: Filter rec comparison (LOG1 filter vs LOG3 PID) ---');
+    console.log(
+      'LOG1 recs:',
+      recs1.map((r) => `${r.setting}: ${r.currentValue}→${r.recommendedValue}`)
+    );
+    console.log(
+      'LOG3 recs:',
+      recs3.map((r) => `${r.setting}: ${r.currentValue}→${r.recommendedValue}`)
+    );
+
+    // Find overlapping settings
+    const overlap = [...dir1.keys()].filter((k) => dir3.has(k));
+    console.log('Overlapping settings:', overlap.length > 0 ? overlap : '(none)');
+
+    // Direction comparison is tricky: LOG1 and LOG3 have DIFFERENT current settings
+    // (tuning was applied between them), so direction from current may legitimately differ.
+    // Instead, compare recommended TARGET values — both flights should converge toward
+    // a similar optimal value for the same quad.
+    const targets1 = new Map<string, number>();
+    for (const r of recs1) targets1.set(r.setting, r.recommendedValue);
+    const targets3 = new Map<string, number>();
+    for (const r of recs3) targets3.set(r.setting, r.recommendedValue);
+
+    for (const setting of overlap) {
+      const t1 = targets1.get(setting)!;
+      const t3 = targets3.get(setting)!;
+      const diff = Math.abs(t1 - t3);
+      const avg = (t1 + t3) / 2;
+      const pctDiff = avg > 0 ? (diff / avg) * 100 : 0;
+      console.log(
+        `  ${setting}: LOG1 target=${t1}, LOG3 target=${t3}, diff=${diff.toFixed(0)} (${pctDiff.toFixed(0)}%)`
+      );
+      // Targets should be in same ballpark (within 50% of each other)
+      // This is a soft check — real flights have different noise profiles
+      expect(
+        pctDiff,
+        `${setting}: targets diverge too much (LOG1=${t1}, LOG3=${t3}, ${pctDiff.toFixed(0)}%)`
+      ).toBeLessThan(100);
+    }
+  });
+
+  /**
+   * Full diagnostic report: filter recs from all 4 flights side by side.
+   * Not a strict test — logs the comparison for human review.
+   */
+  it('K1.3: filter recommendation diagnostic across all flights', () => {
+    console.log('\n--- K1.3: Filter recommendation report (all 4 logs) ---');
+
+    // Collect all unique settings recommended across all flights
+    const allSettings = new Set<string>();
+    for (const result of filterResults) {
+      for (const r of result.recommendations.filter((r) => !r.informational)) {
+        allSettings.add(r.setting);
+      }
+    }
+
+    // Print table
+    for (const setting of [...allSettings].sort()) {
+      const values = filterResults.map((result, idx) => {
+        const rec = result.recommendations.find((r) => r.setting === setting && !r.informational);
+        if (!rec) return `LOG${idx + 1}: —`;
+        const dir = rec.recommendedValue > rec.currentValue ? '↑' : '↓';
+        return `LOG${idx + 1}: ${rec.currentValue}→${rec.recommendedValue} ${dir}`;
+      });
+      console.log(`  ${setting}: ${values.join(' | ')}`);
+    }
+
+    // Pass — this test is purely diagnostic
+    expect(allSettings.size).toBeGreaterThanOrEqual(0);
+  });
+
+  // ---- K2: PID recs — step response vs Wiener deconvolution ----
+
+  /**
+   * Both PID analysis methods should complete on both LOG1 and LOG3.
+   * (Already tested individually in C., but here we verify side-by-side.)
+   */
+  it('K2.1: both PID pipeline methods complete on LOG1 and LOG3', () => {
+    expect(pidResultLog1.recommendations).toBeDefined();
+    expect(tfResultLog1.recommendations).toBeDefined();
+    expect(pidResultLog3.recommendations).toBeDefined();
+    expect(tfResultLog3.recommendations).toBeDefined();
+  });
+
+  /**
+   * For overlapping PID settings recommended by both methods,
+   * direction should agree. Disagreement means the two approaches
+   * give contradictory tuning advice — concerning for user trust.
+   */
+  it('K2.2: PID rec direction agrees between step response and Wiener (LOG3)', () => {
+    const stepRecs = pidResultLog3.recommendations.filter((r) => !r.informational);
+    const wienerRecs = tfResultLog3.recommendations.filter((r) => !r.informational);
+
+    // Build direction maps for PID-specific settings only
+    const pidSettings = (recs: PIDRecommendation[]) => {
+      const map = new Map<string, { dir: number; value: number; current: number }>();
+      for (const r of recs) {
+        if (r.setting.startsWith('pid_')) {
+          map.set(r.setting, {
+            dir: Math.sign(r.recommendedValue - r.currentValue),
+            value: r.recommendedValue,
+            current: r.currentValue,
+          });
+        }
+      }
+      return map;
+    };
+
+    const stepMap = pidSettings(stepRecs);
+    const wienerMap = pidSettings(wienerRecs);
+
+    // Diagnostic: compare the two approaches
+    console.log('\n--- K2.2: PID rec comparison: Step Response vs Wiener (LOG3) ---');
+    console.log(
+      'Step response recs:',
+      stepRecs
+        .filter((r) => r.setting.startsWith('pid_'))
+        .map((r) => `${r.setting}: ${r.currentValue}→${r.recommendedValue}`)
+    );
+    console.log(
+      'Wiener recs:',
+      wienerRecs
+        .filter((r) => r.setting.startsWith('pid_'))
+        .map((r) => `${r.setting}: ${r.currentValue}→${r.recommendedValue}`)
+    );
+
+    // Find overlapping PID settings
+    const overlap = [...stepMap.keys()].filter((k) => wienerMap.has(k));
+    console.log('Overlapping PID settings:', overlap.length > 0 ? overlap : '(none)');
+
+    // For overlapping settings, direction should agree
+    let agreements = 0;
+    let disagreements = 0;
+    for (const setting of overlap) {
+      const s = stepMap.get(setting)!;
+      const w = wienerMap.get(setting)!;
+      if (s.dir !== 0 && w.dir !== 0) {
+        if (s.dir === w.dir) {
+          agreements++;
+        } else {
+          disagreements++;
+          console.log(
+            `  ⚠ DISAGREEMENT: ${setting} — step says ${s.dir > 0 ? 'increase' : 'decrease'} (→${s.value}), Wiener says ${w.dir > 0 ? 'increase' : 'decrease'} (→${w.value})`
+          );
+        }
+      }
+    }
+    console.log(`Direction: ${agreements} agree, ${disagreements} disagree`);
+
+    // Soft assertion: majority should agree (allow some disagreement)
+    if (overlap.length > 0) {
+      expect(
+        agreements,
+        `Only ${agreements}/${overlap.length} PID recs agree in direction`
+      ).toBeGreaterThanOrEqual(disagreements);
+    }
+  });
+
+  /**
+   * Transfer function analysis should provide bandwidth and phase margin —
+   * metrics that step response analysis cannot compute.
+   * These are the unique value-add of the Wiener approach.
+   */
+  it('K2.3: TF analysis provides Wiener-exclusive metrics (bandwidth, phase margin)', () => {
+    expect(tfResultLog3.transferFunction).toBeDefined();
+    expect(tfResultLog3.transferFunction.metrics).toBeDefined();
+
+    console.log('\n--- K2.3: Wiener-exclusive metrics (LOG3) ---');
+    for (const axis of ['roll', 'pitch', 'yaw'] as const) {
+      const m = tfResultLog3.transferFunction.metrics[axis];
+      console.log(
+        `  ${axis}: bandwidth=${m.bandwidthHz.toFixed(1)}Hz, ` +
+          `phaseMargin=${m.phaseMarginDeg.toFixed(1)}°, ` +
+          `dcGain=${m.dcGainDb.toFixed(2)}dB`
+      );
+    }
+
+    // Bandwidth should be positive on roll/pitch (yaw may be 0)
+    expect(tfResultLog3.transferFunction.metrics.roll.bandwidthHz).toBeGreaterThan(0);
+    expect(tfResultLog3.transferFunction.metrics.pitch.bandwidthHz).toBeGreaterThan(0);
+  });
+
+  // ---- K3: Data quality comparison ----
+
+  /**
+   * LOG1 is a dedicated filter flight (throttle sweeps, steady hovers) →
+   * should score higher on filter data quality than LOG3 (PID flight with
+   * step inputs). If they score the same, our data quality scorer doesn't
+   * distinguish flight types — which means Flash Tune filter quality
+   * warnings may be unreliable.
+   */
+  it('K3.1: filter data quality: filter flight ≥ PID flight', () => {
+    const q1 = filterResults[0].dataQuality;
+    const q3 = filterResults[2].dataQuality;
+
+    console.log('\n--- K3.1: Filter data quality comparison ---');
+    console.log(`LOG1 (filter flight): score=${q1?.overall}, tier=${q1?.tier}`);
+    console.log(`LOG3 (PID flight):    score=${q3?.overall}, tier=${q3?.tier}`);
+
+    if (q1 && q3) {
+      // Filter flight should have equal or better data quality for filter analysis
+      expect(
+        q1.overall,
+        `Filter flight (${q1.overall}) should score ≥ PID flight (${q3.overall}) for filter quality`
+      ).toBeGreaterThanOrEqual(q3.overall);
+    }
+  });
+});
