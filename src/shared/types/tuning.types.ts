@@ -15,6 +15,7 @@ import type {
   RecommendationTrace,
   TransferFunctionMetricsSummary,
 } from './tuning-history.types';
+import type { ConvergenceResult, VerificationSimilarity } from './analysis.types';
 import type { RatesConfiguration } from './pid.types';
 
 /** Which analysis mode the wizard is operating in */
@@ -161,4 +162,13 @@ export interface TuningSession {
 
   /** RC rates configuration at time of tuning (for telemetry) */
   ratesConfig?: RatesConfiguration;
+
+  /** Convergence detection result (set after verification flight analysis) */
+  convergence?: ConvergenceResult;
+
+  /** Verification flight similarity score (set after verification flight analysis) */
+  verificationSimilarity?: VerificationSimilarity;
+
+  /** Number of recent tuning iterations of this type (within lookback window) */
+  iterationCount?: number;
 }

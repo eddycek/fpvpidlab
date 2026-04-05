@@ -26,6 +26,7 @@ import {
   isRpmFilterActive,
   recommendRpmFilterQ,
   recommendDtermDynExpo,
+  type ConfidenceContext,
 } from './FilterRecommender';
 import { scoreFilterDataQuality, adjustFilterConfidenceByQuality } from './DataQualityScorer';
 import { computeThrottleSpectrogram } from './ThrottleSpectrogramAnalyzer';
@@ -155,7 +156,15 @@ export async function analyze(
   // Step 4: Generate recommendations
   onProgress?.({ step: 'recommending', percent: 85 });
   const rpmActive = isRpmFilterActive(currentSettings);
-  const rawRecommendations = recommend(noiseProfile, currentSettings, options?.droneSize);
+
+  // Compute noise floor variability across segments for hysteresis-aware deadzone
+  const confidenceContext = computeNoiseFloorVariability(rollSpectra, pitchSpectra);
+  const rawRecommendations = recommend(
+    noiseProfile,
+    currentSettings,
+    options?.droneSize,
+    confidenceContext
+  );
   const recommendations = adjustFilterConfidenceByQuality(
     rawRecommendations,
     qualityResult.score.tier
@@ -318,6 +327,44 @@ function appendProfileAdvisories(
 
   const dexpRec = recommendDtermDynExpo(currentSettings, options.flightStyle);
   if (dexpRec) recommendations.push(dexpRec);
+}
+
+/**
+ * Compute noise floor variability across per-segment spectra.
+ * Returns a ConfidenceContext with the standard deviation of per-segment noise floors (dB).
+ * Higher std = more variable noise = wider deadzone to prevent recommendation churn.
+ */
+function computeNoiseFloorVariability(
+  rollSpectra: PowerSpectrum[],
+  pitchSpectra: PowerSpectrum[]
+): ConfidenceContext {
+  if (rollSpectra.length < 2) return {};
+
+  // Compute per-segment noise floor for roll and pitch (the critical axes)
+  const floors: number[] = [];
+  for (let i = 0; i < rollSpectra.length; i++) {
+    const rollFloor = estimateNoiseFloorFromSpectrum(rollSpectra[i]);
+    const pitchFloor = estimateNoiseFloorFromSpectrum(pitchSpectra[i]);
+    floors.push(Math.max(rollFloor, pitchFloor)); // worst-axis per segment
+  }
+
+  const mean = floors.reduce((a, b) => a + b, 0) / floors.length;
+  const variance = floors.reduce((sum, f) => sum + (f - mean) ** 2, 0) / floors.length;
+  const std = Math.sqrt(variance);
+
+  return { noiseFloorStdDb: std };
+}
+
+/**
+ * Estimate noise floor from a single power spectrum using median of magnitudes.
+ * This is a lightweight approximation — NoiseAnalyzer does a more thorough job,
+ * but we only need relative variability here.
+ */
+function estimateNoiseFloorFromSpectrum(spectrum: PowerSpectrum): number {
+  const mags = Array.from(spectrum.magnitudes);
+  if (mags.length === 0) return -60;
+  mags.sort((a, b) => a - b);
+  return mags[Math.floor(mags.length / 2)]; // median
 }
 
 function yieldToEventLoop(): Promise<void> {

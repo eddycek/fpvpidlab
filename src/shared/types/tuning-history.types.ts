@@ -237,4 +237,7 @@ export interface CompletedTuningRecord {
 
   /** Verification flight similarity score (computed at verification analysis) */
   verificationSimilarity?: VerificationSimilarity;
+
+  /** Number of recent tuning iterations of this type (within lookback window) */
+  iterationCount?: number;
 }

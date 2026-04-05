@@ -218,6 +218,33 @@ export function TuningCompletionSummary({
         />
       )}
 
+      {/* Convergence banner */}
+      {session.convergence && (
+        <div
+          className={`completion-convergence-banner convergence-${session.convergence.status}`}
+          role="status"
+        >
+          <span className="convergence-icon">
+            {session.convergence.status === 'converged'
+              ? '\u2705'
+              : session.convergence.status === 'diminishing_returns'
+                ? '\u26A0\uFE0F'
+                : '\u27A1\uFE0F'}
+          </span>
+          <span className="convergence-message">{session.convergence.message}</span>
+        </div>
+      )}
+
+      {/* Iteration warning banner */}
+      {(session.iterationCount ?? 0) >= 3 && (
+        <div className="completion-iteration-banner" role="alert">
+          You have run {session.iterationCount}{' '}
+          {TUNING_TYPE_LABELS[session.tuningType].toLowerCase()} sessions in the last 7 days. If
+          results aren&apos;t improving, consider checking for mechanical issues or reviewing your
+          flight technique.
+        </div>
+      )}
+
       {/* Re-analyze button for any verification */}
       {hasAnyVerification && onReanalyzeVerification && session.verificationLogId && (
         <button className="completion-reanalyze-link" onClick={onReanalyzeVerification}>

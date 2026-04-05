@@ -29,9 +29,9 @@ function makeFilterMetrics(
 }
 
 const defaultPIDs: PIDConfiguration = {
-  roll: { P: 45, I: 80, D: 30, F: 100 },
-  pitch: { P: 47, I: 84, D: 32, F: 100 },
-  yaw: { P: 45, I: 80, D: 0, F: 100 },
+  roll: { P: 45, I: 80, D: 30 },
+  pitch: { P: 47, I: 84, D: 32 },
+  yaw: { P: 45, I: 80, D: 0 },
 };
 
 function makePIDMetrics(

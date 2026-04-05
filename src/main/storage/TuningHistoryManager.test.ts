@@ -397,4 +397,47 @@ describe('TuningHistoryManager', () => {
       expect(historyB).toHaveLength(1);
     });
   });
+
+  describe('getRecentIterationCount', () => {
+    it('counts sessions of matching type within lookback window', async () => {
+      const now = new Date();
+      const recent = new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000); // 2 days ago
+      const old = new Date(now.getTime() - 10 * 24 * 60 * 60 * 1000); // 10 days ago
+
+      await manager.archiveSession(
+        makeCompletedSession('profile-1', {
+          tuningType: TUNING_TYPE.FILTER,
+          updatedAt: recent.toISOString(),
+        })
+      );
+      await manager.archiveSession(
+        makeCompletedSession('profile-1', {
+          tuningType: TUNING_TYPE.FILTER,
+          updatedAt: now.toISOString(),
+        })
+      );
+      // Old session — outside 7-day window
+      await manager.archiveSession(
+        makeCompletedSession('profile-1', {
+          tuningType: TUNING_TYPE.FILTER,
+          updatedAt: old.toISOString(),
+        })
+      );
+      // Different type — should not count
+      await manager.archiveSession(
+        makeCompletedSession('profile-1', {
+          tuningType: TUNING_TYPE.PID,
+          updatedAt: now.toISOString(),
+        })
+      );
+
+      const count = await manager.getRecentIterationCount('profile-1', 'filter');
+      expect(count).toBe(2); // Only the 2 recent filter sessions
+    });
+
+    it('returns 0 for empty history', async () => {
+      const count = await manager.getRecentIterationCount('profile-1', 'filter');
+      expect(count).toBe(0);
+    });
+  });
 });

@@ -25,6 +25,12 @@ import { validateCLIResponse } from '../../msp/cliUtils';
 import { verifyAppliedConfig } from '../../utils/verifyAppliedConfig';
 import { sendAutoReport } from '../../diagnostic/DiagnosticReportService';
 import { MockMSPClient } from '../../demo/MockMSPClient';
+import {
+  detectFilterConvergence,
+  detectPIDConvergence,
+  detectFlashConvergence,
+} from '../../analysis/ConvergenceDetector';
+import { ITERATION_WARNING_THRESHOLD } from '../../analysis/constants';
 
 /**
  * Pre-apply validation ranges for recommended values.
@@ -894,6 +900,65 @@ export function registerTuningHandlers(deps: HandlerDependencies): void {
           updateData.verificationTransferFunctionMetrics = verificationTransferFunctionMetrics;
         }
         if (verificationPidMetrics) updateData.verificationPidMetrics = verificationPidMetrics;
+
+        // --- Layer 3: Convergence detection ---
+        // Compare initial metrics (from analysis flight) with verification metrics
+        const activeSession = await tuningSessionManager.getSession(profileId);
+        if (activeSession) {
+          try {
+            if (
+              activeSession.tuningType === 'filter' &&
+              activeSession.filterMetrics &&
+              verificationMetrics
+            ) {
+              updateData.convergence = detectFilterConvergence(
+                activeSession.filterMetrics,
+                verificationMetrics
+              );
+            } else if (
+              activeSession.tuningType === 'pid' &&
+              activeSession.pidMetrics &&
+              verificationPidMetrics
+            ) {
+              updateData.convergence = detectPIDConvergence(
+                activeSession.pidMetrics,
+                verificationPidMetrics
+              );
+            } else if (
+              activeSession.tuningType === 'flash' &&
+              activeSession.transferFunctionMetrics &&
+              verificationTransferFunctionMetrics
+            ) {
+              updateData.convergence = detectFlashConvergence(
+                activeSession.transferFunctionMetrics,
+                verificationTransferFunctionMetrics,
+                activeSession.filterMetrics,
+                verificationMetrics
+              );
+            }
+          } catch (err) {
+            logger.warn('Convergence detection failed (non-fatal):', err);
+          }
+
+          // --- Layer 4: Iteration tracking ---
+          if (tuningHistoryManager) {
+            try {
+              const iterationCount = await tuningHistoryManager.getRecentIterationCount(
+                profileId,
+                activeSession.tuningType
+              );
+              updateData.iterationCount = iterationCount;
+              if (iterationCount >= ITERATION_WARNING_THRESHOLD) {
+                logger.info(
+                  `Iteration warning: ${iterationCount} ${activeSession.tuningType} sessions in lookback window`
+                );
+              }
+            } catch (err) {
+              logger.warn('Iteration count failed (non-fatal):', err);
+            }
+          }
+        }
+
         const updated = await tuningSessionManager.updatePhase(
           profileId,
           TUNING_PHASE.COMPLETED,
