@@ -154,6 +154,18 @@ export interface ConvergenceDetail {
   unit: string;
 }
 
+/** Previous session snapshot for cross-session convergence comparison */
+export interface PreviousSessionSnapshot {
+  /** When the previous session was completed */
+  completedAt: string;
+  /** Worst-axis noise floor from filter/flash analysis (dB) */
+  noiseFloorDb?: number;
+  /** Worst-axis overshoot from PID analysis (%) */
+  overshootPct?: number;
+  /** Worst-axis bandwidth from flash analysis (Hz) */
+  bandwidthHz?: number;
+}
+
 /** Result of convergence detection between initial and verification analysis */
 export interface ConvergenceResult {
   /** Whether tuning has converged */
@@ -166,6 +178,8 @@ export interface ConvergenceResult {
   message: string;
   /** Per-metric details */
   details: ConvergenceDetail[];
+  /** Previous session metrics for cross-session comparison (any time range) */
+  previousSession?: PreviousSessionSnapshot;
 }
 
 /** Complete filter analysis result */

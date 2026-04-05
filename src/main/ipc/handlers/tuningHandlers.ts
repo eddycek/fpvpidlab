@@ -940,6 +940,45 @@ export function registerTuningHandlers(deps: HandlerDependencies): void {
             logger.warn('Convergence detection failed (non-fatal):', err);
           }
 
+          // --- Enrich convergence with previous session snapshot ---
+          if (updateData.convergence && tuningHistoryManager) {
+            try {
+              const prevRecord = await tuningHistoryManager.getLatestByType(
+                profileId,
+                activeSession.tuningType,
+                activeSession.startedAt // Exclude current session (already archived)
+              );
+              if (prevRecord) {
+                const convergence =
+                  updateData.convergence as import('@shared/types/analysis.types').ConvergenceResult;
+                convergence.previousSession = {
+                  completedAt: prevRecord.completedAt,
+                };
+                // Populate type-specific metrics from previous session
+                if (prevRecord.verificationMetrics) {
+                  const axes = ['roll', 'pitch', 'yaw'] as const;
+                  convergence.previousSession.noiseFloorDb = Math.max(
+                    ...axes.map((a) => prevRecord.verificationMetrics![a].noiseFloorDb)
+                  );
+                }
+                if (prevRecord.verificationPidMetrics) {
+                  const axes = ['roll', 'pitch', 'yaw'] as const;
+                  convergence.previousSession.overshootPct = Math.max(
+                    ...axes.map((a) => prevRecord.verificationPidMetrics![a].meanOvershoot)
+                  );
+                }
+                if (prevRecord.transferFunctionMetrics) {
+                  const axes = ['roll', 'pitch', 'yaw'] as const;
+                  convergence.previousSession.bandwidthHz = Math.min(
+                    ...axes.map((a) => prevRecord.transferFunctionMetrics![a].bandwidthHz)
+                  );
+                }
+              }
+            } catch (err) {
+              logger.warn('Previous session lookup failed (non-fatal):', err);
+            }
+          }
+
           // --- Layer 4: Iteration tracking ---
           if (tuningHistoryManager) {
             try {

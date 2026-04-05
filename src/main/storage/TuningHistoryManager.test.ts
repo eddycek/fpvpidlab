@@ -398,6 +398,89 @@ describe('TuningHistoryManager', () => {
     });
   });
 
+  describe('getLatestByType', () => {
+    it('returns the most recent record of matching type', async () => {
+      await manager.archiveSession(
+        makeCompletedSession('profile-1', {
+          tuningType: TUNING_TYPE.FILTER,
+          startedAt: '2026-01-10T00:00:00Z',
+          updatedAt: '2026-01-10T01:00:00Z',
+        })
+      );
+      const secondRecord = await manager.archiveSession(
+        makeCompletedSession('profile-1', {
+          tuningType: TUNING_TYPE.FILTER,
+          startedAt: '2026-01-20T00:00:00Z',
+          updatedAt: '2026-01-20T01:00:00Z',
+        })
+      );
+      // PID record should not be returned for filter query
+      await manager.archiveSession(
+        makeCompletedSession('profile-1', {
+          tuningType: TUNING_TYPE.PID,
+          startedAt: '2026-01-25T00:00:00Z',
+          updatedAt: '2026-01-25T01:00:00Z',
+        })
+      );
+
+      const latest = await manager.getLatestByType('profile-1', 'filter');
+      expect(latest).not.toBeNull();
+      expect(latest!.id).toBe(secondRecord.id);
+      expect(latest!.tuningType).toBe('filter');
+    });
+
+    it('returns null when no records of matching type', async () => {
+      await manager.archiveSession(
+        makeCompletedSession('profile-1', {
+          tuningType: TUNING_TYPE.PID,
+        })
+      );
+
+      const latest = await manager.getLatestByType('profile-1', 'filter');
+      expect(latest).toBeNull();
+    });
+
+    it('returns null for non-existent profile', async () => {
+      const latest = await manager.getLatestByType('nonexistent', 'filter');
+      expect(latest).toBeNull();
+    });
+
+    it('filters by beforeStartedAt to exclude current session', async () => {
+      const firstRecord = await manager.archiveSession(
+        makeCompletedSession('profile-1', {
+          tuningType: TUNING_TYPE.FILTER,
+          startedAt: '2026-01-10T00:00:00Z',
+          updatedAt: '2026-01-10T01:00:00Z',
+        })
+      );
+      await manager.archiveSession(
+        makeCompletedSession('profile-1', {
+          tuningType: TUNING_TYPE.FILTER,
+          startedAt: '2026-01-20T00:00:00Z',
+          updatedAt: '2026-01-20T01:00:00Z',
+        })
+      );
+
+      // Exclude records started on or after 2026-01-20 (current session)
+      const prev = await manager.getLatestByType('profile-1', 'filter', '2026-01-20T00:00:00Z');
+      expect(prev).not.toBeNull();
+      expect(prev!.id).toBe(firstRecord.id);
+    });
+
+    it('returns null when all records are filtered by beforeStartedAt', async () => {
+      await manager.archiveSession(
+        makeCompletedSession('profile-1', {
+          tuningType: TUNING_TYPE.FILTER,
+          startedAt: '2026-01-20T00:00:00Z',
+          updatedAt: '2026-01-20T01:00:00Z',
+        })
+      );
+
+      const prev = await manager.getLatestByType('profile-1', 'filter', '2026-01-15T00:00:00Z');
+      expect(prev).toBeNull();
+    });
+  });
+
   describe('getRecentIterationCount', () => {
     it('counts sessions of matching type within lookback window', async () => {
       const now = new Date();

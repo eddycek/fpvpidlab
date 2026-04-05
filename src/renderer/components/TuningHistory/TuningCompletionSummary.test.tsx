@@ -471,4 +471,66 @@ describe('TuningCompletionSummary', () => {
     );
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
+
+  it('shows previous session info in convergence banner when available', () => {
+    const session: TuningSession = {
+      ...baseSession,
+      convergence: {
+        status: 'converged',
+        improvementDelta: -0.5,
+        meaningfulThreshold: 1.5,
+        message: 'Filters are optimized for this quad.',
+        details: [],
+        previousSession: {
+          completedAt: '2026-03-28T14:00:00Z',
+          noiseFloorDb: -45,
+        },
+      },
+    };
+    render(
+      <TuningCompletionSummary session={session} onDismiss={onDismiss} onStartNew={onStartNew} />
+    );
+    expect(screen.getByText(/Previous filter tune/)).toBeInTheDocument();
+    expect(screen.getByText(/noise floor: -45 dB/)).toBeInTheDocument();
+  });
+
+  it('shows previous session with overshoot for PID convergence', () => {
+    const session: TuningSession = {
+      ...baseSession,
+      tuningType: TUNING_TYPE.PID,
+      convergence: {
+        status: 'diminishing_returns',
+        improvementDelta: 1.5,
+        meaningfulThreshold: 2.0,
+        message: 'PID changes are small.',
+        details: [],
+        previousSession: {
+          completedAt: '2026-03-25T10:00:00Z',
+          overshootPct: 12.5,
+        },
+      },
+    };
+    render(
+      <TuningCompletionSummary session={session} onDismiss={onDismiss} onStartNew={onStartNew} />
+    );
+    expect(screen.getByText(/Previous pid tune/)).toBeInTheDocument();
+    expect(screen.getByText(/overshoot: 12.5%/)).toBeInTheDocument();
+  });
+
+  it('does not show previous session when not available', () => {
+    const session: TuningSession = {
+      ...baseSession,
+      convergence: {
+        status: 'continue',
+        improvementDelta: -5.0,
+        meaningfulThreshold: 1.5,
+        message: 'Tuning is progressing well.',
+        details: [],
+      },
+    };
+    render(
+      <TuningCompletionSummary session={session} onDismiss={onDismiss} onStartNew={onStartNew} />
+    );
+    expect(screen.queryByText(/Previous/)).not.toBeInTheDocument();
+  });
 });

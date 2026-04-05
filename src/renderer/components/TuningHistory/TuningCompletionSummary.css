@@ -429,6 +429,17 @@
   flex-shrink: 0;
 }
 
+.convergence-message {
+  flex: 1;
+}
+
+.convergence-prev-session {
+  display: block;
+  font-size: 11px;
+  color: #888;
+  margin-top: 4px;
+}
+
 /* Iteration warning banner */
 .completion-iteration-banner {
   padding: 10px 14px;

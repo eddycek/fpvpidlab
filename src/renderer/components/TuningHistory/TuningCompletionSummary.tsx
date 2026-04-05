@@ -231,7 +231,21 @@ export function TuningCompletionSummary({
                 ? '\u26A0\uFE0F'
                 : '\u27A1\uFE0F'}
           </span>
-          <span className="convergence-message">{session.convergence.message}</span>
+          <div className="convergence-message">
+            {session.convergence.message}
+            {session.convergence.previousSession && (
+              <span className="convergence-prev-session">
+                Previous {TUNING_TYPE_LABELS[session.tuningType].toLowerCase()}:{' '}
+                {formatDate(session.convergence.previousSession.completedAt)}
+                {session.convergence.previousSession.noiseFloorDb != null &&
+                  ` (noise floor: ${session.convergence.previousSession.noiseFloorDb.toFixed(0)} dB)`}
+                {session.convergence.previousSession.overshootPct != null &&
+                  ` (overshoot: ${session.convergence.previousSession.overshootPct.toFixed(1)}%)`}
+                {session.convergence.previousSession.bandwidthHz != null &&
+                  ` (bandwidth: ${session.convergence.previousSession.bandwidthHz.toFixed(0)} Hz)`}
+              </span>
+            )}
+          </div>
         </div>
       )}
 
