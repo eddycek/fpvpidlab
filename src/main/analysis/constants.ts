@@ -177,8 +177,8 @@ export const NOISE_TARGET_DEADZONE_HZ = 5;
 export const PEAK_MATCH_TOLERANCE_MIN_HZ = 10;
 
 /** Similarity score threshold for accepting verification comparison.
- * Calibrated against test-fixtures/bbl LOG1-LOG4 (same VX3.5 quad).
- * Same-quad flights score 80-100 → 70 gives ≥10pt margin against false rejection.
+ * Calibrated against test-fixtures/bbl LOG1-LOG2 (same VX3.5 quad).
+ * Observed same-quad scores 89/100 → 70 gives 19pt margin against false rejection.
  * Adjust if telemetry false-rejection rate exceeds 5% target. */
 export const SIMILARITY_ACCEPT_THRESHOLD = 70;
 

@@ -16,7 +16,18 @@ import type {
   FlightSegment,
   NoiseProfile,
   AxisNoiseProfile,
+  CurrentFilterSettings,
+  FilterAnalysisResult,
 } from '@shared/types/analysis.types';
+import type { BlackboxFlightData } from '@shared/types/blackbox.types';
+import fs from 'fs/promises';
+import path from 'path';
+import { BlackboxParser } from '../blackbox/BlackboxParser';
+import { analyze as analyzeFilters } from './FilterAnalyzer';
+import { enrichSettingsFromBBLHeaders } from './headerValidation';
+import { findThrottleSweepSegments, findSteadySegments } from './SegmentSelector';
+import { DEFAULT_FILTER_SETTINGS } from '@shared/types/analysis.types';
+import { SIMILARITY_ACCEPT_THRESHOLD, SIMILARITY_REJECT_THRESHOLD } from './constants';
 
 // ---- Test helpers ----
 
@@ -337,17 +348,6 @@ describe('matchFlashVerification', () => {
 // Uses real flight logs from test-fixtures/bbl/ (same VX3.5 quad, same session)
 // to validate that SIMILARITY_ACCEPT_THRESHOLD / SIMILARITY_REJECT_THRESHOLD are reasonable.
 
-import fs from 'fs/promises';
-import path from 'path';
-import { BlackboxParser } from '../blackbox/BlackboxParser';
-import { analyze as analyzeFilters } from './FilterAnalyzer';
-import { enrichSettingsFromBBLHeaders } from './headerValidation';
-import { findThrottleSweepSegments, findSteadySegments } from './SegmentSelector';
-import { DEFAULT_FILTER_SETTINGS } from '@shared/types/analysis.types';
-import type { CurrentFilterSettings, FilterAnalysisResult } from '@shared/types/analysis.types';
-import type { BlackboxFlightData } from '@shared/types/blackbox.types';
-import { SIMILARITY_ACCEPT_THRESHOLD, SIMILARITY_REJECT_THRESHOLD } from './constants';
-
 const FIXTURES_DIR = path.resolve(__dirname, '../../../test-fixtures/bbl');
 const LOG_FILES = [
   'blackbox_2026-03-29T11-09-44-682Z.bbl', // LOG1 — filter analysis
@@ -369,6 +369,7 @@ describe('BBL fixture calibration — similarity thresholds', () => {
       const data = await fs.readFile(path.join(FIXTURES_DIR, file));
       const result = await BlackboxParser.parse(data);
       expect(result.success).toBe(true);
+      expect(result.sessions.length).toBeGreaterThan(0);
 
       const session = result.sessions[0];
       const rawHeaders = session.header.rawHeaders;
@@ -409,12 +410,13 @@ describe('BBL fixture calibration — similarity thresholds', () => {
     expect(result.tier).toBe('good');
     expect(result.recommendation).toBe('accept');
 
-    // Log the actual scores for threshold calibration reference
-
-    console.log(
-      `[Calibration] LOG1 vs LOG2 similarity: ${result.score}/100, ` +
-        `sub-scores: ${result.subScores.map((s) => `${s.name}=${s.score}`).join(', ')}`
-    );
+    // Log calibration data only when explicitly enabled (avoids CI noise)
+    if (process.env.VERBOSE_CALIBRATION) {
+      console.log(
+        `[Calibration] LOG1 vs LOG2 similarity: ${result.score}/100, ` +
+          `sub-scores: ${result.subScores.map((s) => `${s.name}=${s.score}`).join(', ')}`
+      );
+    }
   });
 
   it('same-quad LOG2 vs LOG1 (reversed) also scores above threshold', () => {
@@ -476,9 +478,11 @@ describe('BBL fixture calibration — similarity thresholds', () => {
     // If margin is < 10, threshold is too tight for real-world same-quad flights
     expect(margin).toBeGreaterThanOrEqual(10);
 
-    console.log(
-      `[Calibration] Threshold margin: ${margin} points (score=${result.score}, threshold=${SIMILARITY_ACCEPT_THRESHOLD})`
-    );
+    if (process.env.VERBOSE_CALIBRATION) {
+      console.log(
+        `[Calibration] Threshold margin: ${margin} points (score=${result.score}, threshold=${SIMILARITY_ACCEPT_THRESHOLD})`
+      );
+    }
   });
 });
 
