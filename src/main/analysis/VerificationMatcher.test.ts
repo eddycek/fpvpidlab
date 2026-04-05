@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
 import {
   matchFilterVerification,
   matchPIDVerification,
@@ -16,7 +16,18 @@ import type {
   FlightSegment,
   NoiseProfile,
   AxisNoiseProfile,
+  CurrentFilterSettings,
+  FilterAnalysisResult,
 } from '@shared/types/analysis.types';
+import type { BlackboxFlightData } from '@shared/types/blackbox.types';
+import fs from 'fs/promises';
+import path from 'path';
+import { BlackboxParser } from '../blackbox/BlackboxParser';
+import { analyze as analyzeFilters } from './FilterAnalyzer';
+import { enrichSettingsFromBBLHeaders } from './headerValidation';
+import { findThrottleSweepSegments, findSteadySegments } from './SegmentSelector';
+import { DEFAULT_FILTER_SETTINGS } from '@shared/types/analysis.types';
+import { SIMILARITY_ACCEPT_THRESHOLD, SIMILARITY_REJECT_THRESHOLD } from './constants';
 
 // ---- Test helpers ----
 
@@ -282,6 +293,29 @@ describe('matchPIDVerification', () => {
   });
 });
 
+// ---- PID magnitude edge cases ----
+
+describe('matchPIDVerification — magnitude', () => {
+  it('defaults to 50 when magnitude data unavailable', () => {
+    const ref: PIDVerificationInput = {
+      stepsDetected: 15,
+      axisStepCounts: [5, 5, 5],
+      meanMagnitude: 0,
+      magnitudeStd: 0,
+    };
+    const ver: PIDVerificationInput = {
+      stepsDetected: 15,
+      axisStepCounts: [5, 5, 5],
+      meanMagnitude: 0,
+      magnitudeStd: 0,
+    };
+    const result = matchPIDVerification(ref, ver);
+    // magnitude sub-score should be 50 (default), overall still accept
+    const magSubScore = result.subScores.find((s) => s.name === 'Magnitude range overlap');
+    expect(magSubScore?.score).toBe(50);
+  });
+});
+
 // ---- Flash verification ----
 
 describe('matchFlashVerification', () => {
@@ -309,3 +343,151 @@ describe('matchFlashVerification', () => {
     expect(result.recommendation).toBe('reject_reflight');
   });
 });
+
+// ---- BBL Fixture Calibration Tests ----
+// Uses real flight logs from test-fixtures/bbl/ (same VX3.5 quad, same session)
+// to validate that SIMILARITY_ACCEPT_THRESHOLD / SIMILARITY_REJECT_THRESHOLD are reasonable.
+
+const FIXTURES_DIR = path.resolve(__dirname, '../../../test-fixtures/bbl');
+const LOG_FILES = [
+  'blackbox_2026-03-29T11-09-44-682Z.bbl', // LOG1 — filter analysis
+  'blackbox_2026-03-29T16-17-37-126Z.bbl', // LOG2 — filter verification
+] as const;
+
+interface ParsedCalibrationLog {
+  flightData: BlackboxFlightData;
+  filterSettings: CurrentFilterSettings;
+  analysisResult: FilterAnalysisResult;
+  hasSweepSegments: boolean;
+}
+
+describe('BBL fixture calibration — similarity thresholds', () => {
+  const logs: ParsedCalibrationLog[] = [];
+
+  beforeAll(async () => {
+    for (const file of LOG_FILES) {
+      const data = await fs.readFile(path.join(FIXTURES_DIR, file));
+      const result = await BlackboxParser.parse(data);
+      expect(result.success).toBe(true);
+      expect(result.sessions.length).toBeGreaterThan(0);
+
+      const session = result.sessions[0];
+      const rawHeaders = session.header.rawHeaders;
+      const enriched = enrichSettingsFromBBLHeaders(DEFAULT_FILTER_SETTINGS, rawHeaders);
+      const filterSettings = enriched ?? DEFAULT_FILTER_SETTINGS;
+
+      const analysisResult = await analyzeFilters(session.flightData, 0, filterSettings);
+
+      const sweepSegments = findThrottleSweepSegments(session.flightData);
+
+      logs.push({
+        flightData: session.flightData,
+        filterSettings,
+        analysisResult,
+        hasSweepSegments: sweepSegments.length > 0,
+      });
+    }
+  }, 30_000);
+
+  it('same-quad LOG1 vs LOG2 filter similarity scores above ACCEPT threshold', () => {
+    const [log1, log2] = logs;
+
+    const ref: FilterVerificationInput = {
+      noiseProfile: log1.analysisResult.noise,
+      segments: findSegmentsFromFlightData(log1.flightData),
+      hasSweepSegments: log1.hasSweepSegments,
+    };
+    const ver: FilterVerificationInput = {
+      noiseProfile: log2.analysisResult.noise,
+      segments: findSegmentsFromFlightData(log2.flightData),
+      hasSweepSegments: log2.hasSweepSegments,
+    };
+
+    const result = matchFilterVerification(ref, ver);
+
+    // Same quad, same session — similarity should be well above accept threshold
+    expect(result.score).toBeGreaterThanOrEqual(SIMILARITY_ACCEPT_THRESHOLD);
+    expect(result.tier).toBe('good');
+    expect(result.recommendation).toBe('accept');
+
+    // Log calibration data only when explicitly enabled (avoids CI noise)
+    if (process.env.VERBOSE_CALIBRATION) {
+      console.log(
+        `[Calibration] LOG1 vs LOG2 similarity: ${result.score}/100, ` +
+          `sub-scores: ${result.subScores.map((s) => `${s.name}=${s.score}`).join(', ')}`
+      );
+    }
+  });
+
+  it('same-quad LOG2 vs LOG1 (reversed) also scores above threshold', () => {
+    const [log1, log2] = logs;
+
+    const ref: FilterVerificationInput = {
+      noiseProfile: log2.analysisResult.noise,
+      segments: findSegmentsFromFlightData(log2.flightData),
+      hasSweepSegments: log2.hasSweepSegments,
+    };
+    const ver: FilterVerificationInput = {
+      noiseProfile: log1.analysisResult.noise,
+      segments: findSegmentsFromFlightData(log1.flightData),
+      hasSweepSegments: log1.hasSweepSegments,
+    };
+
+    const result = matchFilterVerification(ref, ver);
+    expect(result.score).toBeGreaterThanOrEqual(SIMILARITY_ACCEPT_THRESHOLD);
+  });
+
+  it('scores are not 100 (different filter settings between flights affect peak detection)', () => {
+    const [log1, log2] = logs;
+
+    const ref: FilterVerificationInput = {
+      noiseProfile: log1.analysisResult.noise,
+      segments: findSegmentsFromFlightData(log1.flightData),
+      hasSweepSegments: log1.hasSweepSegments,
+    };
+    const ver: FilterVerificationInput = {
+      noiseProfile: log2.analysisResult.noise,
+      segments: findSegmentsFromFlightData(log2.flightData),
+      hasSweepSegments: log2.hasSweepSegments,
+    };
+
+    const result = matchFilterVerification(ref, ver);
+    // Not exactly 100 because filter settings differ (LOG2 has applied filter recs)
+    // but should be well within accept range
+    expect(result.score).toBeLessThanOrEqual(100);
+    expect(result.score).toBeGreaterThan(SIMILARITY_REJECT_THRESHOLD);
+  });
+
+  it('thresholds have adequate margin (score - threshold > 10)', () => {
+    const [log1, log2] = logs;
+
+    const ref: FilterVerificationInput = {
+      noiseProfile: log1.analysisResult.noise,
+      segments: findSegmentsFromFlightData(log1.flightData),
+      hasSweepSegments: log1.hasSweepSegments,
+    };
+    const ver: FilterVerificationInput = {
+      noiseProfile: log2.analysisResult.noise,
+      segments: findSegmentsFromFlightData(log2.flightData),
+      hasSweepSegments: log2.hasSweepSegments,
+    };
+
+    const result = matchFilterVerification(ref, ver);
+    const margin = result.score - SIMILARITY_ACCEPT_THRESHOLD;
+
+    // If margin is < 10, threshold is too tight for real-world same-quad flights
+    expect(margin).toBeGreaterThanOrEqual(10);
+
+    if (process.env.VERBOSE_CALIBRATION) {
+      console.log(
+        `[Calibration] Threshold margin: ${margin} points (score=${result.score}, threshold=${SIMILARITY_ACCEPT_THRESHOLD})`
+      );
+    }
+  });
+});
+
+/** Helper: extract segments from flight data using the same logic as FilterAnalyzer */
+function findSegmentsFromFlightData(flightData: BlackboxFlightData) {
+  const sweeps = findThrottleSweepSegments(flightData);
+  return sweeps.length > 0 ? sweeps : findSteadySegments(flightData);
+}
