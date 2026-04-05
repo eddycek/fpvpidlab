@@ -295,7 +295,7 @@ describe('matchPIDVerification', () => {
 
 // ---- PID magnitude edge cases ----
 
-describe('matchPIDVerification — magnitude', () => {
+describe('matchPIDVerification — magnitude CoV', () => {
   it('defaults to 50 when magnitude data unavailable', () => {
     const ref: PIDVerificationInput = {
       stepsDetected: 15,
@@ -310,9 +310,86 @@ describe('matchPIDVerification — magnitude', () => {
       magnitudeStd: 0,
     };
     const result = matchPIDVerification(ref, ver);
-    // magnitude sub-score should be 50 (default), overall still accept
-    const magSubScore = result.subScores.find((s) => s.name === 'Magnitude range overlap');
+    const magSubScore = result.subScores.find((s) => s.name === 'Magnitude style (CoV)');
     expect(magSubScore?.score).toBe(50);
+  });
+
+  it('scores high when CoV is similar despite different absolute magnitudes', () => {
+    // Same style (CoV ~0.17) but heavier battery = larger absolute magnitudes
+    const ref: PIDVerificationInput = {
+      stepsDetected: 15,
+      axisStepCounts: [5, 5, 5],
+      meanMagnitude: 300,
+      magnitudeStd: 50, // CoV = 50/300 = 0.167
+    };
+    const ver: PIDVerificationInput = {
+      stepsDetected: 15,
+      axisStepCounts: [5, 5, 5],
+      meanMagnitude: 500, // 1.67× larger (different battery)
+      magnitudeStd: 85, // CoV = 85/500 = 0.17 — nearly identical style
+    };
+    const result = matchPIDVerification(ref, ver);
+    const magSubScore = result.subScores.find((s) => s.name === 'Magnitude style (CoV)');
+    // CoV diff ≈ 0.003 → score should be near 100
+    expect(magSubScore!.score).toBeGreaterThanOrEqual(90);
+  });
+
+  it('scores low when CoV differs significantly (different flying style)', () => {
+    const ref: PIDVerificationInput = {
+      stepsDetected: 15,
+      axisStepCounts: [5, 5, 5],
+      meanMagnitude: 300,
+      magnitudeStd: 30, // CoV = 0.1 — consistent, calm flying
+    };
+    const ver: PIDVerificationInput = {
+      stepsDetected: 15,
+      axisStepCounts: [5, 5, 5],
+      meanMagnitude: 300,
+      magnitudeStd: 180, // CoV = 0.6 — erratic, aggressive flying
+    };
+    const result = matchPIDVerification(ref, ver);
+    const magSubScore = result.subScores.find((s) => s.name === 'Magnitude style (CoV)');
+    // CoV diff = 0.5 = MAX_COV_DIFF → score 0
+    expect(magSubScore!.score).toBe(0);
+  });
+
+  it('handles reference with zero std (valid zero-variance, not unavailable)', () => {
+    const ref: PIDVerificationInput = {
+      stepsDetected: 15,
+      axisStepCounts: [5, 5, 5],
+      meanMagnitude: 300,
+      magnitudeStd: 0, // Perfectly consistent snaps — CoV = 0
+    };
+    const ver: PIDVerificationInput = {
+      stepsDetected: 15,
+      axisStepCounts: [5, 5, 5],
+      meanMagnitude: 300,
+      magnitudeStd: 0, // Also zero variance — CoV = 0
+    };
+    const result = matchPIDVerification(ref, ver);
+    const magSubScore = result.subScores.find((s) => s.name === 'Magnitude style (CoV)');
+    // Both CoV=0 → diff=0 → score 100 (not default 50)
+    expect(magSubScore!.score).toBe(100);
+  });
+
+  it('penalizes when only verification has zero std (different consistency)', () => {
+    const ref: PIDVerificationInput = {
+      stepsDetected: 15,
+      axisStepCounts: [5, 5, 5],
+      meanMagnitude: 300,
+      magnitudeStd: 50, // CoV = 0.167
+    };
+    const ver: PIDVerificationInput = {
+      stepsDetected: 15,
+      axisStepCounts: [5, 5, 5],
+      meanMagnitude: 300,
+      magnitudeStd: 0, // CoV = 0 (perfectly consistent)
+    };
+    const result = matchPIDVerification(ref, ver);
+    const magSubScore = result.subScores.find((s) => s.name === 'Magnitude style (CoV)');
+    // CoV diff = 0.167 → partial penalty (not 100, not 0)
+    expect(magSubScore!.score).toBeGreaterThan(0);
+    expect(magSubScore!.score).toBeLessThan(100);
   });
 });
 

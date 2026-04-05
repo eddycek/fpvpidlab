@@ -19,6 +19,7 @@ import {
   MOTOR_HARMONIC_TOLERANCE_RATIO,
   SIMILARITY_ACCEPT_THRESHOLD,
   SIMILARITY_REJECT_THRESHOLD,
+  PID_MAGNITUDE_MAX_COV_DIFF,
 } from './constants';
 
 // ---- Tier & Recommendation helpers ----
@@ -311,17 +312,22 @@ export function matchPIDVerification(
     }
   }
 
-  // Sub-score 3: Magnitude range overlap (use coefficient of variation for style independence)
+  // Sub-score 3: Magnitude style similarity via coefficient of variation (CoV = std/mean).
+  // CoV normalizes for absolute magnitude — an aggressive pilot with a heavy battery has large
+  // magnitudes AND large spread, while a calm pilot has small both. Same CoV = same style.
+  // Data unavailable only when meanMagnitude <= 0; std=0 is valid (perfectly consistent snaps).
   let magnitudeScore = 50; // Default when magnitude data unavailable
   if (ref.meanMagnitude > 0 && ver.meanMagnitude > 0) {
-    const ratio = computeActivityRatio(ref.meanMagnitude, ver.meanMagnitude);
-    magnitudeScore = clamp100(ratio * 100);
+    const refCoV = ref.magnitudeStd > 0 ? ref.magnitudeStd / ref.meanMagnitude : 0;
+    const verCoV = ver.magnitudeStd > 0 ? ver.magnitudeStd / ver.meanMagnitude : 0;
+    const covDiff = Math.abs(refCoV - verCoV);
+    magnitudeScore = clamp100((1 - Math.min(covDiff / PID_MAGNITUDE_MAX_COV_DIFF, 1)) * 100);
   }
 
   const subScores: SimilaritySubScore[] = [
     { name: 'Step count ratio', score: stepScore, weight: 0.3 },
     { name: 'Axis coverage match', score: axisCoverageScore, weight: 0.35 },
-    { name: 'Magnitude range overlap', score: magnitudeScore, weight: 0.35 },
+    { name: 'Magnitude style (CoV)', score: magnitudeScore, weight: 0.35 },
   ];
 
   const overall = clamp100(subScores.reduce((sum, s) => sum + s.score * s.weight, 0));
