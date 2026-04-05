@@ -19,6 +19,7 @@ import {
   MOTOR_HARMONIC_TOLERANCE_RATIO,
   SIMILARITY_ACCEPT_THRESHOLD,
   SIMILARITY_REJECT_THRESHOLD,
+  PID_MAGNITUDE_MAX_COV_DIFF,
 } from './constants';
 
 // ---- Tier & Recommendation helpers ----
@@ -311,11 +312,15 @@ export function matchPIDVerification(
     }
   }
 
-  // Sub-score 3: Magnitude range overlap (use coefficient of variation for style independence)
+  // Sub-score 3: Magnitude style similarity via coefficient of variation (CoV = std/mean).
+  // CoV normalizes for absolute magnitude — an aggressive pilot with a heavy battery has large
+  // magnitudes AND large spread, while a calm pilot has small both. Same CoV = same style.
   let magnitudeScore = 50; // Default when magnitude data unavailable
-  if (ref.meanMagnitude > 0 && ver.meanMagnitude > 0) {
-    const ratio = computeActivityRatio(ref.meanMagnitude, ver.meanMagnitude);
-    magnitudeScore = clamp100(ratio * 100);
+  if (ref.meanMagnitude > 0 && ver.meanMagnitude > 0 && ref.magnitudeStd > 0) {
+    const refCoV = ref.magnitudeStd / ref.meanMagnitude;
+    const verCoV = ver.magnitudeStd > 0 ? ver.magnitudeStd / ver.meanMagnitude : refCoV;
+    const covDiff = Math.abs(refCoV - verCoV);
+    magnitudeScore = clamp100((1 - Math.min(covDiff / PID_MAGNITUDE_MAX_COV_DIFF, 1)) * 100);
   }
 
   const subScores: SimilaritySubScore[] = [

@@ -196,6 +196,11 @@ export const MAX_VARIABILITY_BONUS_HZ = 15;
  * Derived from computeNoiseBasedTarget() slope: 60 dB range → 225 Hz = 3.75 Hz/dB. */
 export const VARIABILITY_TO_HZ_SCALE = 3.75;
 
+/** Maximum CoV difference for PID magnitude similarity scoring.
+ * CoV (std/mean) normalizes for absolute magnitude — similar style regardless of battery weight.
+ * Typical stick snap CoV: 0.2-0.6. Diff of 0.5 = completely different style → score 0. */
+export const PID_MAGNITUDE_MAX_COV_DIFF = 0.5;
+
 // ---- Convergence Detection ----
 
 /** Filter convergence: worst-axis noise floor delta below this = converged (dB) */

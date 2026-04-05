@@ -295,7 +295,7 @@ describe('matchPIDVerification', () => {
 
 // ---- PID magnitude edge cases ----
 
-describe('matchPIDVerification — magnitude', () => {
+describe('matchPIDVerification — magnitude CoV', () => {
   it('defaults to 50 when magnitude data unavailable', () => {
     const ref: PIDVerificationInput = {
       stepsDetected: 15,
@@ -310,9 +310,66 @@ describe('matchPIDVerification — magnitude', () => {
       magnitudeStd: 0,
     };
     const result = matchPIDVerification(ref, ver);
-    // magnitude sub-score should be 50 (default), overall still accept
     const magSubScore = result.subScores.find((s) => s.name === 'Magnitude range overlap');
     expect(magSubScore?.score).toBe(50);
+  });
+
+  it('scores high when CoV is similar despite different absolute magnitudes', () => {
+    // Same style (CoV ~0.17) but heavier battery = larger absolute magnitudes
+    const ref: PIDVerificationInput = {
+      stepsDetected: 15,
+      axisStepCounts: [5, 5, 5],
+      meanMagnitude: 300,
+      magnitudeStd: 50, // CoV = 50/300 = 0.167
+    };
+    const ver: PIDVerificationInput = {
+      stepsDetected: 15,
+      axisStepCounts: [5, 5, 5],
+      meanMagnitude: 500, // 1.67× larger (different battery)
+      magnitudeStd: 85, // CoV = 85/500 = 0.17 — nearly identical style
+    };
+    const result = matchPIDVerification(ref, ver);
+    const magSubScore = result.subScores.find((s) => s.name === 'Magnitude range overlap');
+    // CoV diff ≈ 0.003 → score should be near 100
+    expect(magSubScore!.score).toBeGreaterThanOrEqual(90);
+  });
+
+  it('scores low when CoV differs significantly (different flying style)', () => {
+    const ref: PIDVerificationInput = {
+      stepsDetected: 15,
+      axisStepCounts: [5, 5, 5],
+      meanMagnitude: 300,
+      magnitudeStd: 30, // CoV = 0.1 — consistent, calm flying
+    };
+    const ver: PIDVerificationInput = {
+      stepsDetected: 15,
+      axisStepCounts: [5, 5, 5],
+      meanMagnitude: 300,
+      magnitudeStd: 180, // CoV = 0.6 — erratic, aggressive flying
+    };
+    const result = matchPIDVerification(ref, ver);
+    const magSubScore = result.subScores.find((s) => s.name === 'Magnitude range overlap');
+    // CoV diff = 0.5 = MAX_COV_DIFF → score 0
+    expect(magSubScore!.score).toBe(0);
+  });
+
+  it('handles verification with zero std gracefully (treats as same CoV)', () => {
+    const ref: PIDVerificationInput = {
+      stepsDetected: 15,
+      axisStepCounts: [5, 5, 5],
+      meanMagnitude: 300,
+      magnitudeStd: 50,
+    };
+    const ver: PIDVerificationInput = {
+      stepsDetected: 15,
+      axisStepCounts: [5, 5, 5],
+      meanMagnitude: 300,
+      magnitudeStd: 0, // Zero std — falls back to ref CoV
+    };
+    const result = matchPIDVerification(ref, ver);
+    const magSubScore = result.subScores.find((s) => s.name === 'Magnitude range overlap');
+    // When ver std=0, CoV defaults to ref CoV → diff=0 → score 100
+    expect(magSubScore!.score).toBe(100);
   });
 });
 
