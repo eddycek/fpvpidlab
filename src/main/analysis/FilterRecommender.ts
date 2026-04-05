@@ -36,7 +36,15 @@ import {
   DTERM_DYN_EXPO_BY_STYLE,
   DTERM_DYN_EXPO_DEFAULT,
   DYNAMIC_LOWPASS_RATIO,
+  MAX_VARIABILITY_BONUS_HZ,
+  VARIABILITY_TO_HZ_SCALE,
 } from './constants';
+
+/** Optional noise variability context for hysteresis-aware deadzone */
+export interface ConfidenceContext {
+  /** Standard deviation of noise floor across segments (dB). Higher = more variable = wider deadzone. */
+  noiseFloorStdDb?: number;
+}
 
 /** Detect whether RPM filter is active from settings */
 export function isRpmFilterActive(settings: CurrentFilterSettings): boolean {
@@ -63,13 +71,14 @@ export function isDtermDynamicActive(settings: CurrentFilterSettings): boolean {
 export function recommend(
   noise: NoiseProfile,
   current: CurrentFilterSettings = DEFAULT_FILTER_SETTINGS,
-  droneSize?: DroneSize
+  droneSize?: DroneSize,
+  confidenceContext?: ConfidenceContext
 ): FilterRecommendation[] {
   const recommendations: FilterRecommendation[] = [];
   const rpmActive = isRpmFilterActive(current);
 
   // 1. Noise-floor-based lowpass adjustments
-  recommendNoiseFloorAdjustments(noise, current, recommendations, rpmActive);
+  recommendNoiseFloorAdjustments(noise, current, recommendations, rpmActive, confidenceContext);
 
   // 2. Resonance-peak-based recommendations
   recommendResonanceFixes(noise, current, recommendations, rpmActive);
@@ -121,7 +130,8 @@ function recommendNoiseFloorAdjustments(
   noise: NoiseProfile,
   current: CurrentFilterSettings,
   out: FilterRecommendation[],
-  rpmActive: boolean
+  rpmActive: boolean,
+  confidenceContext?: ConfidenceContext
 ): void {
   const { overallLevel } = noise;
 
@@ -158,6 +168,14 @@ function recommendNoiseFloorAdjustments(
   const gyroDynActive = isGyroDynamicActive(current);
   const dtermDynActive = isDtermDynamicActive(current);
 
+  // Variability-aware deadzone bonus: widen deadzone when noise floor varies between segments,
+  // preventing recommendation churn from flight-to-flight noise floor variation.
+  const variabilityBonus = Math.min(
+    (confidenceContext?.noiseFloorStdDb ?? 0) * VARIABILITY_TO_HZ_SCALE,
+    MAX_VARIABILITY_BONUS_HZ
+  );
+  const baseDeadzone = NOISE_TARGET_DEADZONE_HZ + variabilityBonus;
+
   // For dynamic mode: the effective "current cutoff" is dyn_min (tightest point at high throttle;
   // BF ramps from dyn_max at low throttle down to dyn_min at high throttle)
   const effectiveGyroCutoff = gyroDynActive
@@ -187,7 +205,7 @@ function recommendNoiseFloorAdjustments(
         adjustedTarget = Math.floor(newMax / DYNAMIC_LOWPASS_RATIO);
         newMax = adjustedTarget * DYNAMIC_LOWPASS_RATIO;
       }
-      if (Math.abs(adjustedTarget - currentMin) > NOISE_TARGET_DEADZONE_HZ) {
+      if (Math.abs(adjustedTarget - currentMin) > baseDeadzone) {
         out.push({
           setting: 'gyro_lpf1_dyn_min_hz',
           currentValue: currentMin,
@@ -221,7 +239,7 @@ function recommendNoiseFloorAdjustments(
       }
     } else {
       // Static mode: tune static_hz directly
-      if (Math.abs(target - current.gyro_lpf1_static_hz) > NOISE_TARGET_DEADZONE_HZ) {
+      if (Math.abs(target - current.gyro_lpf1_static_hz) > baseDeadzone) {
         out.push({
           setting: 'gyro_lpf1_static_hz',
           currentValue: current.gyro_lpf1_static_hz,
@@ -253,7 +271,7 @@ function recommendNoiseFloorAdjustments(
         adjustedTarget = Math.floor(newMax / DYNAMIC_LOWPASS_RATIO);
         newMax = adjustedTarget * DYNAMIC_LOWPASS_RATIO;
       }
-      if (Math.abs(adjustedTarget - currentMin) > NOISE_TARGET_DEADZONE_HZ) {
+      if (Math.abs(adjustedTarget - currentMin) > baseDeadzone) {
         out.push({
           setting: 'dterm_lpf1_dyn_min_hz',
           currentValue: currentMin,
@@ -285,7 +303,7 @@ function recommendNoiseFloorAdjustments(
         }
       }
     } else {
-      if (Math.abs(target - current.dterm_lpf1_static_hz) > NOISE_TARGET_DEADZONE_HZ) {
+      if (Math.abs(target - current.dterm_lpf1_static_hz) > baseDeadzone) {
         out.push({
           setting: 'dterm_lpf1_static_hz',
           currentValue: current.dterm_lpf1_static_hz,
@@ -300,8 +318,10 @@ function recommendNoiseFloorAdjustments(
   };
 
   // Use deadzone against effective cutoff (dyn_min when dynamic, static otherwise)
-  const gyroDeadzone = overallLevel === 'medium' ? 20 : NOISE_TARGET_DEADZONE_HZ;
-  const dtermDeadzone = overallLevel === 'medium' ? 20 : NOISE_TARGET_DEADZONE_HZ;
+  const gyroDeadzone =
+    (overallLevel === 'medium' ? 20 : NOISE_TARGET_DEADZONE_HZ) + variabilityBonus;
+  const dtermDeadzone =
+    (overallLevel === 'medium' ? 20 : NOISE_TARGET_DEADZONE_HZ) + variabilityBonus;
 
   const gyroOffTarget = Math.abs(targetGyroLpf1 - effectiveGyroCutoff) > gyroDeadzone;
   const dtermOffTarget = Math.abs(targetDtermLpf1 - effectiveDtermCutoff) > dtermDeadzone;

@@ -17,6 +17,7 @@ Overview of all design documents in this directory. Completed documents are arch
 | [BLACKBOX_DOWNLOAD_OPTIMIZATION](./BLACKBOX_DOWNLOAD_OPTIMIZATION.md) | **Proposed** | MSC mode for flash storage (10–50× speedup) with MSP pipelining fallback (1.5–2×). Larger chunks deprioritized (already tested, poor results) |
 | [CHIRP_FLIGHT_ANALYSIS](./CHIRP_FLIGHT_ANALYSIS.md) | **Proposed** | Chirp signal system identification for BF 4.6+ — exponential frequency sweep, per-axis sequential execution, coherence validation, high-precision transfer functions |
 | [UX_IMPROVEMENT_IDEAS](./UX_IMPROVEMENT_IDEAS.md) | **Active** | Backlog of UX improvement ideas (4/7 done, rest are future work) |
+| [VERIFICATION_FLIGHT_SIMILARITY](./VERIFICATION_FLIGHT_SIMILARITY.md) | **Proposed** | Verification flight similarity matching & tuning loop prevention. 4-layer architecture: flight similarity matcher, recommendation hysteresis, convergence detection, iteration tracking |
 | [CONFIG_HEALTH_CHECK](./CONFIG_HEALTH_CHECK.md) | **Proposed** | Read-only FC config audit — safety, motor/ESC, RC link, power, size-specific. ~20 rules across 5 categories, health score. Excludes PID/filter/blackbox (covered by tuning modes) |
 | [PAYMENT_AND_INVOICING](./PAYMENT_AND_INVOICING.md) | **Proposed** | Stripe payment gateway + Trivi API invoicing. End-to-end purchase → invoice → license delivery flow |
 | [LICENSE_KEY_SYSTEM](./LICENSE_KEY_SYSTEM.md) | **Active** | Freemium licensing via CF Workers + D1. Ed25519 keys, offline grace period, admin API |

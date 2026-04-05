@@ -10,6 +10,8 @@ import { promises as fs } from 'fs';
 import { join } from 'path';
 import type { TuningSession } from '@shared/types/tuning.types';
 import { APP_VERSION, TUNING_PHASE } from '@shared/constants';
+import type { TuningType } from '@shared/types/tuning.types';
+import { ITERATION_LOOKBACK_DAYS } from '../analysis/constants';
 import type {
   CompletedTuningRecord,
   FilterMetricsSummary,
@@ -66,6 +68,9 @@ export class TuningHistoryManager {
       appVersion: APP_VERSION,
       ratesConfig: session.ratesConfig,
       autoReportId: session.autoReportId,
+      convergence: session.convergence,
+      verificationSimilarity: session.verificationSimilarity,
+      iterationCount: session.iterationCount,
     };
 
     const existing = await this.loadRecords(session.profileId);
@@ -149,6 +154,23 @@ export class TuningHistoryManager {
       `Updated PID verification metrics on latest history record for profile ${profileId}`
     );
     return true;
+  }
+
+  /**
+   * Count recent completed tuning sessions of a given type within the lookback window.
+   * Used by Layer 4 (iteration tracking) to detect tuning loops.
+   */
+  async getRecentIterationCount(
+    profileId: string,
+    tuningType: TuningType,
+    lookbackDays: number = ITERATION_LOOKBACK_DAYS
+  ): Promise<number> {
+    const records = await this.loadRecords(profileId);
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - lookbackDays);
+    const cutoffIso = cutoff.toISOString();
+
+    return records.filter((r) => r.tuningType === tuningType && r.completedAt >= cutoffIso).length;
   }
 
   /**

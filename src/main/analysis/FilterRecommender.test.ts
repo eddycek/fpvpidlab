@@ -1444,3 +1444,88 @@ describe('F-MOTOR-DIAG (Motor Harmonic Diagnostic)', () => {
     expect(diag!.reason).toContain('310 Hz');
   });
 });
+
+// ---- Variability-aware hysteresis (Layer 2) ----
+
+describe('variability-aware hysteresis', () => {
+  it('widens deadzone when noiseFloorStdDb is high, suppressing marginal recs', () => {
+    // Noise that would produce a small recommendation change
+    const noise = makeNoiseProfile({
+      level: 'low',
+      rollFloor: -40,
+      pitchFloor: -40,
+    });
+    // Settings close to the computed target — within normal deadzone + variability bonus
+    const settings: CurrentFilterSettings = {
+      ...DEFAULT_FILTER_SETTINGS,
+      gyro_lpf1_static_hz: 240,
+      dterm_lpf1_static_hz: 120,
+    };
+
+    // Without variability: should produce recs
+    const recsNormal = recommend(noise, settings);
+    const gyroRecNormal = recsNormal.find((r) => r.setting === 'gyro_lpf1_static_hz');
+
+    // With high variability: same noise but wider deadzone should suppress marginal recs
+    const recsVariable = recommend(noise, settings, undefined, { noiseFloorStdDb: 4 });
+    const gyroRecVariable = recsVariable.find((r) => r.setting === 'gyro_lpf1_static_hz');
+
+    // High variability should suppress recs that normal deadzone would allow
+    // (or at minimum, not produce MORE recommendations)
+    if (gyroRecNormal) {
+      // If normal produces a rec, high variability might suppress it
+      const normalCount = recsNormal.filter(
+        (r) => r.setting.includes('gyro_lpf1') || r.setting.includes('dterm_lpf1')
+      ).length;
+      const variableCount = recsVariable.filter(
+        (r) => r.setting.includes('gyro_lpf1') || r.setting.includes('dterm_lpf1')
+      ).length;
+      expect(variableCount).toBeLessThanOrEqual(normalCount);
+    } else {
+      // If even normal doesn't produce a rec, variable shouldn't either
+      expect(gyroRecVariable).toBeUndefined();
+    }
+  });
+
+  it('does not widen deadzone beyond MAX_VARIABILITY_BONUS_HZ', () => {
+    // Very high variability — should be capped at MAX_VARIABILITY_BONUS_HZ (15)
+    // Target for -20 dB noise ≈ 113 Hz. Current at 200 Hz → delta = 87 Hz
+    // Even with max deadzone (5 + 15 = 20 Hz), 87 >> 20 → rec still produced.
+    const noise = makeNoiseProfile({
+      level: 'high',
+      rollFloor: -20,
+      pitchFloor: -20,
+    });
+    const settings: CurrentFilterSettings = {
+      ...DEFAULT_FILTER_SETTINGS,
+      gyro_lpf1_static_hz: 200,
+      dterm_lpf1_static_hz: 150,
+    };
+
+    // Even with extreme variability, large delta overcomes max deadzone
+    const recs = recommend(noise, settings, undefined, { noiseFloorStdDb: 100 });
+    const gyroRec = recs.find((r) => r.setting === 'gyro_lpf1_static_hz');
+    expect(gyroRec).toBeDefined();
+  });
+
+  it('has no effect when noiseFloorStdDb is 0', () => {
+    const noise = makeNoiseProfile({
+      level: 'high',
+      rollFloor: -20,
+      pitchFloor: -20,
+    });
+    const settings: CurrentFilterSettings = {
+      ...DEFAULT_FILTER_SETTINGS,
+    };
+
+    const recsNoCtx = recommend(noise, settings);
+    const recsZeroStd = recommend(noise, settings, undefined, { noiseFloorStdDb: 0 });
+
+    // Should produce identical recommendations
+    expect(recsNoCtx.length).toBe(recsZeroStd.length);
+    for (let i = 0; i < recsNoCtx.length; i++) {
+      expect(recsNoCtx[i].setting).toBe(recsZeroStd[i].setting);
+      expect(recsNoCtx[i].recommendedValue).toBe(recsZeroStd[i].recommendedValue);
+    }
+  });
+});

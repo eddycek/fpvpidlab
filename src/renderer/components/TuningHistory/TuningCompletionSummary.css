@@ -394,3 +394,49 @@
 .overshoot-axis-delta.neutral {
   color: #888;
 }
+
+/* Convergence banner */
+.completion-convergence-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 6px;
+  margin: 12px 0;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.completion-convergence-banner.convergence-converged {
+  background: rgba(81, 207, 102, 0.1);
+  border: 1px solid rgba(81, 207, 102, 0.3);
+  color: #a3e6a8;
+}
+
+.completion-convergence-banner.convergence-diminishing_returns {
+  background: rgba(255, 193, 7, 0.1);
+  border: 1px solid rgba(255, 193, 7, 0.3);
+  color: #ffd43b;
+}
+
+.completion-convergence-banner.convergence-continue {
+  background: rgba(74, 144, 226, 0.1);
+  border: 1px solid rgba(74, 144, 226, 0.3);
+  color: #74c0fc;
+}
+
+.convergence-icon {
+  flex-shrink: 0;
+}
+
+/* Iteration warning banner */
+.completion-iteration-banner {
+  padding: 10px 14px;
+  border-radius: 6px;
+  margin: 8px 0;
+  font-size: 13px;
+  line-height: 1.4;
+  background: rgba(255, 193, 7, 0.08);
+  border: 1px solid rgba(255, 193, 7, 0.25);
+  color: #ffd43b;
+}

@@ -171,6 +171,66 @@ export const NOISE_FLOOR_VERY_CLEAN_DB = -70;
 /** Minimum difference to recommend a noise-based filter change (Hz) */
 export const NOISE_TARGET_DEADZONE_HZ = 5;
 
+// ---- Verification Flight Similarity ----
+
+/** Minimum peak matching tolerance (Hz) — floor for low-frequency peaks */
+export const PEAK_MATCH_TOLERANCE_MIN_HZ = 10;
+
+/** Similarity score threshold for accepting verification comparison */
+export const SIMILARITY_ACCEPT_THRESHOLD = 70;
+
+/** Similarity score threshold below which verification is rejected */
+export const SIMILARITY_REJECT_THRESHOLD = 40;
+
+// ---- Recommendation Hysteresis (Variability-Aware) ----
+
+/** Maximum additional deadzone from noise floor variability (Hz) */
+export const MAX_VARIABILITY_BONUS_HZ = 15;
+
+/** Scale factor: dB of noise floor std → Hz of additional deadzone.
+ * Derived from computeNoiseBasedTarget() slope: 60 dB range → 225 Hz = 3.75 Hz/dB. */
+export const VARIABILITY_TO_HZ_SCALE = 3.75;
+
+// ---- Convergence Detection ----
+
+/** Filter convergence: worst-axis noise floor delta below this = converged (dB) */
+export const FILTER_CONVERGENCE_DB = 1.5;
+
+/** Filter convergence: delta below this = diminishing returns (dB) */
+export const FILTER_DIMINISHING_DB = 3.0;
+
+/** PID convergence: overshoot delta below this = converged (%) */
+export const PID_CONVERGENCE_OVERSHOOT_PCT = 2;
+
+/** PID convergence: settling time delta below this = converged (ms) */
+export const PID_CONVERGENCE_SETTLING_MS = 5;
+
+/** PID diminishing returns: overshoot delta threshold (%) */
+export const PID_DIMINISHING_OVERSHOOT_PCT = 5;
+
+/** PID diminishing returns: settling time delta threshold (ms) */
+export const PID_DIMINISHING_SETTLING_MS = 15;
+
+/** Flash convergence: bandwidth delta below this = converged (Hz) */
+export const FLASH_CONVERGENCE_BW_HZ = 2;
+
+/** Flash convergence: phase margin delta below this = converged (°) */
+export const FLASH_CONVERGENCE_PM_DEG = 3;
+
+/** Flash diminishing returns: bandwidth delta (Hz) */
+export const FLASH_DIMINISHING_BW_HZ = 5;
+
+/** Flash diminishing returns: phase margin delta (°) */
+export const FLASH_DIMINISHING_PM_DEG = 5;
+
+// ---- Iteration Tracking ----
+
+/** Number of recent same-type tuning sessions that triggers iteration warning */
+export const ITERATION_WARNING_THRESHOLD = 3;
+
+/** Lookback window for iteration counting (days) */
+export const ITERATION_LOOKBACK_DAYS = 7;
+
 /** Resonance peak amplitude threshold for notch/cutoff recommendation (dB above floor) */
 export const RESONANCE_ACTION_THRESHOLD_DB = 12;
 

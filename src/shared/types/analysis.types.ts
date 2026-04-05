@@ -97,9 +97,75 @@ export interface AnalysisWarning {
     | 'missing_axis_coverage'
     | 'low_step_magnitude'
     | 'tpa_variance'
-    | 'low_coherence';
+    | 'low_coherence'
+    | 'verification_dissimilar_throttle'
+    | 'verification_dissimilar_peaks'
+    | 'verification_dissimilar_segments'
+    | 'verification_dissimilar_steps'
+    | 'verification_dissimilar_activity'
+    | 'verification_rejected';
   message: string;
   severity: 'info' | 'warning' | 'error';
+}
+
+// ---- Verification Similarity Types ----
+
+/** Sub-score for verification similarity matching */
+export interface SimilaritySubScore {
+  name: string;
+  score: number;
+  weight: number;
+}
+
+/** Result of comparing verification flight to initial analysis flight */
+export interface VerificationSimilarity {
+  /** Overall similarity score 0-100 */
+  score: number;
+  /** Classification tier */
+  tier: 'good' | 'marginal' | 'poor';
+  /** Action recommendation for the UI */
+  recommendation: 'accept' | 'warn' | 'reject_reflight';
+  /** Per-metric sub-scores */
+  subScores: SimilaritySubScore[];
+  /** Human-readable warnings */
+  warnings: AnalysisWarning[];
+}
+
+/** Reference context from initial analysis for verification matching */
+export interface VerificationReferenceContext {
+  /** Noise profile from initial analysis (Filter/Flash) */
+  noiseProfile?: NoiseProfile;
+  /** Segments from initial analysis (Filter/Flash) */
+  segments?: FlightSegment[];
+  /** PID metrics from initial analysis (PID) */
+  pidMetrics?: import('./tuning-history.types').PIDMetricsSummary;
+  /** Transfer function metrics from initial analysis (Flash) */
+  transferFunctionMetrics?: import('./tuning-history.types').TransferFunctionMetricsSummary;
+}
+
+// ---- Convergence Detection Types ----
+
+/** Per-metric convergence detail */
+export interface ConvergenceDetail {
+  metric: string;
+  initialValue: number;
+  verificationValue: number;
+  delta: number;
+  unit: string;
+}
+
+/** Result of convergence detection between initial and verification analysis */
+export interface ConvergenceResult {
+  /** Whether tuning has converged */
+  status: 'converged' | 'diminishing_returns' | 'continue';
+  /** Actual improvement measured (primary metric) */
+  improvementDelta: number;
+  /** Minimum delta considered meaningful */
+  meaningfulThreshold: number;
+  /** Human-readable recommendation */
+  message: string;
+  /** Per-metric details */
+  details: ConvergenceDetail[];
 }
 
 /** Complete filter analysis result */
@@ -132,6 +198,8 @@ export interface FilterAnalysisResult {
   mechanicalHealth?: MechanicalHealthResult;
   /** Dynamic lowpass analysis (throttle-dependent noise) */
   dynamicLowpass?: DynamicLowpassAnalysis;
+  /** Verification flight similarity (only present when analyzing verification log with reference context) */
+  verificationSimilarity?: VerificationSimilarity;
 }
 
 // ---- Throttle Spectrogram Types ----
@@ -544,6 +612,8 @@ export interface PIDAnalysisResult {
       dcGainDb?: number;
     };
   };
+  /** Verification flight similarity (only present when analyzing verification log with reference context) */
+  verificationSimilarity?: VerificationSimilarity;
 }
 
 // ---- D-Term Effectiveness Types ----

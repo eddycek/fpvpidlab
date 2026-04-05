@@ -413,4 +413,62 @@ describe('TuningCompletionSummary', () => {
     expect(scoreMatch).not.toBeNull();
     expect(Number(scoreMatch![1])).toBeGreaterThanOrEqual(60);
   });
+
+  it('renders convergence banner when converged', () => {
+    const session: TuningSession = {
+      ...baseSession,
+      convergence: {
+        status: 'converged',
+        improvementDelta: -0.5,
+        meaningfulThreshold: 1.5,
+        message: 'Filters are optimized for this quad.',
+        details: [],
+      },
+    };
+    render(
+      <TuningCompletionSummary session={session} onDismiss={onDismiss} onStartNew={onStartNew} />
+    );
+    expect(screen.getByText('Filters are optimized for this quad.')).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveClass('convergence-converged');
+  });
+
+  it('renders convergence banner for diminishing returns', () => {
+    const session: TuningSession = {
+      ...baseSession,
+      convergence: {
+        status: 'diminishing_returns',
+        improvementDelta: -2.0,
+        meaningfulThreshold: 3.0,
+        message: 'Another iteration is unlikely to help.',
+        details: [],
+      },
+    };
+    render(
+      <TuningCompletionSummary session={session} onDismiss={onDismiss} onStartNew={onStartNew} />
+    );
+    expect(screen.getByText(/Another iteration is unlikely to help/)).toBeInTheDocument();
+  });
+
+  it('renders iteration warning when count >= 3', () => {
+    const session: TuningSession = {
+      ...baseSession,
+      iterationCount: 4,
+    };
+    render(
+      <TuningCompletionSummary session={session} onDismiss={onDismiss} onStartNew={onStartNew} />
+    );
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+    expect(screen.getByText(/4 filter tune sessions/)).toBeInTheDocument();
+  });
+
+  it('does not render iteration warning when count < 3', () => {
+    const session: TuningSession = {
+      ...baseSession,
+      iterationCount: 2,
+    };
+    render(
+      <TuningCompletionSummary session={session} onDismiss={onDismiss} onStartNew={onStartNew} />
+    );
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
 });

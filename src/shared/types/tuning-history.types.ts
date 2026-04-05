@@ -6,6 +6,7 @@
 
 import type { AppliedChange, TuningType } from './tuning.types';
 import type { PIDConfiguration, RatesConfiguration } from './pid.types';
+import type { ConvergenceResult, VerificationSimilarity } from './analysis.types';
 
 /** Downsampled power spectrum safe for JSON serialization (128 bins) */
 export interface CompactSpectrum {
@@ -230,4 +231,13 @@ export interface CompletedTuningRecord {
 
   /** Auto-generated diagnostic report ID (from apply verification failure) */
   autoReportId?: string;
+
+  /** Convergence detection result (computed at verification completion) */
+  convergence?: ConvergenceResult;
+
+  /** Verification flight similarity score (computed at verification analysis) */
+  verificationSimilarity?: VerificationSimilarity;
+
+  /** Number of recent tuning iterations of this type (within lookback window) */
+  iterationCount?: number;
 }
