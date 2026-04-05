@@ -945,7 +945,8 @@ export function registerTuningHandlers(deps: HandlerDependencies): void {
             try {
               const prevRecord = await tuningHistoryManager.getLatestByType(
                 profileId,
-                activeSession.tuningType
+                activeSession.tuningType,
+                activeSession.startedAt // Exclude current session (already archived)
               );
               if (prevRecord) {
                 const convergence =

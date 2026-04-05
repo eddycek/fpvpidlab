@@ -176,18 +176,25 @@ export class TuningHistoryManager {
   /**
    * Get the most recent completed record of a given type for a profile.
    * Used for cross-session convergence comparison regardless of time window.
-   * Returns null if no matching record exists.
+   *
+   * Optional filters prevent accidentally selecting the current session
+   * (which may already be archived when this is called from verification).
+   *
+   * @param beforeStartedAt - Only return records started before this ISO timestamp
+   * @returns null if no matching record exists
    */
   async getLatestByType(
     profileId: string,
-    tuningType: TuningType
+    tuningType: TuningType,
+    beforeStartedAt?: string
   ): Promise<CompletedTuningRecord | null> {
     const records = await this.loadRecords(profileId);
     // Records stored oldest-first — iterate backwards for newest match
     for (let i = records.length - 1; i >= 0; i--) {
-      if (records[i].tuningType === tuningType) {
-        return records[i];
-      }
+      const record = records[i];
+      if (record.tuningType !== tuningType) continue;
+      if (beforeStartedAt && record.startedAt >= beforeStartedAt) continue;
+      return record;
     }
     return null;
   }
