@@ -1523,6 +1523,40 @@ describe('PIDRecommender', () => {
       expect(dIncrease).toBeUndefined();
     });
 
+    it('should reduce D when P is decreased but D was blocked by effectiveness gating', () => {
+      // Pitch: extreme overshoot → P-OS-P fires (P 47→37), D-OS-D blocked by DTE
+      // D stays at 46 → D/P = 46/37 = 1.24 > 0.85
+      // Damping ratio should catch this and add D decrease
+      const pids: PIDConfiguration = {
+        roll: { P: 45, I: 80, D: 30 },
+        pitch: { P: 47, I: 84, D: 46 },
+        yaw: { P: 45, I: 80, D: 0 },
+      };
+      const extreme = makeProfile({ meanOvershoot: 115 });
+
+      const recs = recommendPID(
+        emptyProfile(),
+        extreme,
+        emptyProfile(),
+        pids,
+        undefined,
+        undefined,
+        'balanced',
+        undefined,
+        { roll: 0.07, pitch: 0.07, yaw: 0, overall: 0.07, dCritical: false }
+      );
+
+      const pitchP = recs.find((r) => r.setting === 'pid_pitch_p');
+      const pitchD = recs.find((r) => r.setting === 'pid_pitch_d');
+      expect(pitchP).toBeDefined();
+      expect(pitchP!.recommendedValue).toBe(37); // P reduced by overshoot rule
+      expect(pitchD).toBeDefined();
+      expect(pitchD!.recommendedValue).toBeLessThanOrEqual(Math.round(37 * DAMPING_RATIO_MAX)); // D reduced to maintain ratio
+      // Resulting ratio should be within bounds
+      const resultRatio = pitchD!.recommendedValue / pitchP!.recommendedValue;
+      expect(resultRatio).toBeLessThanOrEqual(DAMPING_RATIO_MAX);
+    });
+
     it('should add moderate noise warning when D ratio is in balanced range', () => {
       const recs = recommendPID(
         overshooting,
