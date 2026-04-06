@@ -998,6 +998,21 @@ export class MSPClient extends EventEmitter {
   }
 
   /**
+   * Save current configuration to EEPROM without rebooting.
+   * Uses MSP_EEPROM_WRITE (250).
+   */
+  async saveToEEPROM(): Promise<void> {
+    const response = await this.connection.sendCommand(
+      MSPCommand.MSP_EEPROM_WRITE,
+      Buffer.alloc(0)
+    );
+    if (response.error) {
+      throw new MSPError('Failed to save to EEPROM');
+    }
+    logger.info('Configuration saved to EEPROM (no reboot)');
+  }
+
+  /**
    * Get SD card storage information via MSP_SDCARD_SUMMARY.
    * Returns null if SD card is not supported (command not recognized).
    */

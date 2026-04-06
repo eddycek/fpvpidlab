@@ -41,6 +41,14 @@ export interface FCInfo {
 export interface Configuration {
   cliDiff: string;
   cliDump?: string;
+  /** MSP-read PID gains at snapshot time (not in CLI diff when simplified_pids_mode is ON) */
+  pidConfig?: import('./pid.types').PIDConfiguration;
+  /** MSP-read filter settings at snapshot time */
+  filterConfig?: import('./analysis.types').CurrentFilterSettings;
+  /** MSP-read feedforward settings at snapshot time */
+  feedforwardConfig?: import('./pid.types').FeedforwardConfiguration;
+  /** MSP-read rates at snapshot time */
+  ratesConfig?: import('./pid.types').RatesConfiguration;
 }
 
 export interface ConfigurationSnapshot {

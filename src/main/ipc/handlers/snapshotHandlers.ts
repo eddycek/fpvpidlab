@@ -204,20 +204,42 @@ export function registerSnapshotHandlers(deps: HandlerDependencies): void {
         );
 
         // Stage 3: Save and reboot
-        sendProgress({ stage: 'save', message: 'Saving and rebooting FC...', percent: 90 });
+        sendProgress({ stage: 'save', message: 'Saving and rebooting FC...', percent: 85 });
         await deps.mspClient.saveAndReboot();
 
-        sendProgress({ stage: 'save', message: 'FC is rebooting', percent: 100 });
+        // Stage 4: Restore PID config via MSP.
+        // BF simplified_pids_mode causes PID values to be omitted from `diff all`,
+        // so they must be restored separately via MSP after CLI restore + reboot.
+        let mspRestored = false;
+        if (deps.mspClient.isConnected() && snapshot.configuration.pidConfig) {
+          sendProgress({ stage: 'save', message: 'Restoring PID config via MSP...', percent: 92 });
+          try {
+            // Select correct PID profile before writing PIDs
+            if (snapshot.metadata?.bfPidProfileIndex != null) {
+              await deps.mspClient.selectPidProfile(snapshot.metadata.bfPidProfileIndex);
+            }
+            await deps.mspClient.setPIDConfiguration(snapshot.configuration.pidConfig);
+            await deps.mspClient.saveToEEPROM();
+            mspRestored = true;
+            logger.info('Snapshot restore: PID config written via MSP and saved to EEPROM');
+          } catch (mspErr) {
+            logger.warn('Snapshot restore: MSP PID write failed (non-fatal):', mspErr);
+          }
+        }
+
+        sendProgress({ stage: 'save', message: 'Restore complete', percent: 100 });
 
         const result: SnapshotRestoreResult = {
           success: true,
           backupSnapshotId,
-          appliedCommands: applied,
+          appliedCommands: applied + (mspRestored ? 1 : 0),
           failedCommands: failedCommands.length > 0 ? failedCommands : undefined,
           rebooted: true,
         };
 
-        logger.info(`Snapshot restored: ${applied} commands applied, rebooted`);
+        logger.info(
+          `Snapshot restored: ${applied} CLI commands + ${mspRestored ? 'MSP config' : 'no MSP data'}, rebooted`
+        );
         return createResponse<SnapshotRestoreResult>(result);
       } catch (error) {
         logger.error('Failed to restore snapshot:', error);

@@ -39,7 +39,24 @@ export class SnapshotManager {
       // Get FC info
       const fcInfo = await this.mspClient.getFCInfo();
 
-      // Export configuration
+      // Read MSP configuration BEFORE exportCLIDiff (which enters CLI → reboots FC).
+      // These values may not appear in CLI diff (e.g. PIDs when simplified_pids_mode is ON).
+      let pidConfig: import('@shared/types/pid.types').PIDConfiguration | undefined;
+      let filterConfig: import('@shared/types/analysis.types').CurrentFilterSettings | undefined;
+      let feedforwardConfig: import('@shared/types/pid.types').FeedforwardConfiguration | undefined;
+      let ratesConfig: import('@shared/types/pid.types').RatesConfiguration | undefined;
+      try {
+        [pidConfig, filterConfig, feedforwardConfig, ratesConfig] = await Promise.all([
+          this.mspClient.getPIDConfiguration(),
+          this.mspClient.getFilterConfiguration(),
+          this.mspClient.getFeedforwardConfiguration(),
+          this.mspClient.getRatesConfiguration(),
+        ]);
+      } catch (err) {
+        logger.warn('Snapshot: MSP config reads failed (non-fatal, CLI diff still captured):', err);
+      }
+
+      // Export configuration (enters CLI → reboots FC)
       const cliDiff = await this.mspClient.exportCLIDiff();
 
       // Create snapshot
@@ -51,6 +68,10 @@ export class SnapshotManager {
         fcInfo,
         configuration: {
           cliDiff,
+          pidConfig,
+          filterConfig,
+          feedforwardConfig,
+          ratesConfig,
         },
         metadata: {
           appVersion: APP_VERSION,
