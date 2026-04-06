@@ -573,6 +573,32 @@ export class MockMSPClient extends EventEmitter {
     };
   }
 
+  async getTuningConfig(): Promise<Record<string, number>> {
+    const s = this.connection.appliedSettings;
+    return {
+      anti_gravity_gain: intOr(s.get('anti_gravity_gain'), 80),
+      iterm_relax: 1,
+      iterm_relax_type: 1,
+      iterm_relax_cutoff: intOr(s.get('iterm_relax_cutoff'), 15),
+      d_min_roll: intOr(s.get('d_min_roll'), 23),
+      d_min_pitch: intOr(s.get('d_min_pitch'), 25),
+      d_min_yaw: intOr(s.get('d_min_yaw'), 0),
+      d_min_gain: intOr(s.get('d_min_gain'), 37),
+      feedforward_boost: intOr(s.get('feedforward_boost'), 15),
+      feedforward_smooth_factor: intOr(s.get('feedforward_smooth_factor'), 25),
+      feedforward_jitter_factor: intOr(s.get('feedforward_jitter_factor'), 7),
+      feedforward_max_rate_limit: intOr(s.get('feedforward_max_rate_limit'), 90),
+      feedforward_transition: intOr(s.get('feedforward_transition'), 0),
+      motor_output_limit: intOr(s.get('motor_output_limit'), 100),
+      idle_min_rpm: intOr(s.get('dyn_idle_min_rpm'), 0),
+      vbat_sag_compensation: intOr(s.get('vbat_sag_compensation'), 0),
+      thrust_linear: intOr(s.get('thrust_linear'), 0),
+      tpa_mode: 0,
+      tpa_rate: intOr(s.get('tpa_rate'), 65),
+      tpa_breakpoint: intOr(s.get('tpa_breakpoint'), 1350),
+    };
+  }
+
   async getPidProcessDenom(): Promise<number> {
     return 2; // 4kHz PID loop (8kHz gyro / 2)
   }

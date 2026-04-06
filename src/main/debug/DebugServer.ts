@@ -438,6 +438,21 @@ async function getMSPState() {
     } catch {
       result.pidConfig = null;
     }
+    try {
+      result.feedforwardConfig = await mspClient.getFeedforwardConfiguration();
+    } catch {
+      result.feedforwardConfig = null;
+    }
+    try {
+      result.ratesConfig = await mspClient.getRatesConfiguration();
+    } catch {
+      result.ratesConfig = null;
+    }
+    try {
+      result.tuningConfig = await mspClient.getTuningConfig();
+    } catch {
+      result.tuningConfig = null;
+    }
   }
 
   return result;

@@ -998,6 +998,45 @@ export class MSPClient extends EventEmitter {
   }
 
   /**
+   * Read all tuning-relevant advanced PID settings from MSP_PID_ADVANCED.
+   * Includes settings that are also settable via CLI (vbat_sag, thrust_linear, etc.)
+   * but readable via MSP without entering CLI mode.
+   */
+  async getTuningConfig(): Promise<Record<string, number>> {
+    const MIN_TUNING_CONFIG_LENGTH = 61; // TPA_BREAKPOINT at offset 59, U16
+    const response = await this.connection.sendCommand(MSPCommand.MSP_PID_ADVANCED);
+    if (response.data.length < MIN_TUNING_CONFIG_LENGTH) {
+      throw new MSPError(
+        `Invalid MSP_PID_ADVANCED response: expected at least ${MIN_TUNING_CONFIG_LENGTH} bytes, got ${response.data.length}`
+      );
+    }
+    const config: Record<string, number> = {
+      anti_gravity_gain: readField(response.data, PID_ADVANCED.ANTI_GRAVITY_GAIN),
+      iterm_relax: readField(response.data, PID_ADVANCED.ITERM_RELAX),
+      iterm_relax_type: readField(response.data, PID_ADVANCED.ITERM_RELAX_TYPE),
+      iterm_relax_cutoff: readField(response.data, PID_ADVANCED.ITERM_RELAX_CUTOFF),
+      d_min_roll: readField(response.data, PID_ADVANCED.DMIN_ROLL),
+      d_min_pitch: readField(response.data, PID_ADVANCED.DMIN_PITCH),
+      d_min_yaw: readField(response.data, PID_ADVANCED.DMIN_YAW),
+      d_min_gain: readField(response.data, PID_ADVANCED.DMIN_GAIN),
+      feedforward_boost: readField(response.data, PID_ADVANCED.FF_BOOST),
+      feedforward_smooth_factor: readField(response.data, PID_ADVANCED.FF_SMOOTH_FACTOR),
+      feedforward_jitter_factor: readField(response.data, PID_ADVANCED.FF_JITTER_FACTOR),
+      feedforward_max_rate_limit: readField(response.data, PID_ADVANCED.FF_MAX_RATE_LIMIT),
+      feedforward_transition: readField(response.data, PID_ADVANCED.FF_TRANSITION),
+      motor_output_limit: readField(response.data, PID_ADVANCED.MOTOR_OUTPUT_LIMIT),
+      idle_min_rpm: readField(response.data, PID_ADVANCED.IDLE_MIN_RPM),
+      vbat_sag_compensation: readField(response.data, PID_ADVANCED.VBAT_SAG_COMPENSATION),
+      thrust_linear: readField(response.data, PID_ADVANCED.THRUST_LINEARIZATION),
+      tpa_mode: readField(response.data, PID_ADVANCED.TPA_MODE),
+      tpa_rate: readField(response.data, PID_ADVANCED.TPA_RATE),
+      tpa_breakpoint: readField(response.data, PID_ADVANCED.TPA_BREAKPOINT),
+    };
+    logger.info('Tuning config read:', config);
+    return config;
+  }
+
+  /**
    * Save current configuration to EEPROM without rebooting.
    * Uses MSP_EEPROM_WRITE (250).
    */
