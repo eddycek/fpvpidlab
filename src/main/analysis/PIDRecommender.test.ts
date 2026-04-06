@@ -128,6 +128,11 @@ describe('PIDRecommender', () => {
     });
 
     it('should recommend both P decrease and D increase for severe overshoot when D is high', () => {
+      // D=50 is already high relative to P=45 (ratio 1.11).
+      // Overshoot=35 → severity=1.4, D+5=55, P-5=40 (severity<2 but D≥60% of dMax).
+      // Damping ratio: anchorP = max(40, 45) = 45, clampedD = round(45×0.85) = 38.
+      // 38 < 50 (currentD) → D rec is REMOVED (counterproductive decrease).
+      // Only P decrease survives.
       const highDPids: PIDConfiguration = {
         roll: { P: 45, I: 80, D: 50 }, // D ≥ 60% of 80 = 48
         pitch: { P: 47, I: 84, D: 32 },
@@ -139,11 +144,9 @@ describe('PIDRecommender', () => {
 
       const dRec = recs.find((r) => r.setting === 'pid_roll_d');
       const pRec = recs.find((r) => r.setting === 'pid_roll_p');
-      expect(dRec).toBeDefined();
+      // D rec is removed because clamped D (38) < current D (50)
+      expect(dRec).toBeUndefined();
       expect(pRec).toBeDefined();
-      // D confidence is downgraded to 'low' when damping ratio clamp kicks in
-      // (both P-OS-P and P-OS-D fire, combined ratio exceeds 0.85)
-      expect(dRec!.confidence).toBe('low');
       expect(pRec!.recommendedValue).toBeLessThan(highDPids.roll.P);
     });
 
@@ -157,8 +160,8 @@ describe('PIDRecommender', () => {
       const pRec = recs.find((r) => r.setting === 'pid_roll_p');
       expect(dRec).toBeDefined();
       // D initially 30+10=40, P=45-5=40 → ratio 40/40=1.0 > 0.85
-      // Damping ratio clamp: D = round(40 × 0.85) = 34
-      expect(dRec!.recommendedValue).toBe(34);
+      // Damping ratio clamp: anchorP = max(40, 45) = 45, D = round(45 × 0.85) = 38
+      expect(dRec!.recommendedValue).toBe(38);
       expect(pRec).toBeDefined();
       expect(pRec!.recommendedValue).toBe(DEFAULT_PIDS.roll.P - 5); // P: 45 - 5 = 40
     });
@@ -173,15 +176,17 @@ describe('PIDRecommender', () => {
       const pRec = recs.find((r) => r.setting === 'pid_roll_p');
       expect(dRec).toBeDefined();
       // D initially 30+15=45, P=45-10=35 → ratio 45/35=1.29 > 0.85
-      // Damping ratio clamp: D = round(35 × 0.85) = 30 (clamped back to current)
-      expect(dRec!.recommendedValue).toBe(30);
+      // Damping ratio clamp: anchorP = max(35, 45) = 45, D = round(45 × 0.85) = 38
+      expect(dRec!.recommendedValue).toBe(38);
       expect(dRec!.confidence).toBe('low');
       expect(pRec).toBeDefined();
       expect(pRec!.recommendedValue).toBe(DEFAULT_PIDS.roll.P - 10); // P: 45 - 10 = 35
       expect(pRec!.reason).toContain('Extreme');
     });
 
-    it('should clamp D to max even with extreme overshoot', () => {
+    it('should drop D rec when damping ratio clamp would decrease D below current', () => {
+      // D=70 is already very high. Overshoot=145 → D+15=85→80(dMax), P-10=35.
+      // anchorP = max(35, 45) = 45, clampedD = round(45×0.85) = 38. 38 < 70 → D rec removed.
       const highDPids: PIDConfiguration = {
         roll: { P: 45, I: 80, D: 70 }, // near max
         pitch: { P: 47, I: 84, D: 32 },
@@ -192,8 +197,11 @@ describe('PIDRecommender', () => {
       const recs = recommendPID(profile, emptyProfile(), emptyProfile(), highDPids);
 
       const dRec = recs.find((r) => r.setting === 'pid_roll_d');
-      expect(dRec).toBeDefined();
-      expect(dRec!.recommendedValue).toBeLessThanOrEqual(D_GAIN_MAX);
+      // D rec is removed because clamped D (38) < current D (70)
+      expect(dRec).toBeUndefined();
+      // P decrease should still exist
+      const pRec = recs.find((r) => r.setting === 'pid_roll_p');
+      expect(pRec).toBeDefined();
     });
 
     it('should recommend P increase for sluggish response', () => {
@@ -1343,10 +1351,10 @@ describe('PIDRecommender', () => {
       expect(pitchD).toBeUndefined(); // Pitch is fine
     });
 
-    it('should clamp D when both P-OS-P and P-OS-D fire and ratio exceeds max', () => {
+    it('should drop D when both P-OS-P and P-OS-D fire and clamped D < current D', () => {
       // Extreme overshoot (115%) triggers both P-OS-D (+15) and P-OS-P (-10)
       // P=47 → 37, D=46 → 61 → ratio = 61/37 = 1.65 (far above 0.85)
-      // Fix should clamp D to maintain healthy D/P ratio
+      // anchorP = max(37, 47) = 47, clampedD = round(47×0.85) = 40. 40 < 46 → D rec removed.
       const pids: PIDConfiguration = {
         roll: { P: 45, I: 80, D: 30 },
         pitch: { P: 47, I: 84, D: 46 },
@@ -1359,12 +1367,8 @@ describe('PIDRecommender', () => {
       const pitchP = recs.find((r) => r.setting === 'pid_pitch_p');
       const pitchD = recs.find((r) => r.setting === 'pid_pitch_d');
       expect(pitchP).toBeDefined();
-      expect(pitchD).toBeDefined();
-      // Both should exist (from overshoot rule)
-      // D should be clamped so ratio ≤ DAMPING_RATIO_MAX
-      const resultRatio = pitchD!.recommendedValue / pitchP!.recommendedValue;
-      expect(resultRatio).toBeLessThanOrEqual(DAMPING_RATIO_MAX);
-      expect(pitchD!.confidence).toBe('low'); // Downgraded by damping clamp
+      // D rec is removed because clamped D (40) < current D (46)
+      expect(pitchD).toBeUndefined();
     });
 
     it('resulting D/P ratio should be within healthy bounds after damping correction', () => {
@@ -1412,14 +1416,15 @@ describe('PIDRecommender', () => {
       }
     });
 
-    it('should add advisory note when D effectiveness is low and D is being decreased', () => {
-      // Create a scenario where D might be recommended to decrease (overdamped)
+    it('should not annotate D decrease from damping ratio when DTE is low (DTE runs before damping)', () => {
+      // D-term effectiveness runs BEFORE damping ratio validation.
+      // D decreases generated by damping ratio won't have DTE annotation.
       const good = makeProfile({
         meanOvershoot: 5,
         responses: [makeResponse({ overshootPercent: 5, ringingCount: 0 })],
       });
       const pids: PIDConfiguration = {
-        roll: { P: 40, I: 80, D: 60 }, // High D/P ratio → may trigger decrease
+        roll: { P: 40, I: 80, D: 60 }, // High D/P ratio → damping ratio creates D decrease
         pitch: { P: 40, I: 80, D: 60 },
         yaw: { P: 45, I: 80, D: 0 },
       };
@@ -1437,8 +1442,10 @@ describe('PIDRecommender', () => {
       const dDecrease = recs.find(
         (r) => r.setting.includes('_d') && r.recommendedValue < r.currentValue
       );
+      // D decrease exists (from damping ratio) but DTE annotation is NOT present
+      // because DTE runs before damping ratio — no D decrease exists at DTE time
       if (dDecrease) {
-        expect(dDecrease.reason).toContain('D-term effectiveness is low');
+        expect(dDecrease.reason).not.toContain('D-term effectiveness is low');
       }
     });
 
@@ -1467,7 +1474,9 @@ describe('PIDRecommender', () => {
       expect(recs.length).toBeGreaterThan(0);
     });
 
-    it('should add noise warning when D effectiveness is low and D is being increased', () => {
+    it('should remove D increase when D effectiveness is very low (<0.3)', () => {
+      // When DTE overall < 0.3, D increases are spliced out entirely
+      // (not annotated) to prevent counterproductive noise amplification
       const recs = recommendPID(
         overshooting,
         overshooting,
@@ -1482,9 +1491,8 @@ describe('PIDRecommender', () => {
       const dIncrease = recs.find(
         (r) => r.setting.includes('_d') && r.recommendedValue > r.currentValue
       );
-      expect(dIncrease).toBeDefined();
-      expect(dIncrease!.confidence).toBe('low');
-      expect(dIncrease!.reason).toContain('improve filter configuration first');
+      // D increase is removed (spliced) when effectiveness < 0.3
+      expect(dIncrease).toBeUndefined();
     });
 
     it('should add moderate noise warning when D ratio is in balanced range', () => {
@@ -1645,15 +1653,18 @@ describe('PIDRecommender', () => {
 
 describe('quad-size-aware PID bounds', () => {
   it('should clamp D to smaller max for tiny whoops (1")', () => {
-    // 1" quad: dMax=50. Extreme overshoot (100%) → D+15 from 40 = 55, clamped to 50
+    // 1" quad: dMax=50, pMax=80. Moderate overshoot (20%) → D+5 from 20 = 25.
+    // No P decrease (severity < 2 and D < 60% of 50=30). D only case.
+    // Damping ratio: D=25/P=60 = 0.42 < 0.45 → underdamped add won't conflict.
+    // Use high D near max to verify 1" dMax clamp.
     const profile = makeProfile({
-      meanOvershoot: 100,
+      meanOvershoot: 20,
       meanRiseTimeMs: 30,
-      meanSettlingTimeMs: 300,
+      meanSettlingTimeMs: 200,
     });
     const pids: PIDConfiguration = {
-      roll: { P: 40, I: 60, D: 40 },
-      pitch: { P: 40, I: 60, D: 40 },
+      roll: { P: 60, I: 60, D: 46 },
+      pitch: { P: 60, I: 60, D: 46 },
       yaw: { P: 40, I: 60, D: 0 },
     };
     const recs = recommendPID(
@@ -1671,7 +1682,9 @@ describe('quad-size-aware PID bounds', () => {
     );
     const dRec = recs.find((r) => r.setting === 'pid_roll_d');
     expect(dRec).toBeDefined();
+    // D=46+5=51 → clamped to 50 (1" dMax)
     expect(dRec!.recommendedValue).toBeLessThanOrEqual(50); // 1" dMax
+    expect(dRec!.recommendedValue).toBe(50);
   });
 
   it('should allow higher D for 7" long range (dMax=100)', () => {
@@ -1702,15 +1715,17 @@ describe('quad-size-aware PID bounds', () => {
   });
 
   it('should use default 5" bounds when droneSize is undefined', () => {
-    // Severe overshoot → D+15 from 75 = 90, clamped to 5" dMax=80
+    // Moderate overshoot (20%) → D+5 from 76 = 81, clamped to 5" dMax=80.
+    // P=100, no P decrease (severity < 2 and D=76 < 60% of 80=48? No, 76>48 → P-5=95).
+    // anchorP = max(95, 100) = 100, clampedD = round(100×0.85) = 85 > 80(dMax) → stays at 80.
     const profile = makeProfile({
-      meanOvershoot: 100,
+      meanOvershoot: 20,
       meanRiseTimeMs: 30,
-      meanSettlingTimeMs: 300,
+      meanSettlingTimeMs: 200,
     });
     const pids: PIDConfiguration = {
-      roll: { P: 45, I: 80, D: 75 },
-      pitch: { P: 45, I: 80, D: 75 },
+      roll: { P: 100, I: 80, D: 76 },
+      pitch: { P: 100, I: 80, D: 76 },
       yaw: { P: 45, I: 80, D: 0 },
     };
     const recs = recommendPID(profile, emptyProfile(), emptyProfile(), pids);

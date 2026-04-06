@@ -174,7 +174,9 @@ export function recommendPID(
       const severity = profile.meanOvershoot / overshootThreshold;
       const dStep = severity > 4 ? 15 : severity > 2 ? 10 : 5;
       const targetD = clamp(base.D + dStep, bounds.dMin, bounds.dMax);
-      if (targetD !== pids.D) {
+      // Guard: don't introduce D from zero on yaw — D=0 on yaw is a deliberate BF default.
+      // Adding D to yaw requires intentional pilot decision, not auto-recommendation.
+      if (targetD !== pids.D && !(axisName === 'yaw' && pids.D === 0)) {
         recommendations.push({
           setting: `pid_${axisName}_d`,
           currentValue: pids.D,
@@ -246,7 +248,7 @@ export function recommendPID(
     const maxRinging = Math.max(...profile.responses.map((r) => r.ringingCount));
     if (maxRinging > thresholds.ringingMax) {
       const targetD = clamp(base.D + 5, bounds.dMin, bounds.dMax);
-      if (targetD !== pids.D) {
+      if (targetD !== pids.D && !(axisName === 'yaw' && pids.D === 0)) {
         // Don't duplicate if we already recommended D increase for overshoot
         const existingDRec = recommendations.find((r) => r.setting === `pid_${axisName}_d`);
         if (!existingDRec) {
@@ -324,6 +326,13 @@ export function recommendPID(
     }
   }
 
+  // Post-process: apply D-term effectiveness gating FIRST — removes/blocks D increases
+  // when effectiveness is < 30%. Must run BEFORE damping ratio to prevent compensatory
+  // P increases that are counterproductive when D isn't effective.
+  if (dTermEffectiveness) {
+    applyDTermEffectiveness(recommendations, dTermEffectiveness);
+  }
+
   // Post-process: validate D/P damping ratio for coordinated P/D recommendations.
   // Only applies to roll and pitch (yaw often has D=0).
   // Must run BEFORE informational P warnings so damping ratio recs take priority.
@@ -332,12 +341,6 @@ export function recommendPID(
   // Post-process: P informational warnings (after damping ratio to avoid conflicts)
   detectHighP(recommendations, currentPIDs, bounds);
   detectLowP(recommendations, currentPIDs, bounds);
-
-  // Post-process: apply D-term effectiveness context to D recommendations
-  // (runs after damping ratio to annotate all D recs including ratio-generated ones)
-  if (dTermEffectiveness) {
-    applyDTermEffectiveness(recommendations, dTermEffectiveness);
-  }
 
   // Post-process: prop wash context — boost D confidence or suggest D when severe
   if (propWash) {
@@ -499,9 +502,19 @@ function validateDampingRatio(
       }
     } else if (ratio > DAMPING_RATIO_MAX && dRec && pRec) {
       // Both P and D were adjusted (e.g. P-OS-P + P-OS-D from same overshoot rule)
-      // but the combined result exceeds damping ratio — clamp D to restore healthy ratio
-      const clampedD = clamp(Math.round(resultP * DAMPING_RATIO_MAX), bounds.dMin, bounds.dMax);
-      if (clampedD !== dRec.recommendedValue) {
+      // but the combined result exceeds damping ratio.
+      // Use the CURRENT P (not reduced P) as anchor to avoid dragging D below its
+      // current value. If P was decreased and D was increased, clamping D to
+      // (reducedP × 0.85) can produce D < currentD — the opposite of what the
+      // overshoot rule intended.
+      const anchorP = Math.max(resultP, pids.P);
+      const clampedD = clamp(Math.round(anchorP * DAMPING_RATIO_MAX), bounds.dMin, bounds.dMax);
+      if (clampedD < pids.D) {
+        // Clamped D would be LOWER than current — drop the D rec entirely
+        // rather than recommending a counterproductive decrease
+        const dIdx = recommendations.indexOf(dRec);
+        if (dIdx >= 0) recommendations.splice(dIdx, 1);
+      } else if (clampedD !== dRec.recommendedValue) {
         dRec.recommendedValue = clampedD;
         dRec.reason += ` (D clamped from ${resultD} to ${clampedD} to maintain D/P ratio ≤ ${DAMPING_RATIO_MAX}.)`;
         dRec.confidence = 'low';
@@ -538,7 +551,9 @@ function applyDTermEffectiveness(
   recommendations: PIDRecommendation[],
   dte: DTermEffectiveness
 ): void {
-  for (const rec of recommendations) {
+  // Iterate backwards so we can splice without index issues
+  for (let i = recommendations.length - 1; i >= 0; i--) {
+    const rec = recommendations[i];
     if (!rec.setting.includes('_d')) continue;
 
     const isIncrease = rec.recommendedValue > rec.currentValue;
@@ -548,11 +563,10 @@ function applyDTermEffectiveness(
         // D is highly effective — safe to increase
         rec.confidence = 'high';
       } else if (dte.overall < 0.3) {
-        // D is mostly amplifying noise — redirect recommendation
-        rec.confidence = 'low';
-        rec.reason +=
-          ' However, D-term is mostly amplifying noise (effectiveness ' +
-          `${(dte.overall * 100).toFixed(0)}%) — improve filter configuration first for better results.`;
+        // D is mostly amplifying noise — BLOCK the increase.
+        // Increasing D when 93%+ of its output is noise causes hot motors
+        // and counterproductive compensatory P changes from damping ratio.
+        recommendations.splice(i, 1);
       } else {
         // Balanced range — allow increase but warn about noise cost
         rec.reason += ` D-term effectiveness is moderate (${(dte.overall * 100).toFixed(0)}%) — monitor motor temperatures after applying.`;

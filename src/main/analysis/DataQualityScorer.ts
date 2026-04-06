@@ -161,7 +161,7 @@ export function scorePIDDataQuality(input: PIDQualityInput): {
   ];
   const axisNames = ['Roll', 'Pitch', 'Yaw'];
   const axesWithEnough = axesCounts.filter((c) => c >= 3).length;
-  const axisCoverageScore = clamp100((axesWithEnough / 3) * 100);
+  let axisCoverageScore = clamp100((axesWithEnough / 3) * 100);
 
   for (let i = 0; i < 3; i++) {
     if (axesCounts[i] === 0) {
@@ -215,6 +215,27 @@ export function scorePIDDataQuality(input: PIDQualityInput): {
   if (allResponses.length > 0) {
     const validSettling = allResponses.filter((r) => r.settlingTimeMs > 0).length;
     holdScore = clamp100((validSettling / allResponses.length) * 100);
+  }
+
+  // Check for flat/empty step responses per axis — steps may be detected but
+  // the response signal can be near-zero if steps were too weak or noisy.
+  for (const [name, responses] of Object.entries(axisResponses) as [string, StepResponse[]][]) {
+    if (responses.length >= 3) {
+      const maxAbsOvershoot = Math.max(...responses.map((r) => Math.abs(r.overshootPercent)));
+      const maxPeakRatio = Math.max(
+        ...responses.map((r) =>
+          r.step.magnitude !== 0 ? Math.abs(r.peakValue / r.step.magnitude) : 0
+        )
+      );
+      if (maxAbsOvershoot < 1 && maxPeakRatio < 0.05) {
+        warnings.push({
+          code: 'flat_step_response',
+          message: `${name.charAt(0).toUpperCase() + name.slice(1)} axis has ${responses.length} steps but the response signal is nearly flat. Try harder, more distinct stick snaps on this axis.`,
+          severity: 'warning',
+        });
+        axisCoverageScore = clamp100(axisCoverageScore - 33);
+      }
+    }
   }
 
   const subScores: DataQualitySubScore[] = [

@@ -427,9 +427,13 @@ function findBestStepWithTrace(responses: StepResponse[]): StepResponse | null {
 function normalizeStepTrace(step: StepResponse): { timeMs: number[]; response: number[] } {
   const trace = step.trace!;
   const mag = step.step.magnitude || 1; // signed magnitude preserves direction
+  // Subtract baseline (gyro at step start) before dividing by magnitude.
+  // trace.gyro contains absolute gyro values (e.g. 200-400 deg/s), not relative.
+  // Without baseline subtraction, normalization produces wild values.
+  const baseline = trace.gyro[0] ?? 0;
   return {
     timeMs: trace.timeMs,
-    response: trace.gyro.map((g) => g / mag),
+    response: trace.gyro.map((g) => (g - baseline) / mag),
   };
 }
 

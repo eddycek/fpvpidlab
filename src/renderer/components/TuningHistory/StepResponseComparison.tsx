@@ -33,11 +33,11 @@ export function StepResponseComparison({ before, after }: StepResponseComparison
   return (
     <div className="completion-overshoot-comparison">
       <h4>Step Response Comparison</h4>
-
       {after.stepResponse && (
         <TFStepResponseChart
           stepResponse={after.stepResponse}
           beforeStepResponse={before.stepResponse}
+          hideHeader
           overshootAfterOverride={{
             roll: after.roll.meanOvershoot,
             pitch: after.pitch.meanOvershoot,

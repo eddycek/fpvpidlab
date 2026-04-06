@@ -40,6 +40,8 @@ interface TFStepResponseChartProps {
   overshootAfterOverride?: AxisOvershoot;
   /** Override overshoot values for "before" data */
   overshootBeforeOverride?: AxisOvershoot;
+  /** Hide the built-in h4 header (when parent already renders one) */
+  hideHeader?: boolean;
 }
 
 interface ChartDataPoint {
@@ -125,6 +127,7 @@ export function TFStepResponseChart({
   beforeStepResponse,
   overshootAfterOverride,
   overshootBeforeOverride,
+  hideHeader,
 }: TFStepResponseChartProps) {
   const [selectedAxis, setSelectedAxis] = useState<AxisSelection>('all');
 
@@ -203,7 +206,9 @@ export function TFStepResponseChart({
   return (
     <div className="tf-step-response-chart">
       <div className="tf-step-response-header">
-        <h4>{isComparison ? 'Step Response Comparison' : 'Synthetic Step Response'}</h4>
+        {!hideHeader && (
+          <h4>{isComparison ? 'Step Response Comparison' : 'Synthetic Step Response'}</h4>
+        )}
         {isComparison && (
           <span
             className={`tf-overshoot-delta-pill ${improved ? 'improved' : regressed ? 'regressed' : 'neutral'}`}

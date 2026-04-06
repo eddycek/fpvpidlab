@@ -103,7 +103,8 @@ export interface AnalysisWarning {
     | 'verification_dissimilar_segments'
     | 'verification_dissimilar_steps'
     | 'verification_dissimilar_activity'
-    | 'verification_rejected';
+    | 'verification_rejected'
+    | 'flat_step_response';
   message: string;
   severity: 'info' | 'warning' | 'error';
 }
