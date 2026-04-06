@@ -289,13 +289,14 @@ export function registerProfileHandlers(deps: HandlerDependencies): void {
       // Clear snapshot refs on profile
       await deps.profileManager.clearSnapshotRefs(id);
 
-      // Notify UI
+      // Notify UI — only send profile/session events if wiping the active profile
+      const isCurrentProfile = deps.profileManager.getCurrentProfileId() === id;
       const window = getMainWindow();
-      if (window) {
+      if (isCurrentProfile && window) {
         const updatedProfile = await deps.profileManager.getProfile(id);
         sendProfileChanged(window, updatedProfile);
+        sendTuningSessionChanged(null);
       }
-      sendTuningSessionChanged(null);
 
       logger.info(`Profile ${id} wiped successfully`);
       return createResponse<void>(undefined);
