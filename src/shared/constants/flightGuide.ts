@@ -27,7 +27,7 @@ export const FILTER_FLIGHT_PHASES: FlightPhase[] = [
     title: 'Throttle Sweep',
     duration: '2–3 times',
     description:
-      'Slowly push throttle from hover to full power while counting to 8, then smoothly reduce back. Repeat 2–3 times. This reveals how noise shifts with motor RPM — essential for dynamic filter tuning.',
+      'Slowly push throttle from hover to full power while counting to 8, then smoothly reduce back while counting to 8. Repeat 2–3 times. This reveals how noise shifts with motor RPM — essential for dynamic filter tuning.',
   },
   {
     title: 'Final Hover',
@@ -152,6 +152,7 @@ export const VERIFICATION_FLIGHT_PHASES: FlightPhase[] = [
 ];
 
 export const VERIFICATION_FLIGHT_TIPS: string[] = [
+  'Check props for damage before flying — changed props between flights invalidate the comparison',
   'Hover + throttle sweeps — same as a filter test flight',
   'Stay at the same altitude (2–5 meters) for comparable data',
   'Keep movements gentle — this is a noise measurement, not acro',
@@ -187,6 +188,7 @@ export const FILTER_VERIFICATION_FLIGHT_PHASES: FlightPhase[] = [
 ];
 
 export const FILTER_VERIFICATION_FLIGHT_TIPS: string[] = [
+  'Check props for damage before flying — changed props between flights invalidate the comparison',
   'Fly the same throttle sweep pattern as the original filter flight',
   'Stay at the same altitude (2–5 meters) for comparable data',
   'Keep movements gentle — this is a noise measurement, not acro',
@@ -228,6 +230,7 @@ export const PID_VERIFICATION_FLIGHT_PHASES: FlightPhase[] = [
 ];
 
 export const PID_VERIFICATION_FLIGHT_TIPS: string[] = [
+  'Check props for damage before flying — changed props between flights invalidate the comparison',
   'Fly the same stick snap pattern as the original PID flight',
   'Mix half-stick and full-stick snaps for consistent comparison',
   'Stay at 2–5 meters altitude',
@@ -253,6 +256,7 @@ export const FLASH_VERIFICATION_FLIGHT_PHASES: FlightPhase[] = [
 ];
 
 export const FLASH_VERIFICATION_FLIGHT_TIPS: string[] = [
+  'Check props for damage before flying — changed props between flights invalidate the comparison',
   'Fly the same style as your original Flash Tune flight for comparable data',
   'Any flight works — freestyle, racing, cruising',
   'Longer flights give more accurate comparison data',
