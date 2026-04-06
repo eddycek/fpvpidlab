@@ -19,6 +19,10 @@ vi.mock('../hooks/useToast', () => ({
 
 // Mock window.betaflight API
 global.window.betaflight = {
+  // FC State Cache
+  getFCState: vi.fn().mockResolvedValue(null),
+  onFCStateChanged: vi.fn(() => () => {}),
+
   // App
   isDemoMode: vi.fn().mockResolvedValue(false),
   resetDemo: vi.fn().mockResolvedValue(undefined),

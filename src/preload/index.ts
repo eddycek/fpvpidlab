@@ -49,8 +49,26 @@ import type {
 } from '@shared/types/tuning-history.types';
 import type { TelemetrySettings } from '@shared/types/telemetry.types';
 import type { LicenseInfo } from '@shared/types/license.types';
+import type { FCState } from '@shared/types/fcState.types';
 
 const betaflightAPI: BetaflightAPI = {
+  // FC State Cache
+  async getFCState(): Promise<FCState | null> {
+    const response = await ipcRenderer.invoke(IPCChannel.FC_GET_STATE);
+    if (!response.success) {
+      return null;
+    }
+    return response.data;
+  },
+
+  onFCStateChanged(callback: (state: FCState) => void): () => void {
+    const listener = (_: any, state: FCState) => callback(state);
+    ipcRenderer.on(IPCChannel.EVENT_FC_STATE_CHANGED, listener);
+    return () => {
+      ipcRenderer.removeListener(IPCChannel.EVENT_FC_STATE_CHANGED, listener);
+    };
+  },
+
   // App
   async isDemoMode(): Promise<boolean> {
     const response = await ipcRenderer.invoke(IPCChannel.APP_IS_DEMO_MODE);

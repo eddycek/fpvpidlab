@@ -20,6 +20,12 @@ import { createResponse } from './types';
 export function registerBlackboxHandlers(deps: HandlerDependencies): void {
   ipcMain.handle(IPCChannel.BLACKBOX_GET_INFO, async () => {
     try {
+      // Cache-first: return cached blackbox info if available
+      const cached = deps.fcStateCache?.getSlice('blackboxInfo');
+      if (cached) {
+        return createResponse<BlackboxInfo>(cached);
+      }
+
       if (!deps.mspClient) {
         return createResponse<BlackboxInfo>(undefined, 'MSP client not initialized');
       }
@@ -156,6 +162,8 @@ export function registerBlackboxHandlers(deps: HandlerDependencies): void {
         }
       } finally {
         deps.isDownloadingBlackbox = false;
+        // Invalidate cached blackbox info (storage sizes may have changed)
+        await deps.fcStateCache?.invalidate(['blackboxInfo']);
       }
     } catch (error) {
       logger.error('Failed to download Blackbox log:', error);
@@ -266,6 +274,9 @@ export function registerBlackboxHandlers(deps: HandlerDependencies): void {
         await deps.mspClient.eraseBlackboxFlash();
         logger.info('Blackbox flash erased successfully');
       }
+
+      // Invalidate cached blackbox info (storage sizes changed)
+      await deps.fcStateCache?.invalidate(['blackboxInfo']);
 
       return createResponse<void>(undefined);
     } catch (error) {

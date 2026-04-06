@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ConnectionPanel } from './components/ConnectionPanel/ConnectionPanel';
 import { FCInfoDisplay } from './components/FCInfo/FCInfoDisplay';
 import { BlackboxStatus } from './components/BlackboxStatus/BlackboxStatus';
@@ -20,6 +20,7 @@ import { TelemetrySettingsModal } from './components/TelemetrySettings/Telemetry
 import { LicenseSettingsModal } from './components/LicenseSettings/LicenseSettingsModal';
 import { UpdateNotification } from './components/UpdateNotification/UpdateNotification';
 import { useLicense } from './hooks/useLicense';
+import { useFCState } from './hooks/useFCState';
 import { computeBBSettingsStatus } from './utils/bbSettingsUtils';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { ToastProvider } from './contexts/ToastContext';
@@ -30,8 +31,7 @@ import { useTuningHistory } from './hooks/useTuningHistory';
 import { useToast } from './hooks/useToast';
 import { useDemoMode } from './hooks/useDemoMode';
 import { markIntentionalDisconnect } from './hooks/useConnection';
-import type { FCInfo, ConnectionStatus } from '@shared/types/common.types';
-import type { BlackboxSettings, BlackboxStorageType } from '@shared/types/blackbox.types';
+import type { FCInfo } from '@shared/types/common.types';
 import type { ProfileCreationInput } from '@shared/types/profile.types';
 import type {
   TuningMode,
@@ -67,20 +67,13 @@ function AppContent() {
   const [showStartTuningModal, setShowStartTuningModal] = useState(false);
   const [showFlightGuideMode, setShowFlightGuideMode] = useState<FlightGuideMode | null>(null);
   const [erasedForPhase, setErasedForPhase] = useState<string | null>(null);
-  const [flashUsedSize, setFlashUsedSize] = useState<number | null>(null);
   const [erasing, setErasing] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState(0);
-  const [bbSettings, setBbSettings] = useState<BlackboxSettings | null>(null);
   const [fixingSettings, setFixingSettings] = useState(false);
   const [showBannerFixConfirm, setShowBannerFixConfirm] = useState(false);
-  const [fcVersion, setFcVersion] = useState('');
-  const [connectedFcInfo, setConnectedFcInfo] = useState<FCInfo | null>(null);
   const [analyzingVerification, setAnalyzingVerification] = useState(false);
-  const [bbRefreshKey, setBbRefreshKey] = useState(0);
   const [preparingSession, setPreparingSession] = useState(false);
-  const [storageType, setStorageType] = useState<BlackboxStorageType>('flash');
-  const storageTypeRef = useRef<BlackboxStorageType>('flash');
   const [verificationPickerLogId, setVerificationPickerLogId] = useState<string | null>(null);
   const [showLogPicker, setShowLogPicker] = useState(false);
   const [isReanalyze, setIsReanalyze] = useState(false);
@@ -91,6 +84,7 @@ function AppContent() {
   const tuningHistory = useTuningHistory();
   const toast = useToast();
   const { isDemoMode } = useDemoMode();
+  const fcState = useFCState();
   const [resettingDemo, setResettingDemo] = useState(false);
   const [showTelemetrySettings, setShowTelemetrySettings] = useState(false);
   const [showLicenseSettings, setShowLicenseSettings] = useState(false);
@@ -116,56 +110,21 @@ function AppContent() {
       .catch(() => setAvailableLogIds(new Set()));
   };
 
-  const refreshBlackboxInfo = () => {
-    window.betaflight
-      .getBlackboxInfo()
-      .then((info) => {
-        // Guard: flash→none is transient after erase (flash storage only). Use ref for latest value
-        // (avoids stale closure in useEffect subscriptions).
-        if (info.storageType === 'none' && storageTypeRef.current === 'flash') {
-          setFlashUsedSize(0);
-          return;
-        }
-        setFlashUsedSize(info.usedSize);
-        setStorageType(info.storageType);
-        storageTypeRef.current = info.storageType;
-        // Clear erased state when flash has new data (post-flight reconnect)
-        if (info.storageType === 'flash' && info.usedSize > 0) {
-          setErasedForPhase(null);
-        }
-      })
-      .catch(() => setFlashUsedSize(null));
-  };
+  // Clear erased state when flash has new data (post-flight reconnect via cache push)
+  const flashUsedSize = fcState.blackboxInfo?.usedSize ?? null;
+  const storageType = fcState.blackboxInfo?.storageType ?? 'flash';
+  useEffect(() => {
+    if (storageType === 'flash' && flashUsedSize != null && flashUsedSize > 0) {
+      setErasedForPhase(null);
+    }
+  }, [flashUsedSize, storageType]);
 
   useEffect(() => {
     refreshAvailableLogIds();
-    return window.betaflight.onProfileChanged((profile) => {
+    return window.betaflight.onProfileChanged(() => {
       refreshAvailableLogIds();
-      // Re-fetch BB settings when profile becomes available (fixes startup race
-      // where connection event fires before profile is set)
-      if (profile) {
-        window.betaflight
-          .getBlackboxSettings()
-          .then((s) => setBbSettings(s))
-          .catch(() => setBbSettings(null));
-      }
     });
   }, []);
-
-  const fetchBBSettings = (connStatus: ConnectionStatus) => {
-    if (connStatus.connected) {
-      setFcVersion(connStatus.fcInfo?.version || '');
-      setConnectedFcInfo(connStatus.fcInfo ?? null);
-      window.betaflight
-        .getBlackboxSettings()
-        .then((s) => setBbSettings(s))
-        .catch(() => setBbSettings(null));
-    } else {
-      setBbSettings(null);
-      setFcVersion('');
-      setConnectedFcInfo(null);
-    }
-  };
 
   useEffect(() => {
     // Hydrate connection state on mount (survives HMR and late renders)
@@ -173,22 +132,12 @@ function AppContent() {
       .getConnectionStatus()
       .then((status) => {
         setIsConnected(status.connected);
-        fetchBBSettings(status);
-        if (status.connected) {
-          refreshBlackboxInfo();
-        }
       })
       .catch(() => {});
 
     // Listen for connection changes
     const unsubscribeConnection = window.betaflight.onConnectionChanged((status) => {
       setIsConnected(status.connected);
-      fetchBBSettings(status);
-      if (status.connected) {
-        refreshBlackboxInfo();
-      } else {
-        setFlashUsedSize(null);
-      }
     });
 
     // Listen for new FC detection
@@ -241,9 +190,6 @@ function AppContent() {
           await window.betaflight.eraseBlackboxFlash();
           const phaseForErase = tuning.session?.phase ?? null;
           setErasedForPhase(phaseForErase);
-          setFlashUsedSize(0);
-          // Refresh BB panel — eraseBlackboxFlash() already waits for storage recovery
-          setBbRefreshKey((k) => k + 1);
 
           // Persist eraseCompleted so the state survives MSC disconnect/reconnect.
           // For flash this is redundant (flashUsedSize===0 works), but it's harmless
@@ -276,7 +222,6 @@ function AppContent() {
           await tuning.updatePhase(tuning.session!.phase, { eraseSkipped: true });
           toast.info('Erase skipped — fly your test flight, then reconnect.');
         }
-        setBbRefreshKey((k) => k + 1);
         break;
       }
       case 'import_log':
@@ -398,8 +343,6 @@ function AppContent() {
           // Reuse verification log from completed session as analysis flight for new session
           const reuseLogId = tuning.session?.verificationLogId ?? undefined;
           await tuning.startSession(previousType, previousProfile, reuseLogId);
-          // Re-fetch BB info (may be stale from initial connection during CLI mode)
-          refreshBlackboxInfo();
         } catch (err) {
           toast.error(err instanceof Error ? err.message : 'Failed to start new cycle');
         }
@@ -436,9 +379,6 @@ function AppContent() {
           await tuning.updatePhase(verPhase);
           await window.betaflight.eraseBlackboxFlash();
           setErasedForPhase(verPhase);
-          setFlashUsedSize(0);
-          // Refresh BB panel — eraseBlackboxFlash() already waits for storage recovery
-          setBbRefreshKey((k) => k + 1);
           // Persist eraseCompleted for SD card MSC disconnect survival
           await tuning.updatePhase(verPhase, { eraseCompleted: true });
           toast.success(storageType === 'sdcard' ? 'Logs erased!' : 'Flash erased!');
@@ -631,7 +571,6 @@ function AppContent() {
       setResettingDemo(true);
       await window.betaflight.resetDemo();
       setErasedForPhase(null);
-      setBbRefreshKey((k) => k + 1);
       await tuningHistory.reload();
       toast.success('Demo reset — starting from cycle 0');
     } catch (err) {
@@ -667,7 +606,7 @@ function AppContent() {
     }
   };
 
-  const bbStatus = computeBBSettingsStatus(bbSettings, fcVersion);
+  const bbStatus = computeBBSettingsStatus(fcState.blackboxSettings, fcState.info?.version ?? '');
 
   const handleBannerFixSettings = async () => {
     setShowBannerFixConfirm(false);
@@ -817,13 +756,13 @@ function AppContent() {
                   isDemoMode={isDemoMode}
                   hasDownloadedLogs={availableLogIds.size > 0}
                   pidProfileLabel={
-                    (tuning.session.bfPidProfileIndex ?? connectedFcInfo?.pidProfileIndex) != null
+                    (tuning.session.bfPidProfileIndex ?? fcState.info?.pidProfileIndex) != null
                       ? currentProfile?.bfPidProfileLabels?.[
-                          tuning.session.bfPidProfileIndex ?? connectedFcInfo?.pidProfileIndex ?? 0
+                          tuning.session.bfPidProfileIndex ?? fcState.info?.pidProfileIndex ?? 0
                         ]
                       : undefined
                   }
-                  fcPidProfileIndex={connectedFcInfo?.pidProfileIndex}
+                  fcPidProfileIndex={fcState.info?.pidProfileIndex}
                   onFixSettings={() => setShowBannerFixConfirm(true)}
                   onAction={handleTuningAction}
                   onViewGuide={(mode) => setShowFlightGuideMode(mode)}
@@ -850,11 +789,7 @@ function AppContent() {
             )}
             {isConnected && <FCInfoDisplay />}
             {isConnected && (
-              <BlackboxStatus
-                onAnalyze={handleAnalyze}
-                readonly={!!tuning.session}
-                refreshKey={bbRefreshKey}
-              />
+              <BlackboxStatus onAnalyze={handleAnalyze} readonly={!!tuning.session} />
             )}
             {isConnected && currentProfile && <SnapshotManager />}
             {isConnected && currentProfile && (
@@ -887,10 +822,6 @@ function AppContent() {
             try {
               setErasedForPhase(null);
               await tuning.startSession(tuningType, bfPidProfileIndex);
-              // Re-fetch BB info — the initial fetch during onConnectionChanged may have
-              // returned stale data (getBlackboxInfo() during CLI mode returns usedSize=0).
-              // Session start runs AFTER baseline creation, so CLI mode has exited.
-              refreshBlackboxInfo();
             } catch (err) {
               toast.error(err instanceof Error ? err.message : 'Failed to start tuning session');
             } finally {
@@ -898,7 +829,7 @@ function AppContent() {
             }
           }}
           onCancel={() => setShowStartTuningModal(false)}
-          fcInfo={connectedFcInfo ?? undefined}
+          fcInfo={fcState.info ?? undefined}
           defaultPidProfileIndex={currentProfile?.bfPidProfileIndex}
           pidProfileLabels={currentProfile?.bfPidProfileLabels}
           tuningHistory={tuningHistory.history}

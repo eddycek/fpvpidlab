@@ -106,6 +106,7 @@ describe('diagnosticHandlers', () => {
         emit: vi.fn(),
         getEvents: vi.fn().mockReturnValue([]),
       } as any,
+      fcStateCache: null,
     };
 
     registerDiagnosticHandlers(deps);

@@ -2,6 +2,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { FileStorage } from './FileStorage';
 import type { MSPClient } from '../msp/MSPClient';
 import type { ProfileManager } from './ProfileManager';
+import type { FCStateCache } from '../cache/FCStateCache';
 import type { ConfigurationSnapshot, SnapshotMetadata } from '@shared/types/common.types';
 import { SnapshotError } from '../utils/errors';
 import { logger } from '../utils/logger';
@@ -12,10 +13,15 @@ export class SnapshotManager {
   private mspClient: MSPClient;
   private profileManager: ProfileManager | null = null;
   private baselineId: string | null = null;
+  private fcStateCache: FCStateCache | null = null;
 
   constructor(storagePath: string, mspClient: MSPClient) {
     this.storage = new FileStorage(storagePath);
     this.mspClient = mspClient;
+  }
+
+  setFCStateCache(cache: FCStateCache): void {
+    this.fcStateCache = cache;
   }
 
   setProfileManager(profileManager: ProfileManager): void {
@@ -41,19 +47,41 @@ export class SnapshotManager {
 
       // Read MSP configuration BEFORE exportCLIDiff (which enters CLI → reboots FC).
       // These values may not appear in CLI diff (e.g. PIDs when simplified_pids_mode is ON).
+      // Prefer cached values (fast, no MSP round-trips) with MSP fallback.
       let pidConfig: import('@shared/types/pid.types').PIDConfiguration | undefined;
       let filterConfig: import('@shared/types/analysis.types').CurrentFilterSettings | undefined;
       let feedforwardConfig: import('@shared/types/pid.types').FeedforwardConfiguration | undefined;
       let ratesConfig: import('@shared/types/pid.types').RatesConfiguration | undefined;
-      try {
-        [pidConfig, filterConfig, feedforwardConfig, ratesConfig] = await Promise.all([
-          this.mspClient.getPIDConfiguration(),
-          this.mspClient.getFilterConfiguration(),
-          this.mspClient.getFeedforwardConfiguration(),
-          this.mspClient.getRatesConfiguration(),
-        ]);
-      } catch (err) {
-        logger.warn('Snapshot: MSP config reads failed (non-fatal, CLI diff still captured):', err);
+
+      if (this.fcStateCache) {
+        const cached = this.fcStateCache.getState();
+        if (cached.pidConfig) pidConfig = cached.pidConfig;
+        if (cached.filterConfig) filterConfig = cached.filterConfig;
+        if (cached.feedforwardConfig) feedforwardConfig = cached.feedforwardConfig;
+        if (cached.ratesConfig) ratesConfig = cached.ratesConfig;
+      }
+
+      // Fall back to MSP reads for any slices not in cache
+      if (!pidConfig || !filterConfig || !feedforwardConfig || !ratesConfig) {
+        try {
+          const [pid, filter, ff, rates] = await Promise.all([
+            pidConfig ? Promise.resolve(pidConfig) : this.mspClient.getPIDConfiguration(),
+            filterConfig ? Promise.resolve(filterConfig) : this.mspClient.getFilterConfiguration(),
+            feedforwardConfig
+              ? Promise.resolve(feedforwardConfig)
+              : this.mspClient.getFeedforwardConfiguration(),
+            ratesConfig ? Promise.resolve(ratesConfig) : this.mspClient.getRatesConfiguration(),
+          ]);
+          pidConfig = pid;
+          filterConfig = filter;
+          feedforwardConfig = ff;
+          ratesConfig = rates;
+        } catch (err) {
+          logger.warn(
+            'Snapshot: MSP config reads failed (non-fatal, CLI diff still captured):',
+            err
+          );
+        }
       }
 
       // Export configuration (enters CLI → reboots FC)

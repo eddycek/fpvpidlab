@@ -281,6 +281,14 @@ export class MockMSPClient extends EventEmitter {
     return this._connected;
   }
 
+  /**
+   * Whether the FC is currently in CLI mode.
+   * Delegates to the mock connection.
+   */
+  isInCLI(): boolean {
+    return this.connection.isInCLI();
+  }
+
   getConnectionStatus(): ConnectionStatus {
     return {
       connected: this._connected,

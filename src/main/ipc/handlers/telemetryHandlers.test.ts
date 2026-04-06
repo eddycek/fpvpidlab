@@ -44,6 +44,7 @@ describe('telemetryHandlers', () => {
       telemetryManager: mockTelemetryManager,
       licenseManager: null,
       eventCollector: null,
+      fcStateCache: null,
     };
 
     registerTelemetryHandlers(deps);

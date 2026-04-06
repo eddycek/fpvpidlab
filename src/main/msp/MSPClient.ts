@@ -84,6 +84,14 @@ export class MSPClient extends EventEmitter {
     return this._lastStorageType;
   }
 
+  /**
+   * Whether the FC is currently in CLI mode.
+   * Public accessor so FCStateCache can check without accessing the private connection.
+   */
+  isInCLI(): boolean {
+    return this.connection.isInCLI();
+  }
+
   async listPorts(): Promise<PortInfo[]> {
     try {
       const ports = await SerialPort.list();

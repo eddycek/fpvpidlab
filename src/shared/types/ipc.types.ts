@@ -41,6 +41,7 @@ import type {
   DiagnosticReportResult,
   DiagnosticPatchInput,
 } from './diagnostic.types';
+import type { FCState } from './fcState.types';
 
 /** Progress during snapshot restore */
 export interface SnapshotRestoreProgress {
@@ -103,6 +104,9 @@ export enum IPCChannel {
   CONNECTION_CONNECT = 'connection:connect',
   CONNECTION_DISCONNECT = 'connection:disconnect',
   CONNECTION_GET_STATUS = 'connection:get-status',
+
+  // FC State Cache
+  FC_GET_STATE = 'fc:get-state',
 
   // FC Info
   FC_GET_INFO = 'fc:get-info',
@@ -191,6 +195,7 @@ export enum IPCChannel {
   LICENSE_VALIDATE = 'license:validate',
 
   // Events (main -> renderer)
+  EVENT_FC_STATE_CHANGED = 'event:fc-state-changed',
   EVENT_CONNECTION_CHANGED = 'event:connection-changed',
   EVENT_PROFILE_CHANGED = 'event:profile-changed',
   EVENT_NEW_FC_DETECTED = 'event:new-fc-detected',
@@ -215,6 +220,10 @@ export interface IPCResponse<T = any> {
 }
 
 export interface BetaflightAPI {
+  // FC State Cache
+  getFCState(): Promise<FCState | null>;
+  onFCStateChanged(callback: (state: FCState) => void): () => void;
+
   // App
   isDemoMode(): Promise<boolean>;
   resetDemo(): Promise<void>;

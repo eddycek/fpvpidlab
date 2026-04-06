@@ -1,6 +1,7 @@
 import { IPCResponse } from '@shared/types/ipc.types';
 import type { MSCManager } from '../../msc/MSCManager';
 import type { TelemetryEventCollector } from '../../telemetry/TelemetryEventCollector';
+import type { FCStateCache } from '../../cache/FCStateCache';
 
 /**
  * Shared dependencies injected into handler modules.
@@ -26,6 +27,8 @@ export interface HandlerDependencies {
   licenseManager: any;
   /** Telemetry event collector for structured event logging */
   eventCollector: TelemetryEventCollector | null;
+  /** Cached FC state for cache-first reads */
+  fcStateCache: FCStateCache | null;
 }
 
 export function createResponse<T>(data: T | undefined, error?: string): IPCResponse<T> {

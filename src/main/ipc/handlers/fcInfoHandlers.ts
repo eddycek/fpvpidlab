@@ -19,6 +19,12 @@ export function registerFCInfoHandlers(deps: HandlerDependencies): void {
   // FC_GET_INFO
   ipcMain.handle(IPCChannel.FC_GET_INFO, async (): Promise<IPCResponse<FCInfo>> => {
     try {
+      // Cache-first: return cached FC info if available
+      const cached = deps.fcStateCache?.getSlice('info');
+      if (cached) {
+        return createResponse<FCInfo>(cached);
+      }
+
       if (!deps.mspClient) {
         throw new Error('MSP client not initialized');
       }
@@ -55,6 +61,12 @@ export function registerFCInfoHandlers(deps: HandlerDependencies): void {
     IPCChannel.FC_GET_BLACKBOX_SETTINGS,
     async (): Promise<IPCResponse<BlackboxSettings>> => {
       try {
+        // Cache-first: return cached blackbox settings if available
+        const cached = deps.fcStateCache?.getSlice('blackboxSettings');
+        if (cached) {
+          return createResponse<BlackboxSettings>(cached);
+        }
+
         if (!deps.profileManager || !deps.snapshotManager) {
           throw new Error('Profile/Snapshot manager not initialized');
         }
@@ -157,6 +169,17 @@ export function registerFCInfoHandlers(deps: HandlerDependencies): void {
         if (!deps.mspClient.isConnected()) throw new Error('Flight controller not connected');
 
         await deps.mspClient.selectPidProfile(index);
+
+        // PID profile switch changes almost all config — invalidate relevant slices
+        await deps.fcStateCache?.invalidate([
+          'pidConfig',
+          'filterConfig',
+          'feedforwardConfig',
+          'ratesConfig',
+          'tuningConfig',
+          'statusEx',
+        ]);
+
         return createResponse<void>(undefined);
       } catch (error) {
         logger.error('Failed to select PID profile:', error);

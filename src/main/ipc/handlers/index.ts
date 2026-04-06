@@ -6,7 +6,10 @@
  * tests) don't need any changes beyond updating import paths.
  */
 
+import { ipcMain } from 'electron';
+import { IPCChannel } from '@shared/types/ipc.types';
 import type { HandlerDependencies } from './types';
+import { createResponse } from './types';
 import { MSCManager } from '../../msc/MSCManager';
 
 import { registerConnectionHandlers } from './connectionHandlers';
@@ -31,6 +34,7 @@ export {
   sendNewFCDetected,
   sendPIDChanged,
   sendTuningSessionChanged,
+  sendFCStateChanged,
   sendLicenseChanged,
 } from './events';
 
@@ -52,6 +56,7 @@ const deps: HandlerDependencies = {
   telemetryManager: null,
   licenseManager: null,
   eventCollector: null,
+  fcStateCache: null,
 };
 
 // ── Setter functions (called from src/main/index.ts) ─────────────────
@@ -96,6 +101,10 @@ export function setEventCollector(collector: any): void {
   deps.eventCollector = collector;
 }
 
+export function setFCStateCache(cache: HandlerDependencies['fcStateCache']): void {
+  deps.fcStateCache = cache;
+}
+
 /** Returns true if a settings fix/reset was applied and a clean snapshot is needed on reconnect. */
 export function consumePendingSettingsSnapshot(): boolean {
   if (deps.pendingSettingsSnapshot) {
@@ -107,6 +116,11 @@ export function consumePendingSettingsSnapshot(): boolean {
 
 // ── Register all IPC handlers ────────────────────────────────────────
 export function registerIPCHandlers(): void {
+  // FC State Cache (single handler, registered inline)
+  ipcMain.handle(IPCChannel.FC_GET_STATE, () =>
+    createResponse(deps.fcStateCache?.getState() ?? null)
+  );
+
   registerConnectionHandlers(deps);
   registerFCInfoHandlers(deps);
   registerSnapshotHandlers(deps);

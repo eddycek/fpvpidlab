@@ -18,13 +18,16 @@ import {
   setTelemetryManager,
   setLicenseManager,
   setEventCollector,
+  setFCStateCache,
   setDemoMode,
   sendConnectionChanged,
   sendProfileChanged,
   sendNewFCDetected,
   sendTuningSessionChanged,
+  sendFCStateChanged,
   consumePendingSettingsSnapshot,
 } from './ipc/handlers';
+import { FCStateCache } from './cache/FCStateCache';
 import { parseProfileNamesFromDiff } from './ipc/handlers/types';
 import { TelemetryManager } from './telemetry/TelemetryManager';
 import { TelemetryEventCollector } from './telemetry/TelemetryEventCollector';
@@ -58,6 +61,7 @@ let tuningHistoryManager: TuningHistoryManager;
 let telemetryManager: TelemetryManager;
 let eventCollector: TelemetryEventCollector;
 let licenseManager: LicenseManager;
+let fcStateCache: FCStateCache;
 
 async function initialize(): Promise<void> {
   // Create MSP client (real or mock depending on demo mode)
@@ -132,6 +136,11 @@ async function initialize(): Promise<void> {
   licenseManager.setInstallationIdProvider(() => telemetryManager.getSettings().installationId);
   await licenseManager.initialize();
 
+  // Create FC state cache
+  fcStateCache = new FCStateCache(mspClient);
+  fcStateCache.setDependencies(snapshotManager, profileManager);
+  snapshotManager.setFCStateCache(fcStateCache);
+
   // Set up IPC handlers
   setMSPClient(mspClient);
   setSnapshotManager(snapshotManager);
@@ -142,6 +151,7 @@ async function initialize(): Promise<void> {
   setTelemetryManager(telemetryManager);
   setEventCollector(eventCollector);
   setLicenseManager(licenseManager);
+  setFCStateCache(fcStateCache);
   setDemoMode(isDemoMode);
   registerIPCHandlers();
 
@@ -159,6 +169,14 @@ async function initialize(): Promise<void> {
     const port = parseInt(process.env.DEBUG_SERVER_PORT || '9300', 10);
     startDebugServer(port);
   }
+
+  // Forward FC state cache changes to the renderer
+  fcStateCache.on('state-changed', (state) => {
+    const window = getMainWindow();
+    if (window) {
+      sendFCStateChanged(window, state);
+    }
+  });
 
   // Listen for connection changes.
   // For connect events: suppress the initial emit from MSPClient.connect() —
@@ -464,22 +482,13 @@ async function initialize(): Promise<void> {
           logger.warn('Smart reconnect check failed (non-fatal):', err);
         }
 
-        // Read all tuning-relevant config from FC for logging and debug access.
-        // Runs after baseline/reconnect so it doesn't interfere with CLI mode.
-        // Note: getFeedforwardConfiguration() and getTuningConfig() both read
-        // MSP_PID_ADVANCED — must run sequentially (MSP responseQueue is keyed
-        // by command ID, concurrent same-command requests collide).
+        // Hydrate FC state cache — reads all MSP config and pushes to renderer
+        // via 'state-changed' event. Replaces individual MSP reads and the
+        // final connection re-emit (cache push gives renderer fresh state).
         try {
-          await Promise.all([
-            mspClient.getPIDConfiguration(),
-            mspClient.getFilterConfiguration(),
-            mspClient.getRatesConfiguration(),
-          ]);
-          // Sequential: both use MSP_PID_ADVANCED
-          await mspClient.getFeedforwardConfiguration();
-          await mspClient.getTuningConfig();
+          await fcStateCache.hydrate();
         } catch (e) {
-          logger.warn('Post-connect config read failed (non-fatal):', e);
+          logger.warn('Post-connect cache hydrate failed (non-fatal):', e);
         }
 
         // Final re-emit: ensure renderer has current connection + BB state.
@@ -511,6 +520,7 @@ async function initialize(): Promise<void> {
 
   // Handle unexpected disconnection (USB unplugged, etc.)
   mspClient.on('disconnected', () => {
+    fcStateCache.clear();
     const window = getMainWindow();
 
     // If FC is in MSC mode or rebooting after save, this disconnect is expected — don't clear profile
