@@ -1,6 +1,6 @@
 # Architecture Overview
 
-**Last Updated:** April 6, 2026 | **Phase 4 Complete, Phase 6 Complete** | **3099 unit tests, 144 files + 37 Playwright E2E tests**
+**Last Updated:** April 9, 2026 | **Phase 4 Complete, Phase 6 Complete** | **3105 unit tests, 145 files + 37 Playwright E2E tests**
 
 ---
 
@@ -845,7 +845,7 @@ Hardware error (FC timeout, USB disconnect)
 
 ## Testing Strategy
 
-**3099 unit tests across 144 files + 37 Playwright E2E tests**. See [TESTING.md](./TESTING.md) for complete inventory.
+**3105 unit tests across 145 files + 37 Playwright E2E tests**. See [TESTING.md](./TESTING.md) for complete inventory.
 
 | Area | Files | Tests |
 |------|-------|-------|

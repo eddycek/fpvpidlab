@@ -167,7 +167,7 @@ npm run test:ui           # Visual interface with DOM snapshots
 
 ## Test Inventory
 
-**Total: 3099 unit tests across 144 files + 37 Playwright E2E tests across 7 spec files** (last verified: April 6, 2026)
+**Total: 3105 unit tests across 145 files + 37 Playwright E2E tests across 7 spec files** (last verified: April 9, 2026)
 
 ### UI Components
 
@@ -207,6 +207,7 @@ npm run test:ui           # Visual interface with DOM snapshots
 | `TuningHistory/TuningCompletionSummary.test.tsx` | 27 | Completion summary with/without verification, noise chart, spectrogram comparison (Filter Tune), step response comparison (PID Tune), changes, PID metrics, actions, quality score badge with tier label, re-analyze button, mode-aware titles, smart suggestion buttons, convergence banner, iteration warning, previous session reference display |
 | `TuningHistory/TuningHistoryPanel.test.tsx` | 18 | History list, expand/collapse, detail view with duration/flights, empty/loading states, quality score badge with tier label, trend chart, re-analyze verification, mode-aware labels |
 | `TuningHistory/VerificationSessionModal.test.tsx` | 7 | Auto-analyze single session, multi-session picker, reverse order, cancel, error/parsing states |
+| `TuningHistory/VerificationQualityWarning.test.tsx` | 6 | Quality warning modal for fair/poor verification data, tier display, failing sub-scores, accept/reject callbacks, dialog role |
 | `TuningHistory/QualityTrendChart.test.tsx` | 7 | Trend chart rendering, minimum data threshold, null score handling, per-type colored lines, legend |
 | `TuningHistory/SpectrogramComparisonChart.test.tsx` | 5 | Side-by-side spectrogram comparison, before/after labels, empty states, compact data rendering |
 | `TuningHistory/StepResponseComparison.test.tsx` | 6 | Before/after step response metrics, per-axis comparison, delta indicators, empty states |

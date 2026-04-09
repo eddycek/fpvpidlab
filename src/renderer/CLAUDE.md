@@ -64,6 +64,7 @@ Completed tuning sessions archived with self-contained metrics for comparison.
 - **TuningHistoryPanel**: Dashboard section below SnapshotManager. Expandable cards per completed session
 - **QualityTrendChart**: Line chart showing flight quality score progression (minimum 2 data points)
 - **TuningSessionDetail**: Expanded view with mode-aware verification charts
+- **VerificationQualityWarning**: Modal shown when verification flight data quality is fair/poor. Displays tier, score, failing sub-scores, "Fly Again" / "Accept Anyway" buttons
 - **useTuningHistory hook**: Loads history for current profile, reloads on profile change and session dismissal
 
 ## Dashboard Layout
