@@ -209,6 +209,9 @@ export function startDebugServer(port: number = DEFAULT_PORT): void {
         case '/wait-connected':
           return await handlePost(req, res, () => handleWaitConnected(url));
 
+        case '/force-phase':
+          return await handlePost(req, res, () => handleForcePhase(url));
+
         default:
           res.statusCode = 404;
           return json(res, {
@@ -236,6 +239,7 @@ export function startDebugServer(port: number = DEFAULT_PORT): void {
               'POST /open-wizard?logId=X&mode=filter|pid',
               'POST /click?text=ButtonText|selector=.css-selector',
               'POST /wait-connected?timeout=30000',
+              'POST /force-phase?phase=X&key=val (bypass transition validation)',
             ],
           });
       }
@@ -885,6 +889,59 @@ async function handleUpdatePhase(url: URL) {
     `window.betaflight.updateTuningPhase('${phase}', ${dataJson})`
   );
   return result;
+}
+
+/**
+ * Force-set tuning session phase and arbitrary fields, bypassing transition validation.
+ * Debug-only — for testing UI states that are hard to reach via normal workflow.
+ *
+ * Usage: POST /force-phase?phase=pid_verification_pending&pidLogId=abc&verificationLogId=def
+ * All query params except 'phase' are merged into the session as extra data.
+ */
+async function handleForcePhase(url: URL) {
+  if (!deps) return { error: 'Dependencies not initialized' };
+  const { tuningSessionManager, profileManager } = deps;
+  const currentProfile = (await profileManager?.getCurrentProfile?.()) ?? null;
+  if (!currentProfile) return { error: 'No active profile' };
+
+  const phase = url.searchParams.get('phase');
+  if (!phase) return { error: 'Missing phase parameter' };
+
+  const session = await tuningSessionManager.getSession(currentProfile.id);
+  if (!session) return { error: 'No active tuning session' };
+
+  // Collect all extra params as session data
+  const extraData: Record<string, any> = {};
+  for (const [key, val] of url.searchParams.entries()) {
+    if (key === 'phase') continue;
+    // Auto-convert booleans
+    if (val === 'true' || val === 'false') {
+      extraData[key] = val === 'true';
+    } else {
+      extraData[key] = val;
+    }
+  }
+
+  // Direct write — bypass VALID_TRANSITIONS check
+  const updated = {
+    ...session,
+    ...extraData,
+    phase,
+    updatedAt: new Date().toISOString(),
+  };
+
+  const sessionDir = join(app.getPath('userData'), 'data', 'tuning-sessions');
+  const filePath = join(sessionDir, `${currentProfile.id}.json`);
+  await fsPromises.writeFile(filePath, JSON.stringify(updated, null, 2), 'utf-8');
+
+  // Notify renderer of state change
+  const win = getMainWindow();
+  if (win) {
+    win.webContents.send('tuning-session-changed', updated);
+  }
+
+  logger.info(`[DEBUG] Force-set phase to '${phase}' for profile ${currentProfile.id}`);
+  return updated;
 }
 
 async function handleApply(url: URL) {
