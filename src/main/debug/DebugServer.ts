@@ -930,7 +930,7 @@ async function handleForcePhase(url: URL) {
     updatedAt: new Date().toISOString(),
   };
 
-  const sessionDir = join(app.getPath('userData'), 'data', 'tuning-sessions');
+  const sessionDir = join(app.getPath('userData'), 'data', 'tuning');
   const filePath = join(sessionDir, `${currentProfile.id}.json`);
   await fsPromises.writeFile(filePath, JSON.stringify(updated, null, 2), 'utf-8');
 
