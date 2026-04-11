@@ -171,7 +171,12 @@ export function registerSnapshotHandlers(deps: HandlerDependencies): void {
         sendProgress({ stage: 'backup', message: 'Backup complete', percent: 20 });
 
         // Stage 2: Enter CLI and send set commands
+        // After backup snapshot, exportCLIDiff rebooted the FC and reconnected.
+        // Smart reconnect + FC state cache hydration fire concurrently and may
+        // call sendCommand() which races with enterCLI() for the cliMode flag.
+        // Wait for hydration to settle before entering CLI.
         sendProgress({ stage: 'cli', message: 'Entering CLI mode...', percent: 25 });
+        await new Promise((resolve) => setTimeout(resolve, 2000));
         await deps.mspClient.connection.enterCLI();
 
         const failedCommands: string[] = [];
