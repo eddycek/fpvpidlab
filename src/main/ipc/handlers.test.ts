@@ -126,6 +126,8 @@ function createMockMSPClient(connected = true) {
       yaw: { P: 45, I: 80, D: 0 },
     }),
     setPIDConfiguration: vi.fn().mockResolvedValue(undefined),
+    selectPidProfile: vi.fn().mockResolvedValue(undefined),
+    saveToEEPROM: vi.fn().mockResolvedValue(undefined),
     getFilterConfiguration: vi.fn().mockResolvedValue({
       gyro_lpf1_static_hz: 250,
       gyro_lpf2_static_hz: 500,
@@ -1557,6 +1559,104 @@ describe('IPC Handlers', () => {
       expect(res.data.appliedCommands).toBe(0);
       expect(res.data.failedCommands).toBeDefined();
       expect(res.data.failedCommands.length).toBeGreaterThan(0);
+    });
+
+    it('dump-based restore sends defaults nosave before commands', async () => {
+      mockSnapshotMgr.loadSnapshot.mockResolvedValue({
+        id: 'snap-dump',
+        configuration: {
+          cliDiff: 'set gyro_lpf1_static_hz = 250',
+          cliDump: [
+            'defaults nosave',
+            '# master',
+            'set gyro_lpf1_static_hz = 250',
+            'set p_roll = 45',
+            'profile 1',
+            'set p_pitch = 47',
+            'save',
+          ].join('\n'),
+        },
+      });
+
+      const { event } = createMockEvent();
+      const res = await invokeWithEvent(IPCChannel.SNAPSHOT_RESTORE, event, 'snap-dump', false);
+      expect(res.success).toBe(true);
+
+      const cliCalls = mockMSP.connection.sendCLICommand.mock.calls.map((c: any[]) => c[0]);
+      expect(cliCalls[0]).toBe('defaults nosave');
+      expect(cliCalls).toContain('set gyro_lpf1_static_hz = 250');
+      expect(cliCalls).toContain('set p_roll = 45');
+      expect(cliCalls).toContain('profile 1');
+      expect(cliCalls).toContain('set p_pitch = 47');
+      // Identity and control commands should be filtered
+      expect(cliCalls).not.toContain('save');
+    });
+
+    it('dump-based restore filters identity commands from dump', async () => {
+      mockSnapshotMgr.loadSnapshot.mockResolvedValue({
+        id: 'snap-dump-id',
+        configuration: {
+          cliDiff: 'set gyro_lpf1_static_hz = 250',
+          cliDump: [
+            'defaults nosave',
+            'board_name SPEEDYBEEF405MINI',
+            'manufacturer_id SPBE',
+            'mcu_id 12345',
+            'signature abc',
+            'set gyro_lpf1_static_hz = 250',
+            'save',
+          ].join('\n'),
+        },
+      });
+
+      const { event } = createMockEvent();
+      const res = await invokeWithEvent(IPCChannel.SNAPSHOT_RESTORE, event, 'snap-dump-id', false);
+      expect(res.success).toBe(true);
+
+      const cliCalls = mockMSP.connection.sendCLICommand.mock.calls.map((c: any[]) => c[0]);
+      expect(cliCalls).not.toContain('board_name SPEEDYBEEF405MINI');
+      expect(cliCalls).not.toContain('manufacturer_id SPBE');
+      expect(cliCalls).not.toContain('signature abc');
+    });
+
+    it('falls back to diff-based restore when cliDump is missing', async () => {
+      mockSnapshotMgr.loadSnapshot.mockResolvedValue({
+        id: 'snap-legacy',
+        configuration: {
+          cliDiff: 'set gyro_lpf1_static_hz = 250\nset p_roll = 45',
+        },
+      });
+
+      const { event } = createMockEvent();
+      const res = await invokeWithEvent(IPCChannel.SNAPSHOT_RESTORE, event, 'snap-legacy', false);
+      expect(res.success).toBe(true);
+
+      const cliCalls = mockMSP.connection.sendCLICommand.mock.calls.map((c: any[]) => c[0]);
+      // Should NOT send defaults nosave for legacy diff-based restore
+      expect(cliCalls).not.toContain('defaults nosave');
+      expect(cliCalls).toContain('set gyro_lpf1_static_hz = 250');
+    });
+
+    it('dump-based restore still applies MSP PIDs', async () => {
+      mockSnapshotMgr.loadSnapshot.mockResolvedValue({
+        id: 'snap-dump-pid',
+        configuration: {
+          cliDiff: 'set gyro_lpf1_static_hz = 250',
+          cliDump: 'set gyro_lpf1_static_hz = 250\nset p_roll = 45',
+          pidConfig: {
+            roll: { P: 45, I: 80, D: 40 },
+            pitch: { P: 47, I: 84, D: 46 },
+            yaw: { P: 45, I: 80, D: 0 },
+          },
+        },
+        metadata: { bfPidProfileIndex: 1 },
+      });
+
+      const { event } = createMockEvent();
+      const res = await invokeWithEvent(IPCChannel.SNAPSHOT_RESTORE, event, 'snap-dump-pid', false);
+      expect(res.success).toBe(true);
+      expect(mockMSP.setPIDConfiguration).toHaveBeenCalled();
+      expect(mockMSP.selectPidProfile).toHaveBeenCalledWith(1);
     });
   });
 

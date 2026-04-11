@@ -55,6 +55,10 @@ describe('SnapshotManager', () => {
         apiVersion: { protocol: 0, major: 1, minor: 46 },
       }),
       exportCLIDiff: vi.fn().mockResolvedValue('# diff all'),
+      exportCLIDiffAndDump: vi.fn().mockResolvedValue({
+        cliDiff: '# diff all',
+        cliDump: 'defaults nosave\nset gyro_lpf1_static_hz = 250\nsave',
+      }),
     };
 
     mockProfileManager = {
@@ -135,6 +139,18 @@ describe('SnapshotManager', () => {
       await manager.deleteSnapshot('snap-baseline', true);
 
       expect(mockProfileManager.unlinkSnapshot).toHaveBeenCalledWith('profile-1', 'snap-baseline');
+    });
+  });
+
+  describe('createSnapshot', () => {
+    it('stores both cliDiff and cliDump from combined export', async () => {
+      const snapshot = await manager.createSnapshot('Test snapshot');
+
+      expect(mockMspClient.exportCLIDiffAndDump).toHaveBeenCalled();
+      expect(snapshot.configuration.cliDiff).toBe('# diff all');
+      expect(snapshot.configuration.cliDump).toBe(
+        'defaults nosave\nset gyro_lpf1_static_hz = 250\nsave'
+      );
     });
   });
 });

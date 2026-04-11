@@ -77,10 +77,15 @@ Snapshots carry tuning metadata (`tuningSessionNumber`, `tuningType`, `snapshotR
 ## Snapshot Restore (Rollback)
 
 **Restore Flow** (orchestrated in `SNAPSHOT_RESTORE` IPC handler):
-1. Load snapshot and parse `cliDiff` — extract restorable CLI commands
-2. Stage 1 (backup): Create "Pre-restore (auto)" safety snapshot
-3. Stage 2 (cli): Enter CLI mode, send each command (resilient — continues on error, collects failures)
+1. Load snapshot — check for `cliDump` (full state) or fall back to `cliDiff` (legacy)
+2. Stage 1 (backup): Create "Pre-restore (auto)" safety snapshot (2s settle after reboot)
+3. Stage 2 (cli): Enter CLI mode
+   - **Dump-based** (new snapshots with `cliDump`): Send `defaults nosave` first → apply all dump commands → exact 1:1 FC state match
+   - **Diff-based** (legacy snapshots): Apply diff commands only (no `defaults nosave`)
 4. Stage 3 (save): Save and reboot FC
+5. Stage 4 (MSP): Restore PID config via MSP (safety net for `simplified_pids_mode`)
+
+**Full state snapshots**: Since PR #431, snapshots store both `cliDiff` (for comparison UI) and `cliDump` (for complete restore). `exportCLIDiffAndDump()` captures both in a single CLI session (one reboot). Dump-based restore with `defaults nosave` ensures all settings — including BF defaults — are restored exactly.
 
 **Resilient restore**: If a CLI command fails (e.g., out-of-range value), the handler logs the failure, collects the command in `failedCommands[]`, and continues with remaining commands.
 

@@ -159,6 +159,14 @@ function createMockMSPClient(connected = true) {
         'set gyro_lpf1_static_hz = 250\nset dterm_lpf1_static_hz = 150\n' +
           'set debug_mode = GYRO_SCALED\nset blackbox_sample_rate = 1'
       ),
+    exportCLIDiffAndDump: vi.fn().mockResolvedValue({
+      cliDiff:
+        'set gyro_lpf1_static_hz = 250\nset dterm_lpf1_static_hz = 150\n' +
+        'set debug_mode = GYRO_SCALED\nset blackbox_sample_rate = 1',
+      cliDump:
+        'defaults nosave\nset gyro_lpf1_static_hz = 250\nset dterm_lpf1_static_hz = 150\n' +
+        'set debug_mode = GYRO_SCALED\nset blackbox_sample_rate = 1\nsave',
+    }),
     downloadBlackboxLog: vi.fn(),
     eraseBlackboxFlash: vi.fn().mockResolvedValue(undefined),
     saveAndReboot: vi.fn().mockResolvedValue(undefined),
@@ -508,10 +516,13 @@ describe('E2E Tuning Workflow', () => {
     });
 
     it('snapshot restore applies CLI commands to FC', async () => {
-      // Create a snapshot with known CLI diff
-      mockMSP.exportCLIDiff.mockResolvedValue(
-        'set gyro_lpf1_static_hz = 200\nset dterm_lpf1_static_hz = 120\nfeature TELEMETRY'
-      );
+      // Create a snapshot with known CLI config
+      const cliContent =
+        'set gyro_lpf1_static_hz = 200\nset dterm_lpf1_static_hz = 120\nfeature TELEMETRY';
+      mockMSP.exportCLIDiffAndDump.mockResolvedValue({
+        cliDiff: cliContent,
+        cliDump: cliContent,
+      });
       const snapRes = await invoke(IPCChannel.SNAPSHOT_CREATE, 'Restore source');
       expect(snapRes.success).toBe(true);
 
@@ -524,9 +535,12 @@ describe('E2E Tuning Workflow', () => {
         false
       );
       expect(restoreRes.success).toBe(true);
-      expect(restoreRes.data.appliedCommands).toBe(3);
+      // 3 set/feature commands + MSP PID restore (dump-based restore sends defaults nosave separately)
+      expect(restoreRes.data.appliedCommands).toBeGreaterThanOrEqual(3);
       expect(restoreRes.data.rebooted).toBe(true);
 
+      // Verify defaults nosave sent first (dump-based restore)
+      expect(mockMSP.connection.sendCLICommand).toHaveBeenCalledWith('defaults nosave');
       // Verify CLI commands were sent
       expect(mockMSP.connection.enterCLI).toHaveBeenCalled();
       expect(mockMSP.connection.sendCLICommand).toHaveBeenCalledWith(
@@ -1080,9 +1094,12 @@ describe('E2E Tuning Workflow', () => {
       await invoke(IPCChannel.PROFILE_CREATE, makeProfileInput('SN-RESTORE-001', 'Restore Test'));
 
       // Create a snapshot to restore
-      mockMSP.exportCLIDiff.mockResolvedValue(
-        'set gyro_lpf1_static_hz = 300\nset dterm_lpf1_static_hz = 180\nset motor_pwm_protocol = DSHOT600'
-      );
+      const cliContent =
+        'set gyro_lpf1_static_hz = 300\nset dterm_lpf1_static_hz = 180\nset motor_pwm_protocol = DSHOT600';
+      mockMSP.exportCLIDiffAndDump.mockResolvedValue({
+        cliDiff: cliContent,
+        cliDump: cliContent,
+      });
       const snapRes = await invoke(IPCChannel.SNAPSHOT_CREATE, 'Restore target');
       expect(snapRes.success).toBe(true);
 
@@ -1100,7 +1117,7 @@ describe('E2E Tuning Workflow', () => {
       );
       expect(restoreRes.success).toBe(true);
       expect(restoreRes.data.backupSnapshotId).toBeDefined();
-      expect(restoreRes.data.appliedCommands).toBe(3);
+      expect(restoreRes.data.appliedCommands).toBeGreaterThanOrEqual(3);
 
       // Should have one more snapshot (the pre-restore backup)
       const afterList = await invoke(IPCChannel.SNAPSHOT_LIST);

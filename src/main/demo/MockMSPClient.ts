@@ -629,6 +629,11 @@ export class MockMSPClient extends EventEmitter {
     return this.buildCurrentDiff();
   }
 
+  async exportCLIDiffAndDump(): Promise<{ cliDiff: string; cliDump: string }> {
+    const diff = this.buildCurrentDiff();
+    return { cliDiff: diff, cliDump: diff };
+  }
+
   /**
    * Build CLI diff reflecting any applied tuning changes.
    * Starts from the base DEMO_CLI_DIFF and overlays appliedSettings.

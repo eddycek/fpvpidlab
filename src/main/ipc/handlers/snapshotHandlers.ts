@@ -128,11 +128,10 @@ export function registerSnapshotHandlers(deps: HandlerDependencies): void {
         const snapshot = await deps.snapshotManager.loadSnapshot(snapshotId);
         if (!snapshot) throw new Error(`Snapshot not found: ${snapshotId}`);
 
-        // Parse CLI diff — extract restorable CLI commands
-        // Safe commands: set, feature, serial, aux, beacon, map, resource, timer, dma,
-        //   profile (context switch), rateprofile (context switch)
-        // Skip: diff all, batch start/end, defaults nosave, save, board_name,
-        //       manufacturer_id, mcu_id, signature, comments (#)
+        // Parse CLI commands for restore.
+        // New snapshots have cliDump (complete FC state) — use dump-based restore
+        // with `defaults nosave` to get exact 1:1 state match.
+        // Old snapshots have only cliDiff — fall back to diff-based restore.
         const SKIP_PREFIXES = [
           'diff',
           'batch',
@@ -142,9 +141,13 @@ export function registerSnapshotHandlers(deps: HandlerDependencies): void {
           'manufacturer_id',
           'mcu_id',
           'signature',
+          'dump',
         ];
-        const cliDiff: string = snapshot.configuration.cliDiff || '';
-        const restorableCommands = cliDiff
+        const hasDump = !!snapshot.configuration.cliDump;
+        const cliSource = hasDump
+          ? snapshot.configuration.cliDump!
+          : snapshot.configuration.cliDiff || '';
+        const restorableCommands = cliSource
           .split('\n')
           .map((line: string) => line.trim())
           .filter((line: string) => {
@@ -157,7 +160,10 @@ export function registerSnapshotHandlers(deps: HandlerDependencies): void {
           throw new Error('Snapshot contains no restorable settings');
         }
 
-        logger.info(`Restoring snapshot ${snapshotId}: ${restorableCommands.length} CLI commands`);
+        logger.info(
+          `Restoring snapshot ${snapshotId}: ${restorableCommands.length} CLI commands` +
+            ` (${hasDump ? 'dump-based, will reset to defaults' : 'diff-based (legacy)'})`
+        );
 
         // Stage 1: Create backup snapshot (enters CLI mode via exportCLIDiff)
         let backupSnapshotId: string | undefined;
@@ -178,6 +184,16 @@ export function registerSnapshotHandlers(deps: HandlerDependencies): void {
         sendProgress({ stage: 'cli', message: 'Entering CLI mode...', percent: 25 });
         await new Promise((resolve) => setTimeout(resolve, 2000));
         await deps.mspClient.connection.enterCLI();
+
+        // Dump-based restore: reset FC to BF defaults first, then apply ALL settings
+        // from the dump. This ensures exact 1:1 state match including default values.
+        if (hasDump) {
+          sendProgress({ stage: 'cli', message: 'Resetting to defaults...', percent: 26 });
+          const defaultsResponse =
+            await deps.mspClient.connection.sendCLICommand('defaults nosave');
+          validateCLIResponse('defaults nosave', defaultsResponse);
+          logger.info('Restore: defaults nosave validated (dump-based full restore)');
+        }
 
         const failedCommands: string[] = [];
         for (let i = 0; i < restorableCommands.length; i++) {

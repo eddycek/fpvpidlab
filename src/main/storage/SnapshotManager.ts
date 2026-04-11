@@ -84,8 +84,8 @@ export class SnapshotManager {
         }
       }
 
-      // Export configuration (enters CLI → reboots FC)
-      const cliDiff = await this.mspClient.exportCLIDiff();
+      // Export configuration (enters CLI → runs diff + dump → reboots FC)
+      const { cliDiff, cliDump } = await this.mspClient.exportCLIDiffAndDump();
 
       // Create snapshot
       const snapshot: ConfigurationSnapshot = {
@@ -96,6 +96,7 @@ export class SnapshotManager {
         fcInfo,
         configuration: {
           cliDiff,
+          cliDump,
           pidConfig,
           filterConfig,
           feedforwardConfig,

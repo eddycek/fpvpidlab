@@ -170,6 +170,8 @@ await waitFor(() => {
 - **Preset profiles** available in `@shared/constants.ts` (8 common drone types)
 
 ### Snapshot Behavior
+- **Full FC state**: Snapshots store both `cliDiff` (for comparison UI) and `cliDump` (for 1:1 restore). `exportCLIDiffAndDump()` captures both in one CLI session
+- **Dump-based restore**: New snapshots use `defaults nosave` + dump commands for exact state match. Legacy snapshots (no `cliDump`) fall back to diff-based restore
 - **Baseline** type cannot be deleted via UI
 - **Auto-created baseline** when profile first connects
 - **Server-side filtering** by current profile's snapshotIds

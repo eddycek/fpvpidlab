@@ -492,6 +492,89 @@ export class MSPClient extends EventEmitter {
     return this.getUID();
   }
 
+  /**
+   * Send CLI `exit` (triggers FC reboot) and wait for reconnection.
+   * Shared by exportCLIDiff, exportCLIDump, and exportCLIDiffAndDump.
+   */
+  private async handlePostCLIExitReboot(label: string): Promise<void> {
+    // IMPORTANT: Send `exit` BEFORE clearing cliMode. writeCLIRaw() requires
+    // cliMode=true. Keep cliMode=true during reboot so the boot banner goes
+    // into the CLI buffer (harmless) instead of the MSP parser (corrupts it).
+    this._rebootPending = true;
+    try {
+      await this.connection.writeCLIRaw('exit');
+    } catch {
+      // Port closing during reboot is expected
+    }
+
+    // FC is now rebooting (CLI `exit` calls systemReset()).
+    // Two scenarios:
+    //   A) USB-CDC stays alive (some STM32F4xx) → ping MSP after settle
+    //   B) USB re-enumerates → port closes → poll for port → reconnect
+    const BOOT_SETTLE_MS = 4000;
+    const PING_TIMEOUT_MS = 2000;
+    const PING_INTERVAL_MS = 1000;
+    const MAX_WAIT_MS = 15000;
+    logger.info(`CLI exit sent (${label}) — waiting for FC to reboot...`);
+    await new Promise((resolve) => setTimeout(resolve, BOOT_SETTLE_MS));
+
+    if (this.connection.isOpen()) {
+      // Scenario A: port stayed open — clear parser, switch to MSP, ping
+      this.connection.resetProtocol();
+      await this.connection.forceExitCLI();
+      this.connection.clearFCRebootedFromCLI();
+
+      const pingStart = Date.now();
+      while (Date.now() - pingStart < MAX_WAIT_MS) {
+        if (!this.connection.isOpen()) break;
+        try {
+          await this.connection.sendCommand(
+            MSPCommand.MSP_API_VERSION,
+            Buffer.alloc(0),
+            PING_TIMEOUT_MS
+          );
+          logger.info(`FC is MSP-responsive after reboot (${label})`);
+          break;
+        } catch {
+          logger.debug('MSP ping after reboot — FC still booting...');
+          await new Promise((resolve) => setTimeout(resolve, PING_INTERVAL_MS));
+        }
+      }
+    }
+
+    if (!this.connection.isOpen()) {
+      // Scenario B: port closed (USB re-enumeration) — poll and reconnect
+      logger.info(`Port closed during reboot (${label}) — attempting auto-reconnect...`);
+      await this.connection.forceExitCLI();
+      this.connection.clearFCRebootedFromCLI();
+      const reconnected = await this.reconnectAfterReboot(MAX_WAIT_MS);
+      this._rebootPending = false;
+      if (!reconnected) {
+        logger.warn(`Auto-reconnect failed (${label}) — FC may need manual reconnection`);
+        this.connectionStatus = { connected: false };
+        this.emit('connection-changed', this.connectionStatus);
+      }
+    } else {
+      this._rebootPending = false;
+    }
+  }
+
+  /** Recovery after CLI export error — exit CLI to avoid leaving FC stuck. */
+  private async recoverFromCLIError(): Promise<void> {
+    this._rebootPending = true;
+    try {
+      try {
+        await this.connection.writeCLIRaw('exit');
+      } catch {}
+      await new Promise((resolve) => setTimeout(resolve, 4000));
+      this.connection.resetProtocol();
+      await this.connection.forceExitCLI();
+      this.connection.clearFCRebootedFromCLI();
+    } finally {
+      this._rebootPending = false;
+    }
+  }
+
   async exportCLIDiff(): Promise<string> {
     const wasInCLI = this.connection.isInCLI();
 
@@ -501,91 +584,15 @@ export class MSPClient extends EventEmitter {
       }
       const output = await this.connection.sendCLICommand(CLI_COMMANDS.DIFF, 10000);
 
-      // Exit CLI if WE entered it (not if caller was already in CLI).
-      // BF CLI `exit` reboots the FC — this is intentional. Leaving FC in CLI
-      // breaks all subsequent MSP commands (erase, PID reads, etc.).
-      // Callers that are already in CLI (e.g. apply flow) handle exit themselves via save.
       if (!wasInCLI) {
-        // IMPORTANT: Send `exit` BEFORE clearing cliMode. writeCLIRaw() requires
-        // cliMode=true. Keep cliMode=true during reboot so the boot banner goes
-        // into the CLI buffer (harmless) instead of the MSP parser (corrupts it).
-        this._rebootPending = true; // Preserve currentPort across disconnect
-        try {
-          await this.connection.writeCLIRaw('exit');
-        } catch {
-          // Port closing during reboot is expected
-        }
-
-        // FC is now rebooting (CLI `exit` calls systemReset()).
-        // Two scenarios:
-        //   A) USB-CDC stays alive (some STM32F4xx) → ping MSP after settle
-        //   B) USB re-enumerates → port closes → poll for port → reconnect
-        const BOOT_SETTLE_MS = 4000;
-        const PING_TIMEOUT_MS = 2000;
-        const PING_INTERVAL_MS = 1000;
-        const MAX_WAIT_MS = 15000;
-        logger.info('CLI exit sent — waiting for FC to reboot...');
-        await new Promise((resolve) => setTimeout(resolve, BOOT_SETTLE_MS));
-
-        if (this.connection.isOpen()) {
-          // Scenario A: port stayed open — clear parser, switch to MSP, ping
-          this.connection.resetProtocol();
-          await this.connection.forceExitCLI();
-          this.connection.clearFCRebootedFromCLI();
-
-          const pingStart = Date.now();
-          while (Date.now() - pingStart < MAX_WAIT_MS) {
-            if (!this.connection.isOpen()) {
-              // Port closed late — fall through to reconnect path below
-              break;
-            }
-            try {
-              await this.connection.sendCommand(
-                MSPCommand.MSP_API_VERSION,
-                Buffer.alloc(0),
-                PING_TIMEOUT_MS
-              );
-              logger.info('FC is MSP-responsive after reboot');
-              break;
-            } catch {
-              logger.debug('MSP ping after reboot — FC still booting...');
-              await new Promise((resolve) => setTimeout(resolve, PING_INTERVAL_MS));
-            }
-          }
-        }
-
-        if (!this.connection.isOpen()) {
-          // Scenario B: port closed (USB re-enumeration) — poll and reconnect
-          logger.info('Port closed during reboot — attempting auto-reconnect...');
-          await this.connection.forceExitCLI();
-          this.connection.clearFCRebootedFromCLI();
-          const reconnected = await this.reconnectAfterReboot(MAX_WAIT_MS);
-          this._rebootPending = false;
-          if (!reconnected) {
-            logger.warn('Auto-reconnect failed — FC may need manual reconnection');
-            this.connectionStatus = { connected: false };
-            this.emit('connection-changed', this.connectionStatus);
-          }
-        } else {
-          this._rebootPending = false;
-        }
+        await this.handlePostCLIExitReboot('diff');
       }
 
       return this.cleanCLIOutput(output);
     } catch (error) {
       this._rebootPending = false;
-      // Try to recover — send exit to get FC out of CLI (triggers reboot)
       try {
-        if (!wasInCLI) {
-          try {
-            await this.connection.writeCLIRaw('exit');
-          } catch {}
-          // Wait for FC to reboot, then clean up
-          await new Promise((resolve) => setTimeout(resolve, 4000));
-          this.connection.resetProtocol();
-          await this.connection.forceExitCLI();
-          this.connection.clearFCRebootedFromCLI();
-        }
+        if (!wasInCLI) await this.recoverFromCLIError();
       } catch {}
       throw error;
     }
@@ -600,73 +607,46 @@ export class MSPClient extends EventEmitter {
       }
       const output = await this.connection.sendCLICommand(CLI_COMMANDS.DUMP, 15000);
 
-      // Exit CLI if WE entered it — same rationale as exportCLIDiff()
       if (!wasInCLI) {
-        this._rebootPending = true; // Preserve currentPort across disconnect
-        try {
-          await this.connection.writeCLIRaw('exit');
-        } catch {
-          // Port closing during reboot is expected
-        }
-        const BOOT_SETTLE_MS = 4000;
-        const PING_TIMEOUT_MS = 2000;
-        const PING_INTERVAL_MS = 1000;
-        const MAX_WAIT_MS = 15000;
-        logger.info('CLI exit sent (dump) — waiting for FC to reboot...');
-        await new Promise((resolve) => setTimeout(resolve, BOOT_SETTLE_MS));
-
-        if (this.connection.isOpen()) {
-          this.connection.resetProtocol();
-          await this.connection.forceExitCLI();
-          this.connection.clearFCRebootedFromCLI();
-
-          const pingStart = Date.now();
-          while (Date.now() - pingStart < MAX_WAIT_MS) {
-            if (!this.connection.isOpen()) break;
-            try {
-              await this.connection.sendCommand(
-                MSPCommand.MSP_API_VERSION,
-                Buffer.alloc(0),
-                PING_TIMEOUT_MS
-              );
-              logger.info('FC is MSP-responsive after reboot (dump)');
-              break;
-            } catch {
-              logger.debug('MSP ping after reboot — FC still booting...');
-              await new Promise((resolve) => setTimeout(resolve, PING_INTERVAL_MS));
-            }
-          }
-        }
-
-        if (!this.connection.isOpen()) {
-          logger.info('Port closed during reboot (dump) — attempting auto-reconnect...');
-          await this.connection.forceExitCLI();
-          this.connection.clearFCRebootedFromCLI();
-          const reconnected = await this.reconnectAfterReboot(MAX_WAIT_MS);
-          this._rebootPending = false;
-          if (!reconnected) {
-            logger.warn('Auto-reconnect failed (dump) — FC may need manual reconnection');
-            this.connectionStatus = { connected: false };
-            this.emit('connection-changed', this.connectionStatus);
-          }
-        } else {
-          this._rebootPending = false;
-        }
+        await this.handlePostCLIExitReboot('dump');
       }
 
       return this.cleanCLIOutput(output);
     } catch (error) {
       this._rebootPending = false;
       try {
-        if (!wasInCLI) {
-          try {
-            await this.connection.writeCLIRaw('exit');
-          } catch {}
-          await new Promise((resolve) => setTimeout(resolve, 4000));
-          this.connection.resetProtocol();
-          await this.connection.forceExitCLI();
-          this.connection.clearFCRebootedFromCLI();
-        }
+        if (!wasInCLI) await this.recoverFromCLIError();
+      } catch {}
+      throw error;
+    }
+  }
+
+  /**
+   * Export both CLI diff and dump in a single CLI session (one reboot).
+   * Used by SnapshotManager to capture complete FC state.
+   */
+  async exportCLIDiffAndDump(): Promise<{ cliDiff: string; cliDump: string }> {
+    const wasInCLI = this.connection.isInCLI();
+
+    try {
+      if (!wasInCLI) {
+        await this.connection.enterCLI();
+      }
+      const diffOutput = await this.connection.sendCLICommand(CLI_COMMANDS.DIFF, 10000);
+      const dumpOutput = await this.connection.sendCLICommand(CLI_COMMANDS.DUMP, 15000);
+
+      if (!wasInCLI) {
+        await this.handlePostCLIExitReboot('diff+dump');
+      }
+
+      return {
+        cliDiff: this.cleanCLIOutput(diffOutput),
+        cliDump: this.cleanCLIOutput(dumpOutput),
+      };
+    } catch (error) {
+      this._rebootPending = false;
+      try {
+        if (!wasInCLI) await this.recoverFromCLIError();
       } catch {}
       throw error;
     }
